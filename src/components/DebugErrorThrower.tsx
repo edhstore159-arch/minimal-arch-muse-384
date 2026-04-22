@@ -1,53 +1,33 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * DebugErrorThrower
  *
- * Sem UI. Escuta o evento global "lovable-debug-error" e reporta o erro
- * para o overlay global da Lovable SEM desmontar a árvore React.
+ * Sem UI. Escuta o evento global "lovable-debug-error" e, durante o render,
+ * lança um Error com a mensagem recebida. Deve ficar FORA de qualquer
+ * ErrorBoundary/Suspense para que o erro escape até o overlay global da Lovable.
  *
- * Antes: usávamos `throw` durante o render, o que fazia a página ficar em
- * branco enquanto o usuário esperava o "Try to Fix".
- *
- * Agora: despachamos um ErrorEvent na window (e fallback via setTimeout
- * com throw assíncrono). Isso é capturado pelo handler global de erros do
- * overlay da Lovable, mas como acontece FORA do ciclo de render do React,
- * a página continua visível e interativa.
+ * NÃO REMOVA O THROW. Esse erro é INTENCIONAL — ele existe para acionar o
+ * botão "Try to Fix" do overlay de erro nativo.
  */
 export const DebugErrorThrower = () => {
+  const [message, setMessage] = useState<string | null>(null);
+
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
-      if (typeof detail !== "string" || detail.length === 0) return;
-
-      const err = new Error(detail);
-
-      // 1) Despacha um ErrorEvent global — capturado pelo window.onerror
-      //    do overlay da Lovable sem afetar o React.
-      try {
-        const errorEvent = new ErrorEvent("error", {
-          message: detail,
-          error: err,
-          filename: "src/components/DebugErrorThrower.tsx",
-          lineno: 0,
-          colno: 0,
-        });
-        window.dispatchEvent(errorEvent);
-      } catch {
-        // ignore
+      if (typeof detail === "string" && detail.length > 0) {
+        setMessage(detail);
       }
-
-      // 2) Fallback: throw assíncrono. Vai parar no window.onerror também,
-      //    mas FORA do render do React, então a página não desmonta.
-      setTimeout(() => {
-        throw err;
-      }, 0);
     };
-
     window.addEventListener("lovable-debug-error", handler as EventListener);
-    return () =>
-      window.removeEventListener("lovable-debug-error", handler as EventListener);
+    return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
+
+  if (message) {
+    // Erro intencional — não envolver em try/catch, não trocar por console.error.
+    throw new Error(message);
+  }
 
   return null;
 };
