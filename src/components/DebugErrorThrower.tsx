@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * DebugErrorThrower
@@ -10,37 +10,26 @@ import { useEffect, useRef, useState } from "react";
  * NÃO REMOVA O THROW. Esse erro é INTENCIONAL — ele existe para acionar o
  * botão "Try to Fix" do overlay de erro nativo.
  */
-type PendingDebugError = {
-  id: number;
-  message: string;
-};
-
-let debugErrorSequence = 0;
-
 export const DebugErrorThrower = () => {
-  const [pendingError, setPendingError] = useState<PendingDebugError | null>(null);
-  const lastThrownIdRef = useRef<number | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
-        debugErrorSequence += 1;
-        setPendingError({
-          id: debugErrorSequence,
-          message: detail,
-        });
+        setMessage(detail);
       }
     };
-
     window.addEventListener("lovable-debug-error", handler as EventListener);
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
 
-  if (pendingError && lastThrownIdRef.current !== pendingError.id) {
-    lastThrownIdRef.current = pendingError.id;
+  if (message) {
+    const toThrow = message;
+    // Limpa para que o próximo render não re-lance o mesmo erro.
+    setMessage(null);
     // Erro intencional — não envolver em try/catch, não trocar por console.error.
-    throw new Error(pendingError.message);
+    throw new Error(toThrow);
   }
 
   return null;
