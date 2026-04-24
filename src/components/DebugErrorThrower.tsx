@@ -25,8 +25,11 @@ export const DebugErrorThrower = () => {
   }, []);
 
   if (message) {
+    const toThrow = message;
+    // Limpa para que o próximo render não re-lance o mesmo erro.
+    setMessage(null);
     // Erro intencional — não envolver em try/catch, não trocar por console.error.
-    throw new Error(message);
+    throw new Error(toThrow);
   }
 
   return null;
