@@ -10,9 +10,15 @@ import MyEvents from "./pages/MyEvents";
 import CreateEvent from "./pages/CreateEvent";
 import EditEvent from "./pages/EditEvent";
 import NotFound from "./pages/NotFound";
+import { DebugErrorThrower } from "./components/DebugErrorThrower";
+import { ErrorDebugPopup } from "./components/ErrorDebugPopup";
 
 const App = () => (
   <TooltipProvider>
+    {/* DebugErrorThrower DEVE ficar fora de qualquer ErrorBoundary/Suspense
+        para que o erro intencional escape até o overlay global da Lovable. */}
+    <DebugErrorThrower />
+    <ErrorDebugPopup />
     <Toaster />
     <Sonner />
     <Routes>
