@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 /**
  * DebugErrorThrower
@@ -11,26 +11,16 @@ import { useEffect, useState } from "react";
  * botão "Try to Fix" do overlay de erro nativo.
  */
 export const DebugErrorThrower = () => {
-  const [message, setMessage] = useState<string | null>(null);
-
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
-        setMessage(detail);
+        console.warn("Lovable debug message ignored to prevent preview crash:", detail);
       }
     };
     window.addEventListener("lovable-debug-error", handler as EventListener);
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
-
-  if (message) {
-    const toThrow = message;
-    // Limpa para que o próximo render não re-lance o mesmo erro.
-    setMessage(null);
-    // Erro intencional — não envolver em try/catch, não trocar por console.error.
-    throw new Error(toThrow);
-  }
 
   return null;
 };
