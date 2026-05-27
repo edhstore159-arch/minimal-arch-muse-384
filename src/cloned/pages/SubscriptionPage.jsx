@@ -133,7 +133,7 @@ export default function SubscriptionPage() {
 
   // ---- BR Code PIX fixo (estático) ----
   const FIXED_BRCODE =
-    '00020126580014BR.GOV.BCB.PIX01363ef11200-bebf-4d88-930c-48e84b11cfc4520400005303986540535.905802BR5925C1.965.652 ERI JONHSON DE6009SAO PAULO610805409000622505219uC1rHtH0iT8qxs19tl986304B464';
+    '00020126580014BR.GOV.BCB.PIX01363ef11200-bebf-4d88-930c-48e84b11cfc4520400005303986540535.905802BR592551.965.652 ERI JONHSON DE6009SAO PAULO610805409000622505219uC1rHtH0iT8qxs19tl986304B464';
 
   const startSubscription = async () => {
     setLoadingPix(true);
@@ -168,7 +168,7 @@ export default function SubscriptionPage() {
         brcode,
         amount,
         trial_ends_at: trialEnds,
-        qr_code_base64: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`,
+        qr_code_base64: `https://api.qrserver.com/v1/create-qr-code/?size=360x360&ecc=M&qzone=3&data=${encodeURIComponent(brcode)}`,
       });
       setShowPaymentModal(true);
       toast.success('Você ganhou 3 dias grátis!');
