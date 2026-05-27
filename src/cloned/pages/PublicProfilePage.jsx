@@ -62,7 +62,7 @@ export default function PublicProfilePage() {
           <div className="px-4 sm:px-8 pb-4 -mt-14 sm:-mt-16 flex flex-col sm:flex-row sm:items-end gap-4">
             <div className="relative shrink-0">
               <Avatar className="w-28 h-28 sm:w-32 sm:h-32 ring-4 ring-white shadow-md">
-                <AvatarImage src={profile.avatar_url} />
+                <AvatarImage src={profile.avatar_url} className="object-cover" />
                 <AvatarFallback className="text-2xl">{initial}</AvatarFallback>
               </Avatar>
               <span className="absolute bottom-2 right-2 w-4 h-4 rounded-full bg-green-500 ring-2 ring-white" />
