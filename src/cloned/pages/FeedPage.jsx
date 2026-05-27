@@ -276,53 +276,43 @@ export default function FeedPage() {
 
   const fetchPosts = async () => {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const authed = !!session?.session;
+      const { data: svc, error } = await supabase
+        .from('svc_posts')
+        .select('*')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) console.warn('svc_posts fetch error', error);
 
-      // 1) local posts always shown
-      const local = loadLocalPosts();
-
-      // 2) supabase posts when authenticated
-      let remote = [];
-      if (authed) {
-        const { data: svc } = await supabase
-          .from('svc_posts')
-          .select('*')
-          .eq('status', 'open')
-          .order('created_at', { ascending: false })
-          .limit(50);
-        const ids = Array.from(new Set((svc ?? []).map(p => p.user_id)));
-        let profMap = {};
-        if (ids.length) {
-          const { data: profs } = await supabase
-            .from('svc_profiles')
-            .select('user_id, display_name, avatar_url')
-            .in('user_id', ids);
-          (profs ?? []).forEach(p => { profMap[p.user_id] = p; });
-        }
-        remote = (svc ?? []).map(p => ({
-          id: p.id,
-          user_id: p.user_id,
-          type: p.post_type === 'volunteer' ? 'offer' : 'need',
-          category: p.category_slug || 'social',
-          title: p.title,
-          description: p.description,
-          images: p.photos || [],
-          videos: [],
-          budget: p.budget_range,
-          likes_count: 0,
-          comments_count: 0,
-          created_at: p.created_at,
-          location: { address: p.address || 'Paris', city: 'Paris', lat: p.lat, lng: p.lng },
-          user: {
-            name: profMap[p.user_id]?.display_name || 'Usuário',
-            avatar: profMap[p.user_id]?.avatar_url,
-          },
-        }));
+      const ids = Array.from(new Set((svc ?? []).map(p => p.user_id)));
+      let profMap = {};
+      if (ids.length) {
+        const { data: profs } = await supabase
+          .from('svc_profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', ids);
+        (profs ?? []).forEach(p => { profMap[p.user_id] = p; });
       }
-
-      const combined = [...local, ...remote];
-      setPosts(combined.length ? combined : PREVIEW_POSTS);
+      const remote = (svc ?? []).map(p => ({
+        id: p.id,
+        user_id: p.user_id,
+        type: p.post_type === 'volunteer' ? 'offer' : 'need',
+        category: p.category_slug || 'social',
+        title: p.title,
+        description: p.description,
+        images: p.photos || [],
+        videos: [],
+        budget: p.budget_range,
+        likes_count: 0,
+        comments_count: 0,
+        created_at: p.created_at,
+        location: { address: p.address || 'Paris', city: 'Paris', lat: p.lat, lng: p.lng },
+        user: {
+          name: profMap[p.user_id]?.display_name || 'Usuário',
+          avatar: profMap[p.user_id]?.avatar_url,
+        },
+      }));
+      setPosts(remote.length ? remote : PREVIEW_POSTS);
     } catch (e) {
       console.error('Failed to fetch posts', e);
       const local = loadLocalPosts();
