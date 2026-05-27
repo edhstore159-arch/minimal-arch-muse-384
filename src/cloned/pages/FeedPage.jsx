@@ -366,8 +366,8 @@ export default function FeedPage() {
       return;
     }
     files.forEach((file) => {
-      if (file.size > 5_000_000) {
-        toast.error(`${file.name}: máx. 5MB`);
+      if (file.size > 15_000_000) {
+        toast.error(`${file.name}: máx. 15MB`);
         return;
       }
       const reader = new FileReader();
