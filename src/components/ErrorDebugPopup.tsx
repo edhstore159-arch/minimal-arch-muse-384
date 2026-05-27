@@ -271,30 +271,30 @@ export const ErrorDebugPopup: React.FC = () => {
 
     if (files.length > 0) {
       setUploading(true);
+      setUploadProgress("Preparando upload...");
       const uploadedUrls: { name: string; url: string; type: string }[] = [];
       try {
-        for (const f of files) {
-          const fileWithBlob = f as AttachedFile & { _file?: File };
-          const body: Blob | File = f.isImage ? dataUrlToBlob(f.dataUrl) : (fileWithBlob._file as File);
-          const ext = f.name.split(".").pop() || "bin";
-          const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-          const { error: upErr } = await supabase.storage
-            .from("debug-uploads")
-            .upload(path, body, { contentType: f.type, upsert: false });
-          if (upErr) {
-            setAttachError(`Falha no upload de "${f.name}": ${upErr.message}`);
-            setUploading(false);
-            return;
-          }
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          const ext = sanitizePathSegment(f.name.split(".").pop() || "bin");
+          const baseName = sanitizePathSegment(f.name.replace(/\.[^/.]+$/, ""));
+          const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${baseName}.${ext}`;
+          setUploadProgress(`Enviando ${i + 1}/${files.length}: 0%`);
+          await uploadLargeFile(f.file, path, (percent) => {
+            setUploadProgress(`Enviando ${i + 1}/${files.length}: ${percent}%`);
+          });
           const { data: pub } = supabase.storage.from("debug-uploads").getPublicUrl(path);
           uploadedUrls.push({ name: f.name, url: pub.publicUrl, type: f.type });
         }
       } catch (e) {
         setAttachError(`Erro inesperado no upload: ${(e as Error).message}`);
+        setUploadProgress(null);
         setUploading(false);
         return;
+      } finally {
+        setUploadProgress(null);
+        setUploading(false);
       }
-      setUploading(false);
 
       message += `\n\n---\n${ATTACHMENT_INSTRUCTIONS}\n\nARQUIVOS ANEXADOS (${uploadedUrls.length}):\n`;
       uploadedUrls.forEach((f, idx) => {
