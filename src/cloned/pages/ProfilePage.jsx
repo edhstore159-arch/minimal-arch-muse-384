@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, updateSvcProfile } from '../lib/authProfile';
+import ServicesMap from '../components/ServicesMap';
 
 const HELP_CATEGORIES = [
   { value: 'food', label: 'Alimentação', icon: '🍽️' },
