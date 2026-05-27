@@ -386,7 +386,16 @@ export default function HomePage() {
   const filterPosts = () => {
     let filtered = posts;
     
-    if (categoryFilter !== 'all') {
+    if (categoryFilter === 'recommended') {
+      const interest = (user?.categories?.[0] || '').toLowerCase().trim();
+      const city = (user?.city || '').toLowerCase().trim();
+      filtered = filtered.filter(p => {
+        const hay = `${p.title || ''} ${p.description || ''} ${p.address || ''} ${p.category || ''}`.toLowerCase();
+        const matchInterest = interest ? hay.includes(interest) : true;
+        const matchCity = city ? hay.includes(city.split(',')[0].trim()) : true;
+        return (interest || city) ? (matchInterest || matchCity) : true;
+      });
+    } else if (categoryFilter !== 'all') {
       filtered = filtered.filter(p => p.category === categoryFilter);
     }
     
@@ -696,6 +705,21 @@ export default function HomePage() {
               <Filter size={18} />
               <span className="text-[10px] font-medium">{t('allFilter')}</span>
             </button>
+            {(user?.categories?.[0] || user?.city) && (
+              <button
+                onClick={() => setCategoryFilter('recommended')}
+                className={`flex flex-col items-center gap-1 min-w-[80px] p-2 rounded-xl transition-all flex-shrink-0 ${
+                  categoryFilter === 'recommended'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30'
+                }`}
+                data-testid="filter-recommended"
+                title={`${user?.categories?.[0] || ''} ${user?.city ? '· ' + user.city : ''}`}
+              >
+                <span className="text-base leading-none">⭐</span>
+                <span className="text-[10px] font-medium whitespace-nowrap">Para você</span>
+              </button>
+            )}
             {categories.map(cat => {
               const IconComponent = cat.icon;
               return (

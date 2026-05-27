@@ -28,6 +28,7 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
   const [lastName, setLastName] = useState('');
   const [location, setLocation] = useState('');
   const [mobile, setMobile] = useState('');
+  const [serviceWanted, setServiceWanted] = useState('');
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const fileRef = useRef(null);
@@ -87,6 +88,7 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
     setLastName('');
     setLocation('');
     setMobile('');
+    setServiceWanted('');
     setAvatarFile(null);
     setAvatarPreview(null);
   };
@@ -137,7 +139,12 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
       if (error) throw error;
 
       if (data.session) {
-        let profile = await getOrCreateSvcProfile(data.user, { display_name: name, role, city: location });
+        let profile = await getOrCreateSvcProfile(data.user, {
+          display_name: name,
+          role,
+          city: location,
+          categories: serviceWanted ? [serviceWanted.trim()] : [],
+        });
         if (avatarFile && data.user) {
           const path = `${data.user.id}/avatar`;
           const { error: upErr } = await supabase.storage
@@ -338,6 +345,14 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
                 placeholder="Mobile"
                 className="w-full h-11 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 data-testid="signup-mobile"
+              />
+
+              <input
+                value={serviceWanted}
+                onChange={(e) => setServiceWanted(e.target.value)}
+                placeholder={role === 'migrant' ? 'Serviço que procura (ex: pedreiro, garçom)' : 'Serviço que oferece (ex: eletricista)'}
+                className="w-full h-11 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                data-testid="signup-service-wanted"
               />
 
               <input
