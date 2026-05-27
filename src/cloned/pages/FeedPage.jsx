@@ -107,12 +107,25 @@ const PostCard = ({ post, onChat }) => {
 
       <div className="px-3 pb-3">
         <div className="flex items-start space-x-2.5 mb-2">
-          <Avatar className="w-9 h-9">
-            <AvatarImage src={avatarUrl} />
-            <AvatarFallback>{avatarFallback}</AvatarFallback>
-          </Avatar>
+          <button
+            type="button"
+            onClick={() => post.user_id && navigate(`/u/${post.user_id}`)}
+            className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
+            aria-label={`Ver perfil de ${displayName}`}
+          >
+            <Avatar className="w-9 h-9 cursor-pointer hover:opacity-80 transition-opacity">
+              <AvatarImage src={avatarUrl} />
+              <AvatarFallback>{avatarFallback}</AvatarFallback>
+            </Avatar>
+          </button>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-sm mb-1.5">{displayName}</h3>
+            <button
+              type="button"
+              onClick={() => post.user_id && navigate(`/u/${post.user_id}`)}
+              className="font-bold text-sm mb-1.5 hover:underline text-left"
+            >
+              {displayName}
+            </button>
             {post.title && <p className="text-xs font-medium text-gray-900 mb-1">{post.title}</p>}
             <p className="text-xs text-gray-800 leading-relaxed">{description}</p>
 
