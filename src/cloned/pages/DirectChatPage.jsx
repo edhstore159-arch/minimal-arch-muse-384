@@ -1030,7 +1030,7 @@ export default function DirectChatPage() {
               <p className="font-semibold text-green-700 mt-3 text-lg">R$ {parseFloat(payAmount.replace(',', '.')).toFixed(2).replace('.', ',')}</p>
               <p className="text-xs text-gray-500 mb-3">{payDescription || 'Pagamento de serviço'}</p>
               <button
-                onClick={() => { navigator.clipboard.writeText(pixCharge.brcode); toast.success('Copiado!'); }}
+                onClick={() => { copyToClipboard(pixCharge.brcode); toast.success('Copiado!'); }}
                 data-testid="pix-charge-copy"
                 className="w-full h-11 rounded-full bg-gray-900 text-white font-medium flex items-center justify-center gap-2 hover:bg-black"
               ><Copy size={16} /> Copiar PIX Copia e Cola</button>
@@ -1192,7 +1192,7 @@ const ModalShell = ({ title, children, onClose }) => (
     data-testid="action-modal"
   >
     <div
-      className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
+      className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl p-6 max-h-[90dvh] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-4">
