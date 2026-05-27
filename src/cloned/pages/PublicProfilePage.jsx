@@ -54,7 +54,7 @@ export default function PublicProfilePage() {
       });
       if (error) throw error;
       toast.success(`Chamando ${profile.display_name}…`);
-      window.open(`https://meet.jit.si/${room}`, '_blank', 'noopener');
+      navigate(`/call/${room}?kind=${kind}`);
     } catch (e) {
       console.error('[call] failed', e);
       toast.error('Não foi possível iniciar a chamada.');
