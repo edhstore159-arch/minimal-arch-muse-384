@@ -42,8 +42,23 @@ export default function ProfilePage() {
   const [avatarOverride, setAvatarOverride] = useState(null);
   const avatarInputRef = useRef(null);
   const photoInputRef = useRef(null);
+  const [helpRequests, setHelpRequests] = useState([]);
+  const isVolunteer = user?.role === 'volunteer' || user?.role === 'helper' || user?.role === 'admin';
 
   const avatarSrc = avatarOverride || user?.avatar_url;
+
+  useEffect(() => {
+    if (!isVolunteer) return;
+    (async () => {
+      const { data } = await supabase
+        .from('svc_posts')
+        .select('id, title, description, address, created_at, post_type, user_id')
+        .neq('post_type', 'volunteer')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      setHelpRequests(data || []);
+    })();
+  }, [isVolunteer]);
 
   const fetchPhotos = async () => {
     if (!user?.id) return;
