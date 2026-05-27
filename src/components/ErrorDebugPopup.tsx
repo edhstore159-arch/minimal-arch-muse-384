@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import * as tus from "tus-js-client";
 import { supabase } from "@/integrations/supabase/client";
 
 const PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE O ERRO, EXECUTE A TAREFA):";
@@ -13,20 +14,65 @@ type AttachedFile = {
   name: string;
   type: string;
   size: number;
-  dataUrl: string; // base64 data URL (usado só para preview de imagens)
+  file: File;
+  previewUrl?: string;
   isImage: boolean;
 };
 
 const MAX_FILE_BYTES = Number.POSITIVE_INFINITY; // sem limite por arquivo
 const MAX_TOTAL_BYTES = Number.POSITIVE_INFINITY; // sem limite total
+const TUS_CHUNK_SIZE = 6 * 1024 * 1024;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
-const fileToDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
+const sanitizePathSegment = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "arquivo";
+
+const uploadLargeFile = async (
+  file: File,
+  path: string,
+  onProgress: (percent: number) => void
+): Promise<void> => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Sessão expirada. Entre novamente para enviar arquivos.");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
+      chunkSize: TUS_CHUNK_SIZE,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        "x-upsert": "false",
+      },
+      metadata: {
+        bucketName: "debug-uploads",
+        objectName: path,
+        contentType: file.type || "application/octet-stream",
+        cacheControl: "3600",
+      },
+      onError: reject,
+      onProgress: (bytesUploaded, bytesTotal) => {
+        onProgress(bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0);
+      },
+      onSuccess: () => resolve(),
+    });
+
+    upload.start();
   });
+};
 
 /**
  * ErrorDebugPopup
