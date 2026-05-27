@@ -138,7 +138,12 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
       if (error) throw error;
 
       if (data.session) {
-        let profile = await getOrCreateSvcProfile(data.user, { display_name: name, role, city: location });
+        let profile = await getOrCreateSvcProfile(data.user, {
+          display_name: name,
+          role,
+          city: location,
+          categories: serviceWanted ? [serviceWanted.trim()] : [],
+        });
         if (avatarFile && data.user) {
           const path = `${data.user.id}/avatar`;
           const { error: upErr } = await supabase.storage
