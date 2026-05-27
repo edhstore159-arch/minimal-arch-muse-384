@@ -114,14 +114,18 @@ export default function HousingPage() {
   ];
 
   const cities = [
-    { name: 'Paris', emoji: '🗼' },
-    { name: 'Lyon', emoji: '🦁' },
-    { name: 'Marseille', emoji: '⚓' },
-    { name: 'Toulouse', emoji: '🌹' },
-    { name: 'Nice', emoji: '🌴' },
-    { name: 'Bordeaux', emoji: '🍷' },
-    { name: 'Lille', emoji: '🏛️' },
-    { name: 'Nantes', emoji: '🐘' }
+    { name: 'Todo o Brasil', emoji: '🇧🇷' },
+    { name: 'Jataí - GO', emoji: '🌾' },
+    { name: 'Goiânia - GO', emoji: '🌆' },
+    { name: 'Rio Verde - GO', emoji: '🌿' },
+    { name: 'Brasília - DF', emoji: '🏛️' },
+    { name: 'São Paulo - SP', emoji: '🏙️' },
+    { name: 'Rio de Janeiro - RJ', emoji: '🏖️' },
+    { name: 'Belo Horizonte - MG', emoji: '⛰️' },
+    { name: 'Curitiba - PR', emoji: '🌲' },
+    { name: 'Salvador - BA', emoji: '🌴' },
+    { name: 'Fortaleza - CE', emoji: '☀️' },
+    { name: 'Recife - PE', emoji: '🌊' }
   ];
 
   useEffect(() => {
@@ -136,21 +140,19 @@ export default function HousingPage() {
   const fetchListings = async () => {
     try {
       setLoading(true);
-      let url = `${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ""}/api/housing?`;
-      if (filterType !== 'all') url += `type=${filterType}&`;
-      if (filterCity) url += `city=${filterCity}&`;
-      
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setListings(data);
+      // No backend housing API configured yet — load from localStorage
+      const stored = localStorage.getItem('housing_listings');
+      let data = stored ? JSON.parse(stored) : [];
+      if (filterType !== 'all') {
+        data = data.filter((l) => l.listing_type === filterType);
       }
+      if (filterCity && filterCity !== 'Todo o Brasil') {
+        data = data.filter((l) => l.city === filterCity);
+      }
+      setListings(data);
     } catch (error) {
       console.error('Error fetching housing listings:', error);
-      toast.error(t('errorLoadingListings'));
+      setListings([]);
     } finally {
       setLoading(false);
     }
@@ -163,26 +165,21 @@ export default function HousingPage() {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ""}/api/housing`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...newListing,
-          listing_type: listingType
-        })
-      });
-
-      if (response.ok) {
-        toast.success(listingType === 'offer' ? t('housingOfferCreated') : t('housingRequestCreated'));
-        setShowCreateModal(false);
-        resetForm();
-        fetchListings();
-      } else {
-        throw new Error('Failed to create listing');
-      }
+      const stored = localStorage.getItem('housing_listings');
+      const existing = stored ? JSON.parse(stored) : [];
+      const item = {
+        ...newListing,
+        listing_type: listingType,
+        id: `local-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        user_id: user?.id || null,
+      };
+      const updated = [item, ...existing];
+      localStorage.setItem('housing_listings', JSON.stringify(updated));
+      toast.success(listingType === 'offer' ? t('housingOfferCreated') : t('housingRequestCreated'));
+      setShowCreateModal(false);
+      resetForm();
+      fetchListings();
     } catch (error) {
       toast.error(t('errorCreatingListing'));
     }
