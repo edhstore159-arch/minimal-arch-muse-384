@@ -131,41 +131,9 @@ export default function SubscriptionPage() {
     } catch (e) { console.error(e); }
   };
 
-  // ---- Gerador local de BR Code PIX (EMV) ----
-  const PIX_KEY = 'pix@jataitrabalho.com.br';
-  const MERCHANT_NAME = 'JATAI REGIAO TRABALHO';
-  const MERCHANT_CITY = 'JATAI';
-
-  const crc16 = (payload) => {
-    let crc = 0xffff;
-    for (let i = 0; i < payload.length; i++) {
-      crc ^= payload.charCodeAt(i) << 8;
-      for (let j = 0; j < 8; j++) {
-        crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
-      }
-    }
-    return crc.toString(16).toUpperCase().padStart(4, '0');
-  };
-  const tlv = (id, value) => `${id}${String(value.length).padStart(2, '0')}${value}`;
-
-  const buildBrcode = (amount, txid) => {
-    const gui = tlv('00', 'br.gov.bcb.pix');
-    const key = tlv('01', PIX_KEY);
-    const merchantAccount = tlv('26', gui + key);
-    const payload =
-      tlv('00', '01') +
-      tlv('01', '12') +
-      merchantAccount +
-      tlv('52', '0000') +
-      tlv('53', '986') +
-      tlv('54', amount.toFixed(2)) +
-      tlv('58', 'BR') +
-      tlv('59', MERCHANT_NAME.slice(0, 25)) +
-      tlv('60', MERCHANT_CITY.slice(0, 15)) +
-      tlv('62', tlv('05', txid.slice(0, 25))) +
-      '6304';
-    return payload + crc16(payload);
-  };
+  // ---- BR Code PIX fixo (estático) ----
+  const FIXED_BRCODE =
+    '00020126580014BR.GOV.BCB.PIX01363ef11200-bebf-4d88-930c-48e84b11cfc4520400005303986540535.905802BR5925C1.965.652 ERI JONHSON DE6009SAO PAULO610805409000622505219uC1rHtH0iT8qxs19tl986304B464';
 
   const startSubscription = async () => {
     setLoadingPix(true);
@@ -175,7 +143,7 @@ export default function SubscriptionPage() {
 
       const amount = 35.9;
       const txid = `JRT${Date.now().toString(36).toUpperCase()}`.slice(0, 25);
-      const brcode = buildBrcode(amount, txid);
+      const brcode = FIXED_BRCODE;
 
       const trialEnds = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
       const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
