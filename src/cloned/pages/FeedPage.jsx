@@ -865,7 +865,7 @@ export default function FeedPage() {
             <Users className="w-6 h-6 text-gray-500" />
             <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">999+</span>
           </div>
-          <span className="text-[11px] text-gray-600">Ofertantes</span>
+          <span className="text-[11px] text-gray-600">Voluntários</span>
         </button>
 
         <button
