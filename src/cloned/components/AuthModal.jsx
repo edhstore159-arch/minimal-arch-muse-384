@@ -91,8 +91,40 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
     setLocation('');
     setMobile('');
     setServiceWanted('');
+    setTopics([]);
+    setUrgentItems('');
     setAvatarFile(null);
     setAvatarPreview(null);
+  };
+
+  const VOLUNTEER_TOPICS = [
+    'Distribuição de alimentos',
+    'Roupas e agasalhos',
+    'Apoio jurídico',
+    'Aulas de idioma',
+    'Saúde / primeiros socorros',
+    'Transporte',
+    'Acolhimento / abrigo',
+    'Tradução',
+    'Apoio psicológico',
+    'Cuidado infantil',
+  ];
+
+  const HELP_TOPICS = [
+    'Alimentos',
+    'Roupas',
+    'Abrigo',
+    'Medicamentos',
+    'Documentação',
+    'Trabalho',
+    'Transporte',
+    'Apoio jurídico',
+    'Apoio psicológico',
+    'Material escolar',
+  ];
+
+  const toggleTopic = (t) => {
+    setTopics((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   };
 
 
