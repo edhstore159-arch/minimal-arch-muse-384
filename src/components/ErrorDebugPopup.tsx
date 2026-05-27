@@ -19,8 +19,6 @@ type AttachedFile = {
   isImage: boolean;
 };
 
-const MAX_FILE_BYTES = Number.POSITIVE_INFINITY; // sem limite por arquivo
-const MAX_TOTAL_BYTES = Number.POSITIVE_INFINITY; // sem limite total
 const TUS_CHUNK_SIZE = 6 * 1024 * 1024;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -93,6 +91,7 @@ export const ErrorDebugPopup: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const filesRef = useRef<AttachedFile[]>([]);
 
   const [pos, setPos] = useState<{ x: number; y: number }>(() => ({
     x: typeof window !== "undefined" ? Math.max(16, window.innerWidth - 380) : 16,
@@ -175,12 +174,16 @@ export const ErrorDebugPopup: React.FC = () => {
   };
 
   useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  useEffect(() => {
     return () => {
-      files.forEach((file) => {
+      filesRef.current.forEach((file) => {
         if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
       });
     };
-  }, [files]);
+  }, []);
 
   const addFiles = useCallback(
     (fileList: FileList | File[]) => {
@@ -189,17 +192,7 @@ export const ErrorDebugPopup: React.FC = () => {
       if (incoming.length === 0) return;
 
       const newFiles: AttachedFile[] = [];
-      let currentTotal = files.reduce((acc, f) => acc + f.size, 0);
-
       for (const file of incoming) {
-        if (file.size > MAX_FILE_BYTES) {
-          setAttachError(`"${file.name}" excede ${Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB e foi ignorado.`);
-          continue;
-        }
-        if (currentTotal + file.size > MAX_TOTAL_BYTES) {
-          setAttachError(`Total excede ${Math.round(MAX_TOTAL_BYTES / 1024 / 1024)}MB. Alguns arquivos foram ignorados.`);
-          break;
-        }
         const isImage = file.type.startsWith("image/");
         newFiles.push({
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -210,14 +203,13 @@ export const ErrorDebugPopup: React.FC = () => {
           previewUrl: isImage ? URL.createObjectURL(file) : undefined,
           isImage,
         });
-        currentTotal += file.size;
       }
 
       if (newFiles.length > 0) {
         setFiles((prev) => [...prev, ...newFiles]);
       }
     },
-    [files]
+    []
   );
 
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
