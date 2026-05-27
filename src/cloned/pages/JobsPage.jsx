@@ -161,23 +161,20 @@ export default function JobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      // Buscar todos os posts
-      const response = await fetch(`${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ""}/api/posts`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Filtrar posts de trabalho
-        const workPosts = data.filter(p => p.category === 'work');
-        
-        // Separar ofertas e procuras
-        const offers = workPosts.filter(p => p.type === 'offer');
-        const seekers = workPosts.filter(p => p.type === 'need');
-        
-        setJobOffers(offers);
-        setJobSeekers(seekers);
-      }
+      const { data, error } = await supabase
+        .from('svc_posts')
+        .select('*')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const posts = (data || []).map((p) => ({
+        ...p,
+        category: p.category_slug,
+        type: p.post_type === 'need' ? 'need' : 'offer',
+      }));
+      setJobOffers(posts.filter((p) => p.type === 'offer'));
+      setJobSeekers(posts.filter((p) => p.type === 'need'));
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
@@ -185,22 +182,31 @@ export default function JobsPage() {
     }
   };
 
-  // Buscar vagas via edge function (carrega resultados DENTRO do app)
+  // Buscar vagas via API pública Remotive (CORS habilitado) — sem edge function
   const searchExternalJobs = async (query, location, page = 1) => {
     setSearchLoading(true);
     try {
       const q = (query || 'emprego').trim();
       const loc = (location || 'Brasil').trim();
 
-      const { data, error } = await supabase.functions.invoke('jobs-search', {
-        body: { query: q, location: loc },
-        // Suporte a query string também
-        method: 'POST',
-      });
+      const url = `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(q)}&limit=30`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Falha na busca');
+      const json = await res.json();
+      const jobs = (json?.jobs || []).map((j) => ({
+        id: j.id,
+        title: j.title,
+        company: j.company_name,
+        company_logo: j.company_logo,
+        location: j.candidate_required_location || loc,
+        url: j.url,
+        description: j.description,
+        salary: j.salary,
+        category: j.category,
+        publication_date: j.publication_date,
+        source: 'Remotive',
+      }));
 
-      if (error) throw error;
-
-      const jobs = Array.isArray(data?.jobs) ? data.jobs : [];
       setExternalJobs(jobs);
       setTotalJobs(jobs.length);
       setCurrentPage(page);
