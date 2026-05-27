@@ -80,7 +80,7 @@ export default function PublicProfilePage() {
               <p className="text-xs text-green-600 mt-0.5">● Online</p>
             </div>
             <Button
-              onClick={() => navigate(`/servicos/chat?with=${userId}`)}
+              onClick={() => navigate(`/servicos/chat?userId=${userId}`)}
               className="bg-green-600 hover:bg-green-700 sm:self-end"
             >
               <MessageCircle className="w-4 h-4 mr-1.5" /> Enviar mensagem
