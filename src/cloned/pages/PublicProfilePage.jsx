@@ -87,26 +87,26 @@ export default function PublicProfilePage() {
         {/* Identity */}
         <div className="bg-white">
           <div className="px-4 sm:px-8 pb-4 -mt-14 sm:-mt-16 flex flex-col sm:flex-row sm:items-end gap-4">
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 mx-auto sm:mx-0">
               <Avatar className="w-28 h-28 sm:w-32 sm:h-32 ring-4 ring-white shadow-md">
                 <AvatarImage src={profile.avatar_url} className="object-cover" />
                 <AvatarFallback className="text-2xl">{initial}</AvatarFallback>
               </Avatar>
               <span className="absolute bottom-2 right-2 w-4 h-4 rounded-full bg-green-500 ring-2 ring-white" />
             </div>
-            <div className="flex-1 min-w-0 sm:pb-2">
-              <div className="flex items-start gap-2">
-                <h2 className="font-bold text-xl sm:text-2xl truncate">{profile.display_name}</h2>
-                <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full mt-1.5 capitalize">
+            <div className="flex-1 min-w-0 sm:pb-2 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row sm:items-start items-center gap-1 sm:gap-2">
+                <h2 className="font-bold text-xl sm:text-2xl break-words max-w-full">{profile.display_name}</h2>
+                <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full sm:mt-1.5 capitalize">
                   {profile.role === 'helper' || profile.role === 'volunteer' ? 'Ofertante' : 'Particular'}
                 </span>
               </div>
               {profile.city && (
-                <p className="text-sm text-gray-600 flex items-center gap-1 mt-1"><MapPin className="w-3.5 h-3.5" />{profile.city}</p>
+                <p className="text-sm text-gray-600 flex items-center justify-center sm:justify-start gap-1 mt-1"><MapPin className="w-3.5 h-3.5" />{profile.city}</p>
               )}
               <p className="text-xs text-green-600 mt-0.5">● Online</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:self-end">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:self-end">
               <Button
                 onClick={() => navigate(`/servicos/chat?userId=${userId}`)}
                 className="bg-green-600 hover:bg-green-700"
