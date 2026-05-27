@@ -39,6 +39,66 @@ const formatRelativeDate = (iso) => {
   } catch { return ''; }
 };
 
+const PIX_KEY = '3ef11200-bebf-4d88-930c-48e84b11cfc452';
+const PIX_MERCHANT_NAME = 'JATAI TRABALHO';
+const PIX_MERCHANT_CITY = 'JATAI';
+
+const emv = (id, value) => `${id}${String(value.length).padStart(2, '0')}${value}`;
+
+const crc16 = (payload) => {
+  let crc = 0xffff;
+  for (let i = 0; i < payload.length; i += 1) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xffff;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+};
+
+const sanitizePixText = (value, max) => (value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^A-Z0-9 .,-]/gi, '')
+  .trim()
+  .slice(0, max)
+  .toUpperCase();
+
+const buildPixPayload = ({ amount, description }) => {
+  const txid = `JRT${Date.now().toString(36).toUpperCase()}`.slice(0, 25);
+  const merchantInfo = emv('00', 'BR.GOV.BCB.PIX') + emv('01', PIX_KEY) + emv('02', sanitizePixText(description || 'Pagamento de serviço', 40));
+  const additionalData = emv('05', txid);
+  const base = [
+    emv('00', '01'),
+    emv('26', merchantInfo),
+    emv('52', '0000'),
+    emv('53', '986'),
+    emv('54', amount.toFixed(2)),
+    emv('58', 'BR'),
+    emv('59', sanitizePixText(PIX_MERCHANT_NAME, 25)),
+    emv('60', sanitizePixText(PIX_MERCHANT_CITY, 15)),
+    emv('62', additionalData),
+  ].join('');
+  const payload = `${base}6304`;
+  return { brcode: `${payload}${crc16(payload)}`, txid };
+};
+
+const getQrUrl = (brcode) => `https://api.qrserver.com/v1/create-qr-code/?size=360x360&ecc=M&qzone=3&data=${encodeURIComponent(brcode)}`;
+
+const copyToClipboard = async (text) => {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+  const input = document.createElement('textarea');
+  input.value = text;
+  input.setAttribute('readonly', '');
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('copy');
+  document.body.removeChild(input);
+};
+
 export default function DirectChatPage() {
   const { userId } = useParams();
   const { user: currentUser, token } = useContext(AuthContext);
@@ -150,7 +210,10 @@ export default function DirectChatPage() {
       await sendSystemMessage('❌ Solicitação recusada. Obrigado pelo contato.');
       toast.success('Solicitação recusada');
       setActiveModal(null);
-    } catch { toast.error('Erro ao recusar'); }
+    } catch (error) {
+      console.error('[chat] erro ao recusar:', error);
+      toast.error(error?.message || 'Erro ao recusar');
+    }
     finally { setLoadingAction(false); }
   };
 
@@ -161,14 +224,20 @@ export default function DirectChatPage() {
     }
     setLoadingAction(true);
     try {
-      const d = new Date(`${scheduleDate}T${scheduleTime}`);
-      const formatted = d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+      const [year, month, day] = scheduleDate.split('-');
+      const [hour, minute] = scheduleTime.split(':');
+      const d = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+      if (Number.isNaN(d.getTime())) throw new Error('Data ou hora inválida');
+      const formatted = d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const msg = `📅 Agendamento proposto: ${formatted}${scheduleNote ? `\n📝 ${scheduleNote}` : ''}`;
       await sendSystemMessage(msg);
       toast.success('Agendamento enviado!');
       setActiveModal(null);
       setScheduleDate(''); setScheduleTime(''); setScheduleNote('');
-    } catch { toast.error('Erro ao agendar'); }
+    } catch (error) {
+      console.error('[chat] erro ao agendar:', error);
+      toast.error(error?.message || 'Erro ao agendar');
+    }
     finally { setLoadingAction(false); }
   };
 
@@ -180,30 +249,22 @@ export default function DirectChatPage() {
     }
     setLoadingAction(true);
     try {
-      const r = await fetch(`${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ""}/api/payments/pix-charge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          amount,
-          to_user_id: userId,
-          description: payDescription || `Pagamento de serviço - ${otherUser?.name || ''}`,
-        }),
-      });
-      if (r.ok) {
-        const data = await r.json();
-        setPixCharge(data);
-        // Auto-envia mensagem com QR
-        const summary = `💳 Cobrança PIX gerada\nValor: R$ ${amount.toFixed(2).replace('.', ',')}\n${payDescription || 'Pagamento de serviço'}\n\nPIX Copia e Cola:\n${data.brcode}`;
-        await sendSystemMessage(summary);
-        toast.success('PIX enviado no chat!');
-      } else {
-        toast.error('Erro ao gerar PIX');
-      }
-    } catch { toast.error('Erro de conexão'); }
+      const description = payDescription || 'Pagamento de serviço';
+      const { brcode, txid } = buildPixPayload({ amount, description });
+      const data = { brcode, txid, qr_code_base64: getQrUrl(brcode) };
+      setPixCharge(data);
+      const summary = `💳 Cobrança PIX gerada\nValor: R$ ${amount.toFixed(2).replace('.', ',')}\n${description}\n\nPIX Copia e Cola:\n${brcode}`;
+      await sendSystemMessage(summary);
+      toast.success('PIX enviado no chat!');
+    } catch (error) {
+      console.error('[chat] erro ao gerar PIX:', error);
+      toast.error(error?.message || 'Erro ao gerar PIX');
+    }
     finally { setLoadingAction(false); }
   };
 
   const sendSystemMessage = async (text) => {
+    if (!userId) throw new Error('Conversa inválida');
     const sent = await sendChatMessage(userId, text, currentUser?.id);
     setMessages((prev) => [...prev, sent]);
     fetchMessages();
@@ -969,7 +1030,7 @@ export default function DirectChatPage() {
               <p className="font-semibold text-green-700 mt-3 text-lg">R$ {parseFloat(payAmount.replace(',', '.')).toFixed(2).replace('.', ',')}</p>
               <p className="text-xs text-gray-500 mb-3">{payDescription || 'Pagamento de serviço'}</p>
               <button
-                onClick={() => { navigator.clipboard.writeText(pixCharge.brcode); toast.success('Copiado!'); }}
+                onClick={() => { copyToClipboard(pixCharge.brcode); toast.success('Copiado!'); }}
                 data-testid="pix-charge-copy"
                 className="w-full h-11 rounded-full bg-gray-900 text-white font-medium flex items-center justify-center gap-2 hover:bg-black"
               ><Copy size={16} /> Copiar PIX Copia e Cola</button>
@@ -1131,7 +1192,7 @@ const ModalShell = ({ title, children, onClose }) => (
     data-testid="action-modal"
   >
     <div
-      className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
+      className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl p-6 max-h-[90dvh] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-4">
