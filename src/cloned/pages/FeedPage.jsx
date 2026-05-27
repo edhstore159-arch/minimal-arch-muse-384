@@ -276,53 +276,43 @@ export default function FeedPage() {
 
   const fetchPosts = async () => {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const authed = !!session?.session;
+      const { data: svc, error } = await supabase
+        .from('svc_posts')
+        .select('*')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) console.warn('svc_posts fetch error', error);
 
-      // 1) local posts always shown
-      const local = loadLocalPosts();
-
-      // 2) supabase posts when authenticated
-      let remote = [];
-      if (authed) {
-        const { data: svc } = await supabase
-          .from('svc_posts')
-          .select('*')
-          .eq('status', 'open')
-          .order('created_at', { ascending: false })
-          .limit(50);
-        const ids = Array.from(new Set((svc ?? []).map(p => p.user_id)));
-        let profMap = {};
-        if (ids.length) {
-          const { data: profs } = await supabase
-            .from('svc_profiles')
-            .select('user_id, display_name, avatar_url')
-            .in('user_id', ids);
-          (profs ?? []).forEach(p => { profMap[p.user_id] = p; });
-        }
-        remote = (svc ?? []).map(p => ({
-          id: p.id,
-          user_id: p.user_id,
-          type: p.post_type === 'volunteer' ? 'offer' : 'need',
-          category: p.category_slug || 'social',
-          title: p.title,
-          description: p.description,
-          images: p.photos || [],
-          videos: [],
-          budget: p.budget_range,
-          likes_count: 0,
-          comments_count: 0,
-          created_at: p.created_at,
-          location: { address: p.address || 'Paris', city: 'Paris', lat: p.lat, lng: p.lng },
-          user: {
-            name: profMap[p.user_id]?.display_name || 'Usuário',
-            avatar: profMap[p.user_id]?.avatar_url,
-          },
-        }));
+      const ids = Array.from(new Set((svc ?? []).map(p => p.user_id)));
+      let profMap = {};
+      if (ids.length) {
+        const { data: profs } = await supabase
+          .from('svc_profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', ids);
+        (profs ?? []).forEach(p => { profMap[p.user_id] = p; });
       }
-
-      const combined = [...local, ...remote];
-      setPosts(combined.length ? combined : PREVIEW_POSTS);
+      const remote = (svc ?? []).map(p => ({
+        id: p.id,
+        user_id: p.user_id,
+        type: p.post_type === 'volunteer' ? 'offer' : 'need',
+        category: p.category_slug || 'social',
+        title: p.title,
+        description: p.description,
+        images: p.photos || [],
+        videos: [],
+        budget: p.budget_range,
+        likes_count: 0,
+        comments_count: 0,
+        created_at: p.created_at,
+        location: { address: p.address || 'Paris', city: 'Paris', lat: p.lat, lng: p.lng },
+        user: {
+          name: profMap[p.user_id]?.display_name || 'Usuário',
+          avatar: profMap[p.user_id]?.avatar_url,
+        },
+      }));
+      setPosts(remote.length ? remote : PREVIEW_POSTS);
     } catch (e) {
       console.error('Failed to fetch posts', e);
       const local = loadLocalPosts();
@@ -401,6 +391,34 @@ export default function FeedPage() {
   const removePhoto = (id) => setSelectedPhotos((prev) => prev.filter((p) => p.id !== id));
   const removeVideo = (id) => setSelectedVideos((prev) => prev.filter((v) => v.id !== id));
 
+  const dataUrlToBlob = (dataUrl) => {
+    const [meta, b64] = dataUrl.split(',');
+    const mime = /data:([^;]+);/.exec(meta)?.[1] || 'image/jpeg';
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+  };
+
+  const uploadPhotosToStorage = async (uid, photos) => {
+    const urls = [];
+    for (const p of photos) {
+      if (!p?.dataUrl) continue;
+      try {
+        const blob = dataUrlToBlob(p.dataUrl);
+        const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+        const path = `${uid}/posts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('svc-photos').upload(path, blob, {
+          contentType: blob.type, upsert: false,
+        });
+        if (upErr) { console.warn('photo upload failed', upErr); continue; }
+        const { data } = supabase.storage.from('svc-photos').getPublicUrl(path);
+        if (data?.publicUrl) urls.push(data.publicUrl);
+      } catch (e) { console.warn('photo upload error', e); }
+    }
+    return urls;
+  };
+
   const handlePostSubmit = async () => {
     if (!postDescription.trim()) {
       toast.error('Adicione uma descrição');
@@ -408,51 +426,46 @@ export default function FeedPage() {
     }
     setLoadingPost(true);
     try {
-      const newPost = {
-        id: `local-${Date.now()}`,
-        user_id: user?.id || 'local-user',
-        type: modalMode,
-        category: postCategory,
+      // Require auth so post is visible to everyone
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session) {
+        toast.error('Faça login para publicar');
+        setLoadingPost(false);
+        navigate('/servicos/auth');
+        return;
+      }
+      const uid = session.session.user.id;
+
+      // Upload photos to public storage so other users can see them
+      const uploadedUrls = await uploadPhotosToStorage(uid, selectedPhotos);
+
+      const insertPayload = {
+        user_id: uid,
         title: postDescription.slice(0, 60),
         description: postDescription,
-        images: selectedPhotos.map((p) => p.dataUrl),
-        videos: selectedVideos.map((v) => v.dataUrl),
-        budget: postBudget,
-        likes_count: 0,
-        comments_count: 0,
-        created_at: new Date().toISOString(),
-        location: { address: postAddress, city: 'Paris', lat: postCoords?.lat, lng: postCoords?.lng },
-        user: { name: user?.name || 'Você', avatar: user?.avatar },
+        photos: uploadedUrls,
+        budget_range: postBudget || null,
+        category_slug: postCategory || null,
+        address: postAddress || null,
+        lat: postCoords?.lat ?? null,
+        lng: postCoords?.lng ?? null,
+        post_type: modalMode === 'offer' ? 'volunteer' : 'paid',
+        status: 'open',
       };
-
-      // Try to persist to Supabase if logged in
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session) {
-        const uid = session.session.user.id;
-        const { error } = await supabase.from('svc_posts').insert({
-          user_id: uid,
-          title: newPost.title,
-          description: newPost.description,
-          photos: newPost.images.filter(u => u && !u.startsWith('data:')),
-          budget_range: postBudget || null,
-          category_slug: postCategory || null,
-          address: postAddress || null,
-          lat: postCoords?.lat ?? null,
-          lng: postCoords?.lng ?? null,
-          post_type: modalMode === 'offer' ? 'volunteer' : 'paid',
-          status: 'open',
-        });
-        if (error) console.warn('svc_posts insert failed, keeping local only:', error.message);
+      const { error } = await supabase.from('svc_posts').insert(insertPayload);
+      if (error) {
+        console.error('svc_posts insert failed', error);
+        toast.error('Erro ao publicar: ' + error.message);
+        setLoadingPost(false);
+        return;
       }
-
-      // Optimistic local persistence so the post always appears
-      const local = loadLocalPosts();
-      const updated = [newPost, ...local];
-      saveLocalPosts(updated);
-      setPosts((prev) => [newPost, ...prev]);
 
       toast.success(modalMode === 'need' ? 'Sua demanda foi publicada!' : 'Seu serviço foi publicado!');
       setShowCreateModal(false);
+      setPostDescription('');
+      setSelectedPhotos([]);
+      setSelectedVideos([]);
+      await fetchPosts();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
       console.error(e);
