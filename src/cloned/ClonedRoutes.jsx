@@ -22,6 +22,7 @@ import JobsPage from './pages/JobsPage';
 import HousingPage from './pages/HousingPage';
 import SubscriptionPage from './pages/SubscriptionPage';
 import PublicProfilePage from './pages/PublicProfilePage';
+import CallPage from './pages/CallPage';
 import { AuthContext } from './ClonedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, normalizeAuthUser } from './lib/authProfile';
@@ -134,6 +135,7 @@ export function clonedRoutes(user) {
     <Route key="cloned-profile" path="/profile" element={<ProfilePage />} />,
     <Route key="cloned-servicos-profile" path="/servicos/perfil" element={<ProfilePage />} />,
     <Route key="cloned-public-profile" path="/u/:userId" element={<PublicProfilePage />} />,
+    <Route key="cloned-call" path="/call/:room" element={<CallPage />} />,
     <Route key="cloned-admin" path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/home" />} />,
     <Route key="cloned-servicos-admin" path="/servicos/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/home" />} />,
     <Route key="cloned-direct-chat" path="/direct-chat/:userId" element={<DirectChatPage />} />,

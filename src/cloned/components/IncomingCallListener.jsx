@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from '../ClonedAuthContext';
 import { Phone, PhoneOff, Video } from 'lucide-react';
@@ -9,6 +10,7 @@ import { Phone, PhoneOff, Video } from 'lucide-react';
  */
 export default function IncomingCallListener() {
   const { user } = useContext(AuthContext) || {};
+  const navigate = useNavigate();
   const [incoming, setIncoming] = useState(null);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export default function IncomingCallListener() {
   const accept = async () => {
     try {
       await supabase.from('calls').update({ status: 'accepted' }).eq('id', incoming.id);
-      window.open(`https://meet.jit.si/${incoming.room}`, '_blank', 'noopener');
+      navigate(`/call/${incoming.room}?kind=${incoming.kind || 'video'}`);
     } catch (e) { console.error('[call] accept failed', e); }
     setIncoming(null);
   };
