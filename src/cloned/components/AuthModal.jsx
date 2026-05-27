@@ -280,33 +280,30 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
               <ArrowLeft className="w-5 h-5" />
             </button>
 
-            {/* role toggle (compacto) */}
-            <div className="flex gap-2 mt-2 mb-4">
-              <button
-                type="button"
-                onClick={() => setRole('migrant')}
-                className={`flex-1 text-xs font-medium py-1.5 rounded-full border transition ${
-                  role === 'migrant'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-                data-testid="role-procuro"
-              >
-                Procuro serviço
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('helper')}
-                className={`flex-1 text-xs font-medium py-1.5 rounded-full border transition ${
-                  role === 'helper'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-                data-testid="role-ofereco"
-              >
-                Ofereço serviço
-              </button>
+            {/* role toggle */}
+            <div className="grid grid-cols-2 gap-2 mt-2 mb-4">
+              {[
+                { key: 'migrant', label: 'Procuro serviço' },
+                { key: 'helper', label: 'Ofereço serviço' },
+                { key: 'volunteer', label: 'Sou voluntário' },
+                { key: 'needs_help', label: 'Preciso de ajuda' },
+              ].map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => { setRole(r.key); setTopics([]); }}
+                  className={`text-xs font-medium py-1.5 rounded-full border transition ${
+                    role === r.key
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                  data-testid={`role-${r.key}`}
+                >
+                  {r.label}
+                </button>
+              ))}
             </div>
+
 
             {/* avatar (opcional, discreto) */}
             <div className="flex justify-center mb-4">
