@@ -174,8 +174,18 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background pb-20" data-testid="profile-page">
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 glassmorphism">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-heading font-bold text-textPrimary">{t('profile')}</h1>
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            size="sm"
+            className="rounded-full text-red-600 border-red-200 hover:bg-red-50"
+            data-testid="logout-button-top"
+          >
+            <LogOut size={16} className="mr-1.5" />
+            Sair
+          </Button>
         </div>
       </div>
 
