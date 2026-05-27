@@ -1,18 +1,22 @@
 services:
   - type: web
-    name: igma-joy-pixels
-    runtime: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    healthCheckPath: /api
-    autoDeploy: true
+    name: jatai-app
+    runtime: static
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_SUPABASE_URL
         value: https://kzlxysxvvlupjtrmxqmb.supabase.co
-      - key: VITE_SUPABASE_PROJECT_ID
-        value: kzlxysxvvlupjtrmxqmb
       - key: VITE_SUPABASE_PUBLISHABLE_KEY
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6bHh5c3h2dmx1cGp0cm14cW1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4OTM3MDUsImV4cCI6MjA5MjQ2OTcwNX0.iU5enYnsJExOHtbwpJKQ4bMGZS8hzQIURi6T2y2EQVM
-      - key: VITE_GOOGLE_MAPS_API_KEY
-        sync: false
+      - key: VITE_SUPABASE_PROJECT_ID
+        value: kzlxysxvvlupjtrmxqmb
