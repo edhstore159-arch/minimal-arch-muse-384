@@ -347,6 +347,14 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
               />
 
               <input
+                value={serviceWanted}
+                onChange={(e) => setServiceWanted(e.target.value)}
+                placeholder={role === 'migrant' ? 'Serviço que procura (ex: pedreiro, garçom)' : 'Serviço que oferece (ex: eletricista)'}
+                className="w-full h-11 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                data-testid="signup-service-wanted"
+              />
+
+              <input
                 required
                 type="email"
                 value={email}
