@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import * as tus from "tus-js-client";
 import { supabase } from "@/integrations/supabase/client";
 
 const PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE O ERRO, EXECUTE A TAREFA):";
@@ -13,20 +14,63 @@ type AttachedFile = {
   name: string;
   type: string;
   size: number;
-  dataUrl: string; // base64 data URL (usado só para preview de imagens)
+  file: File;
+  previewUrl?: string;
   isImage: boolean;
 };
 
-const MAX_FILE_BYTES = Number.POSITIVE_INFINITY; // sem limite por arquivo
-const MAX_TOTAL_BYTES = Number.POSITIVE_INFINITY; // sem limite total
+const TUS_CHUNK_SIZE = 6 * 1024 * 1024;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
-const fileToDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
+const sanitizePathSegment = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "arquivo";
+
+const uploadLargeFile = async (
+  file: File,
+  path: string,
+  onProgress: (percent: number) => void
+): Promise<void> => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Sessão expirada. Entre novamente para enviar arquivos.");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
+      chunkSize: TUS_CHUNK_SIZE,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        "x-upsert": "false",
+      },
+      metadata: {
+        bucketName: "debug-uploads",
+        objectName: path,
+        contentType: file.type || "application/octet-stream",
+        cacheControl: "3600",
+      },
+      onError: reject,
+      onProgress: (bytesUploaded, bytesTotal) => {
+        onProgress(bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0);
+      },
+      onSuccess: () => resolve(),
+    });
+
+    upload.start();
   });
+};
 
 /**
  * ErrorDebugPopup
@@ -45,6 +89,9 @@ export const ErrorDebugPopup: React.FC = () => {
   const [attachError, setAttachError] = useState<string | null>(null);
   const [minimized, setMinimized] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const filesRef = useRef<AttachedFile[]>([]);
 
   const [pos, setPos] = useState<{ x: number; y: number }>(() => ({
     x: typeof window !== "undefined" ? Math.max(16, window.innerWidth - 380) : 16,
@@ -126,50 +173,43 @@ export const ErrorDebugPopup: React.FC = () => {
     e.stopPropagation();
   };
 
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      filesRef.current.forEach((file) => {
+        if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
+      });
+    };
+  }, []);
+
   const addFiles = useCallback(
-    async (fileList: FileList | File[]) => {
+    (fileList: FileList | File[]) => {
       setAttachError(null);
       const incoming = Array.from(fileList);
       if (incoming.length === 0) return;
 
       const newFiles: AttachedFile[] = [];
-      let currentTotal = files.reduce((acc, f) => acc + f.size, 0);
-
       for (const file of incoming) {
-        if (file.size > MAX_FILE_BYTES) {
-          setAttachError(`"${file.name}" excede ${Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB e foi ignorado.`);
-          continue;
-        }
-        if (currentTotal + file.size > MAX_TOTAL_BYTES) {
-          setAttachError(`Total excede ${Math.round(MAX_TOTAL_BYTES / 1024 / 1024)}MB. Alguns arquivos foram ignorados.`);
-          break;
-        }
         const isImage = file.type.startsWith("image/");
-        try {
-          const dataUrl = isImage ? await fileToDataUrl(file) : "";
-          newFiles.push({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            name: file.name,
-            type: file.type || "application/octet-stream",
-            size: file.size,
-            dataUrl,
-            isImage,
-          });
-          currentTotal += file.size;
-          // Para não-imagens, guardamos o File via closure no upload — recriamos abaixo
-          if (!isImage) {
-            (newFiles[newFiles.length - 1] as AttachedFile & { _file?: File })._file = file;
-          }
-        } catch {
-          setAttachError(`Falha ao ler "${file.name}".`);
-        }
+        newFiles.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          file,
+          previewUrl: isImage ? URL.createObjectURL(file) : undefined,
+          isImage,
+        });
       }
 
       if (newFiles.length > 0) {
         setFiles((prev) => [...prev, ...newFiles]);
       }
     },
-    [files]
+    []
   );
 
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,18 +248,11 @@ export const ErrorDebugPopup: React.FC = () => {
   };
 
   const removeFile = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
-  };
-
-  const [uploading, setUploading] = useState(false);
-
-  const dataUrlToBlob = (dataUrl: string): Blob => {
-    const [header, base64] = dataUrl.split(",");
-    const mime = header.match(/data:(.*?);base64/)?.[1] || "application/octet-stream";
-    const bin = atob(base64);
-    const arr = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    return new Blob([arr], { type: mime });
+    setFiles((prev) => {
+      const target = prev.find((f) => f.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((f) => f.id !== id);
+    });
   };
 
   const fireError = useCallback(async () => {
@@ -230,30 +263,30 @@ export const ErrorDebugPopup: React.FC = () => {
 
     if (files.length > 0) {
       setUploading(true);
+      setUploadProgress("Preparando upload...");
       const uploadedUrls: { name: string; url: string; type: string }[] = [];
       try {
-        for (const f of files) {
-          const fileWithBlob = f as AttachedFile & { _file?: File };
-          const body: Blob | File = f.isImage ? dataUrlToBlob(f.dataUrl) : (fileWithBlob._file as File);
-          const ext = f.name.split(".").pop() || "bin";
-          const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-          const { error: upErr } = await supabase.storage
-            .from("debug-uploads")
-            .upload(path, body, { contentType: f.type, upsert: false });
-          if (upErr) {
-            setAttachError(`Falha no upload de "${f.name}": ${upErr.message}`);
-            setUploading(false);
-            return;
-          }
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          const ext = sanitizePathSegment(f.name.split(".").pop() || "bin");
+          const baseName = sanitizePathSegment(f.name.replace(/\.[^/.]+$/, ""));
+          const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${baseName}.${ext}`;
+          setUploadProgress(`Enviando ${i + 1}/${files.length}: 0%`);
+          await uploadLargeFile(f.file, path, (percent) => {
+            setUploadProgress(`Enviando ${i + 1}/${files.length}: ${percent}%`);
+          });
           const { data: pub } = supabase.storage.from("debug-uploads").getPublicUrl(path);
           uploadedUrls.push({ name: f.name, url: pub.publicUrl, type: f.type });
         }
       } catch (e) {
         setAttachError(`Erro inesperado no upload: ${(e as Error).message}`);
+        setUploadProgress(null);
         setUploading(false);
         return;
+      } finally {
+        setUploadProgress(null);
+        setUploading(false);
       }
-      setUploading(false);
 
       message += `\n\n---\n${ATTACHMENT_INSTRUCTIONS}\n\nARQUIVOS ANEXADOS (${uploadedUrls.length}):\n`;
       uploadedUrls.forEach((f, idx) => {
@@ -379,7 +412,7 @@ export const ErrorDebugPopup: React.FC = () => {
                   <div key={f.id} className="relative group">
                     {f.isImage ? (
                       <img
-                        src={f.dataUrl}
+                        src={f.previewUrl}
                         alt={f.name}
                         className="h-14 w-14 object-cover rounded border border-border"
                       />
@@ -411,6 +444,9 @@ export const ErrorDebugPopup: React.FC = () => {
 
             {attachError && (
               <p className="text-[10px] text-destructive">{attachError}</p>
+            )}
+            {uploadProgress && (
+              <p className="text-[10px] text-muted-foreground">{uploadProgress}</p>
             )}
           </div>
 
