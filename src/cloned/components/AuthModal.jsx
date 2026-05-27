@@ -83,11 +83,14 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
   const setMode = (m) => onModeChange?.(m);
 
   const resetSignup = () => {
-    setName('');
+    setFirstName('');
+    setLastName('');
     setLocation('');
+    setMobile('');
     setAvatarFile(null);
     setAvatarPreview(null);
   };
+
 
   const handleAvatarPick = (e) => {
     const f = e.target.files?.[0];
