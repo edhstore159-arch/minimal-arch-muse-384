@@ -666,7 +666,7 @@ export default function FeedPage() {
           </div>
 
           {/* Right Sidebar - Post Creation + Monetization */}
-          <div className="lg:col-span-5 space-y-3">
+          <div className="hidden lg:block lg:col-span-5 space-y-3">
             <Card id="post-create-card" className="p-4 bg-gray-50 border border-gray-200">
               <h3 className="font-medium text-sm mb-3">Olá, {user?.name?.split(' ')[0] || ''}</h3>
 
