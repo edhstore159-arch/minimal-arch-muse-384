@@ -495,7 +495,7 @@ export default function DirectChatPage() {
 
           <nav className="flex items-center gap-1">
             <NavBtn label="Acolhida" icon={<HomeIcon size={18} />} onClick={() => navigate('/home')} />
-            <NavBtn label="Ofertantes" icon={<UsersIcon size={18} />} onClick={() => navigate('/volunteers')} />
+            <NavBtn label="Voluntários" icon={<UsersIcon size={18} />} onClick={() => navigate('/volunteers')} />
             <button
               onClick={() => navigate('/home')}
               data-testid="nav-demanda"
@@ -1124,7 +1124,7 @@ export default function DirectChatPage() {
       {/* ===== MOBILE BOTTOM NAV (only mobile) ===== */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-2 py-2 flex items-end justify-around" data-testid="mobile-bottom-nav">
         <MobileNavItem icon={<HomeIcon size={22} />} label="Início" onClick={() => navigate('/home')} testid="mob-nav-home" />
-        <MobileNavItem icon={<UsersIcon size={22} />} label="Ofertantes" onClick={() => navigate('/volunteers')} testid="mob-nav-offer" />
+        <MobileNavItem icon={<UsersIcon size={22} />} label="Voluntários" onClick={() => navigate('/volunteers')} testid="mob-nav-offer" />
         <button
           onClick={() => navigate('/home')}
           data-testid="mob-nav-demande"
