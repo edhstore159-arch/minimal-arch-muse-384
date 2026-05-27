@@ -140,7 +140,10 @@ const PostCard = ({ post, onChat }) => {
                     <img
                       src={img}
                       alt={`Mídia ${idx + 1}`}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
+                      style={{ imageRendering: 'auto' }}
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   </div>
