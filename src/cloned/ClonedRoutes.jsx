@@ -135,6 +135,7 @@ export function clonedRoutes(user) {
     <Route key="cloned-profile" path="/profile" element={<ProfilePage />} />,
     <Route key="cloned-servicos-profile" path="/servicos/perfil" element={<ProfilePage />} />,
     <Route key="cloned-public-profile" path="/u/:userId" element={<PublicProfilePage />} />,
+    <Route key="cloned-call" path="/call/:room" element={<CallPage />} />,
     <Route key="cloned-admin" path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/home" />} />,
     <Route key="cloned-servicos-admin" path="/servicos/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/home" />} />,
     <Route key="cloned-direct-chat" path="/direct-chat/:userId" element={<DirectChatPage />} />,
