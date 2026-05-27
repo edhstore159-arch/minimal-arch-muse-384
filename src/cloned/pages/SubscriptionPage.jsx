@@ -11,7 +11,7 @@ import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { getStableDefaultAvatarUrl } from '../lib/authProfile';
 import { supabase } from '@/integrations/supabase/client';
-import paymentPixImg from '@/assets/payment-pix.png';
+
 
 const NAV_DESKTOP = [
   { label: 'Acolhida', icon: HomeIcon, route: '/home' },
