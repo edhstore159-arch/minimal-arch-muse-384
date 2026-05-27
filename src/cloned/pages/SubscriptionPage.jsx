@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const NAV_DESKTOP = [
   { label: 'Acolhida', icon: HomeIcon, route: '/home' },
-  { label: 'Ofertantes', icon: UsersIcon, route: '/volunteers' },
+  { label: 'Voluntários', icon: UsersIcon, route: '/volunteers' },
   { label: 'Assinatura', icon: BarChart3, route: '/assinatura', active: true },
   { label: 'Mensagens', icon: MessageSquare, route: '/chat' },
 ];
@@ -512,7 +512,7 @@ export default function SubscriptionPage() {
         </button>
         <button onClick={() => navigate('/volunteers')} className="flex flex-col items-center gap-0.5 px-2 py-1 min-w-[60px] text-gray-500">
           <UsersIcon size={22} />
-          <span className="text-[11px] font-medium">Ofertantes</span>
+          <span className="text-[11px] font-medium">Voluntários</span>
         </button>
         <button onClick={() => navigate('/home')} className="flex flex-col items-center -mt-5">
           <div className="w-12 h-12 rounded-full bg-[#16a34a] text-white grid place-items-center shadow-md shadow-green-500/40">
