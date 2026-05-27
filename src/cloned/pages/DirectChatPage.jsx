@@ -968,14 +968,44 @@ export default function DirectChatPage() {
       )}
 
       {activeModal === 'more' && (
-        <ModalShell title="Mais opções" onClose={() => setActiveModal(null)}>
-          <div className="space-y-1">
-            <MoreOption icon={<StarIcon size={18} className="text-amber-500" />} label="Avaliar este profissional" onClick={openRating} />
+        <ModalShell title="Sua transação com confiança" onClose={() => setActiveModal(null)}>
+          <p className="text-xs text-gray-600 mb-5 leading-relaxed">
+            Use nossas ferramentas para acompanhar toda a sua transação. E o melhor: é gratuito!
+          </p>
+
+          <h4 className="text-sm font-bold text-gray-900 mb-3">Prestação</h4>
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            <TileOption icon={<ThumbsUp size={22} className="text-blue-600" />} bg="bg-blue-50" label="Boas práticas" onClick={() => { setActiveModal(null); toast.info('Boas práticas em breve'); }} />
+            <TileOption icon={<Calendar size={22} className="text-blue-600" />} bg="bg-blue-50" label="Encontro" onClick={() => setActiveModal('schedule')} />
+            <TileOption icon={<FileText size={22} className="text-blue-600" />} bg="bg-blue-50" label="Contrato" onClick={() => { setActiveModal(null); toast.info('Contrato em breve'); }} />
+            <TileOption icon={<ClipboardList size={22} className="text-blue-600" />} bg="bg-blue-50" label="Vistoria" onClick={() => { setActiveModal(null); toast.info('Vistoria em breve'); }} />
+          </div>
+
+          <h4 className="text-sm font-bold text-gray-900 mb-3">Orçamentos e faturas</h4>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <TileOption icon={<FileText size={22} className="text-purple-600" />} bg="bg-purple-50" label="Fazer orçamento" onClick={() => { setActiveModal(null); toast.info('Orçamento em breve'); }} />
+            <TileOption icon={<Receipt size={22} className="text-purple-600" />} bg="bg-purple-50" label="Fazer fatura" onClick={() => { setActiveModal(null); toast.info('Fatura em breve'); }} />
+            <TileOption icon={<History size={22} className="text-purple-600" />} bg="bg-purple-50" label="Histórico" onClick={() => { setActiveModal(null); toast.info('Histórico em breve'); }} />
+          </div>
+
+          <h4 className="text-sm font-bold text-gray-900 mb-3">Pagamento</h4>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <TileOption icon={<Wallet size={22} className="text-emerald-600" />} bg="bg-emerald-50" label="Pagar" onClick={() => setActiveModal('payment')} />
+            <TileOption icon={<CreditCard size={22} className="text-emerald-600" />} bg="bg-emerald-50" label="Cobrar" onClick={() => setActiveModal('payment')} />
+            <TileOption icon={<Settings size={22} className="text-emerald-600" />} bg="bg-emerald-50" label="Gerenciar" onClick={() => { setActiveModal(null); toast.info('Gerenciar pagamentos em breve'); }} />
+          </div>
+
+          <h4 className="text-sm font-bold text-gray-900 mb-3">Avaliação</h4>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <TileOption icon={<StarIcon size={22} className="text-brand-coral" />} bg="bg-orange-50" label="Avaliar" onClick={openRating} />
+            <TileOption icon={<StarIcon size={22} className="text-brand-coral" />} bg="bg-orange-50" label="Recomendar" onClick={() => { setActiveModal(null); toast.info('Recomendar em breve'); }} />
+          </div>
+
+          <div className="border-t border-gray-100 pt-4 space-y-1">
             <MoreOption icon={<Share2 size={18} className="text-blue-500" />} label="Compartilhar conversa" onClick={handleShareConversation} />
-            <MoreOption icon={<Pin size={18} className="text-orange-500" />} label={isPinned ? 'Desafixar conversa' : 'Fixar conversa'} onClick={togglePin} />
+            <MoreOption icon={<Pin size={18} className="text-brand-coral" />} label={isPinned ? 'Desafixar conversa' : 'Fixar conversa'} onClick={togglePin} />
             <MoreOption icon={<Archive size={18} className="text-gray-500" />} label={isArchived ? 'Desarquivar conversa' : 'Arquivar conversa'} onClick={toggleArchive} />
-            <div className="my-2 border-t border-gray-100" />
-            <MoreOption icon={<Flag size={18} className="text-red-500" />} label="Reportar usuário" danger onClick={handleReport} />
+            <MoreOption icon={<Flag size={18} className="text-red-500" />} label="Denunciar usuário" danger onClick={handleReport} />
             <MoreOption icon={<Ban size={18} className="text-red-500" />} label={isBlocked ? 'Desbloquear usuário' : 'Bloquear usuário'} danger onClick={toggleBlock} />
           </div>
         </ModalShell>
