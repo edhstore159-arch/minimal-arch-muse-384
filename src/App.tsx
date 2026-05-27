@@ -10,7 +10,16 @@ import Admin from "./pages/Admin";
 import MyEvents from "./pages/MyEvents";
 import CreateEvent from "./pages/CreateEvent";
 import EditEvent from "./pages/EditEvent";
+import Social from "./pages/Social";
 import NotFound from "./pages/NotFound";
+import ServicosLanding from "./pages/servicos/Landing";
+import ServicosAuth from "./pages/servicos/Auth";
+import ServicosFeed from "./pages/servicos/Feed";
+import ServicosChat from "./pages/servicos/Chat";
+import ServicosOfertantes from "./pages/servicos/Ofertantes";
+import ServicosAssinatura from "./pages/servicos/Assinatura";
+import ServicosPerfil from "./pages/servicos/Perfil";
+import ServicosAdmin from "./pages/servicos/Admin";
 import { DebugErrorThrower } from "./components/DebugErrorThrower";
 import { ErrorDebugPopup } from "./components/ErrorDebugPopup";
 import { ClonedAuthProvider, clonedRoutes } from "./cloned/ClonedRoutes";
@@ -27,8 +36,18 @@ const AppRoutes = () => {
       <Route path="/event/:id/edit" element={<EditEvent />} />
       <Route path="/my-events" element={<MyEvents />} />
       <Route path="/create-event" element={<CreateEvent />} />
+      <Route path="/social" element={<Social />} />
+      {/* Rotas antigas mantidas em fallback para não quebrar links já existentes. */}
       <Route path="/legacy/auth" element={<Auth />} />
       <Route path="/legacy/admin" element={<Admin />} />
+      <Route path="/legacy/servicos" element={<ServicosLanding />} />
+      <Route path="/legacy/servicos/auth" element={<ServicosAuth />} />
+      <Route path="/legacy/servicos/home" element={<ServicosFeed />} />
+      <Route path="/legacy/servicos/chat" element={<ServicosChat />} />
+      <Route path="/legacy/servicos/ofertantes" element={<ServicosOfertantes />} />
+      <Route path="/legacy/servicos/assinatura" element={<ServicosAssinatura />} />
+      <Route path="/legacy/servicos/perfil" element={<ServicosPerfil />} />
+      <Route path="/legacy/servicos/admin" element={<ServicosAdmin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
