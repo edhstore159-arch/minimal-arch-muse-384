@@ -106,6 +106,253 @@ export type Database = {
         }
         Relationships: []
       }
+      svc_categories: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      svc_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: []
+      }
+      svc_messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          lat: number | null
+          lng: number | null
+          media_type: string | null
+          media_url: string | null
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          media_type?: string | null
+          media_url?: string | null
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          media_type?: string | null
+          media_url?: string | null
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "svc_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "svc_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      svc_posts: {
+        Row: {
+          address: string | null
+          budget_range: string | null
+          category_slug: string | null
+          created_at: string
+          description: string
+          id: string
+          lat: number | null
+          lng: number | null
+          photos: string[]
+          post_type: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          budget_range?: string | null
+          category_slug?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          photos?: string[]
+          post_type?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          budget_range?: string | null
+          category_slug?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          photos?: string[]
+          post_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "svc_posts_category_slug_fkey"
+            columns: ["category_slug"]
+            isOneToOne: false
+            referencedRelation: "svc_categories"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      svc_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          categories: string[]
+          city: string | null
+          created_at: string
+          display_name: string
+          id: string
+          lat: number | null
+          lng: number | null
+          phone: string | null
+          rating: number
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          categories?: string[]
+          city?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          phone?: string | null
+          rating?: number
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          categories?: string[]
+          city?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          phone?: string | null
+          rating?: number
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      svc_subscriptions: {
+        Row: {
+          amount_brl: number
+          created_at: string
+          expires_at: string | null
+          id: string
+          pix_brcode: string | null
+          pix_txid: string | null
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_brl?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          pix_brcode?: string | null
+          pix_txid?: string | null
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_brl?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          pix_brcode?: string | null
+          pix_txid?: string | null
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -139,9 +386,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      svc_get_or_create_conversation: {
+        Args: { _other_user: string }
+        Returns: string
+      }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "migrant" | "volunteer" | "helper"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -269,7 +520,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "migrant", "volunteer", "helper"],
     },
   },
 } as const
