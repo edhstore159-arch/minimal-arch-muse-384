@@ -1145,3 +1145,16 @@ const MoreOption = ({ icon, label, onClick, danger }) => (
   </button>
 );
 
+const TileOption = ({ icon, label, onClick, bg = 'bg-gray-50' }) => (
+  <button
+    onClick={onClick}
+    className="flex flex-col items-center gap-1.5 group"
+  >
+    <div className={`w-full aspect-square rounded-2xl ${bg} grid place-items-center group-hover:scale-105 transition`}>
+      {icon}
+    </div>
+    <span className="text-[11px] text-gray-700 text-center leading-tight">{label}</span>
+  </button>
+);
+
+
