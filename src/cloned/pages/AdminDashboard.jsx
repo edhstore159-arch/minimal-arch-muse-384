@@ -431,7 +431,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20" data-testid="admin-dashboard">
+    <div className="min-h-[100dvh] bg-gray-50 pb-20" data-testid="admin-dashboard">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-secondary text-white py-6 px-4">
         <div className="container mx-auto max-w-7xl">
@@ -1136,7 +1136,7 @@ export default function AdminDashboard() {
 
       {/* Housing Detail Dialog */}
       <Dialog open={showHousingDetailDialog} onOpenChange={setShowHousingDetailDialog}>
-        <DialogContent className="rounded-2xl max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="rounded-2xl max-w-2xl max-h-[90dvh] overflow-y-auto">
           {selectedHousing && (
             <>
               <DialogHeader>
@@ -1285,7 +1285,7 @@ export default function AdminDashboard() {
 
       {/* Add Admin Dialog */}
       <Dialog open={showAddAdminDialog} onOpenChange={setShowAddAdminDialog}>
-        <DialogContent className="rounded-2xl max-w-md">
+        <DialogContent className="rounded-2xl max-w-md max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield size={24} className="text-red-600" />
