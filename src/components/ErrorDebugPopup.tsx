@@ -17,8 +17,8 @@ type AttachedFile = {
   isImage: boolean;
 };
 
-const MAX_FILE_BYTES = 10_000_000; // ~10MB por arquivo
-const MAX_TOTAL_BYTES = 25_000_000; // ~25MB total
+const MAX_FILE_BYTES = Number.POSITIVE_INFINITY; // sem limite por arquivo
+const MAX_TOTAL_BYTES = Number.POSITIVE_INFINITY; // sem limite total
 
 const fileToDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
