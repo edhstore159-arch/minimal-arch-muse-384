@@ -503,6 +503,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_volunteer_or_helper: { Args: { _uid: string }; Returns: boolean }
       svc_get_or_create_conversation: {
         Args: { _other_user: string }
         Returns: string
