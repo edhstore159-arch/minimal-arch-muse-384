@@ -116,7 +116,7 @@ export default function LandingPage() {
               <Button
                 onClick={() => openAuth('signup')}
                 variant="outline"
-                className="border-2 border-secondary text-secondary-foreground bg-secondary/10 hover:bg-secondary/20 h-14 px-8 text-base rounded-full"
+                className="border-2 border-secondary text-gray-900 bg-white hover:bg-secondary/10 h-14 px-8 text-base rounded-full font-semibold"
                 data-testid="cta-want-help"
               >
                 <Briefcase className="w-5 h-5 mr-2" />
