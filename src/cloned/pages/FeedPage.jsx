@@ -113,9 +113,9 @@ const PostCard = ({ post, onChat }) => {
             className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
             aria-label={`Ver perfil de ${displayName}`}
           >
-            <Avatar className="w-9 h-9 cursor-pointer hover:opacity-80 transition-opacity">
-              <AvatarImage src={avatarUrl} />
-              <AvatarFallback>{avatarFallback}</AvatarFallback>
+            <Avatar className="w-14 h-14 cursor-pointer hover:opacity-80 transition-opacity ring-2 ring-white shadow-sm">
+              <AvatarImage src={avatarUrl} className="object-cover" />
+              <AvatarFallback className="text-base font-semibold">{avatarFallback}</AvatarFallback>
             </Avatar>
           </button>
           <div className="flex-1 min-w-0">
