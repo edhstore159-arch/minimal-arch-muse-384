@@ -171,7 +171,7 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
       data-testid="auth-modal"
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto relative"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[92vh] overflow-y-auto relative"
         onClick={(e) => e.stopPropagation()}
       >
         <button
