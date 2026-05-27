@@ -325,7 +325,7 @@ export default function FeedPage() {
         title: p.title,
         description: p.description,
         images: p.photos || [],
-        videos: [],
+        videos: p.videos || [],
         budget: p.budget_range,
         likes_count: 0,
         comments_count: 0,
@@ -388,20 +388,20 @@ export default function FeedPage() {
       return;
     }
     files.forEach((file) => {
-      if (file.size > 4_000_000) {
-        toast.error(`Vídeo muito grande (${(file.size / 1_000_000).toFixed(1)}MB). Máximo 4MB.`);
+      if (file.size > 50_000_000) {
+        toast.error(`Vídeo muito grande (${(file.size / 1_000_000).toFixed(1)}MB). Máximo 50MB.`);
         e.target.value = '';
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedVideos((prev) => [
-          ...prev,
-          { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, dataUrl: reader.result },
-        ]);
-        toast.success('Vídeo adicionado!');
-      };
-      reader.readAsDataURL(file);
+      setSelectedVideos((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+          dataUrl: URL.createObjectURL(file),
+        },
+      ]);
+      toast.success('Vídeo adicionado!');
     });
     e.target.value = '';
   };
@@ -437,6 +437,25 @@ export default function FeedPage() {
     return urls;
   };
 
+  const uploadVideosToStorage = async (uid, videos) => {
+    const urls = [];
+    for (const v of videos) {
+      if (!v?.file) continue;
+      try {
+        const file = v.file;
+        const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
+        const path = `${uid}/posts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('social-media').upload(path, file, {
+          contentType: file.type || 'video/mp4', upsert: false,
+        });
+        if (upErr) { console.warn('video upload failed', upErr); continue; }
+        const { data } = supabase.storage.from('social-media').getPublicUrl(path);
+        if (data?.publicUrl) urls.push(data.publicUrl);
+      } catch (e) { console.warn('video upload error', e); }
+    }
+    return urls;
+  };
+
   const handlePostSubmit = async () => {
     if (!postDescription.trim()) {
       toast.error('Adicione uma descrição');
@@ -454,14 +473,16 @@ export default function FeedPage() {
       }
       const uid = session.session.user.id;
 
-      // Upload photos to public storage so other users can see them
+      // Upload photos and videos to public storage so other users can see them
       const uploadedUrls = await uploadPhotosToStorage(uid, selectedPhotos);
+      const uploadedVideos = await uploadVideosToStorage(uid, selectedVideos);
 
       const insertPayload = {
         user_id: uid,
         title: postDescription.slice(0, 60),
         description: postDescription,
         photos: uploadedUrls,
+        videos: uploadedVideos,
         budget_range: postBudget || null,
         category_slug: ['limpeza','reformas','jardinagem','mudancas','aulas','cuidados','tecnologia','beleza','transporte','outros'].includes(postCategory) ? postCategory : 'outros',
         address: postAddress || null,
@@ -950,7 +971,7 @@ export default function FeedPage() {
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-gray-900 mb-1">Adicione um vídeo</h4>
               <p className="text-[11px] text-gray-500 mb-3">
-                Opcional · MP4/WebM/MOV até 4MB.
+                Opcional · MP4/WebM/MOV até 50MB.
               </p>
               {selectedVideos.length > 0 ? (
                 <div className="relative">
