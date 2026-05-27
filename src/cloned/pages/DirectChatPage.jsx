@@ -797,7 +797,7 @@ export default function DirectChatPage() {
                     <button
                       data-testid="video-call-btn"
                       onClick={() => {
-                        const room = `pertodemim-${(otherUser?.id || activeUserId || 'sala').toString().slice(0, 16)}`;
+                        const room = `pertodemim-${(otherUser?.id || userId || 'sala').toString().slice(0, 16)}`;
                         window.open(`https://meet.jit.si/${room}`, '_blank', 'noopener');
                       }}
                       className="w-11 h-11 rounded-full border border-gray-200 hover:border-[#16a34a] hover:text-[#16a34a] grid place-items-center transition"
