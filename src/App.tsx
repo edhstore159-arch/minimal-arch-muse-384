@@ -63,6 +63,7 @@ const App = () => (
       <ErrorDebugPopup />
       <Toaster />
       <Sonner />
+      <IncomingCallListener />
       <AppRoutes />
     </ClonedAuthProvider>
   </TooltipProvider>
