@@ -28,6 +28,7 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
   const [lastName, setLastName] = useState('');
   const [location, setLocation] = useState('');
   const [mobile, setMobile] = useState('');
+  const [serviceWanted, setServiceWanted] = useState('');
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const fileRef = useRef(null);
