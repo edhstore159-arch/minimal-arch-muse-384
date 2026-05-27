@@ -130,21 +130,39 @@ export default function ServicosChat() {
   }, [messages]);
 
   const insertMessage = async (payload: Partial<Message>) => {
-    if (!me || !activeId) return;
+    if (!me) {
+      toast({ title: 'Sessão expirada', description: 'Faça login novamente.', variant: 'destructive' });
+      return;
+    }
+    if (!activeId) {
+      toast({ title: 'Nenhuma conversa selecionada', description: 'Abra um perfil em Ofertantes para iniciar.', variant: 'destructive' });
+      return;
+    }
     const { error } = await supabase.from('svc_messages').insert({
       conversation_id: activeId, sender_id: me, ...payload,
     });
-    if (error) toast({ title: 'Erro ao enviar', description: error.message, variant: 'destructive' });
-    if (me) loadConversations(me);
+    if (error) {
+      console.error('[chat] insert svc_messages failed', error);
+      toast({ title: 'Erro ao enviar', description: `${error.message}${error.code ? ` (${error.code})` : ''}`, variant: 'destructive' });
+      return;
+    }
+    loadConversations(me);
   };
 
   const send = async () => {
-    if (!me || !activeId || !text.trim()) return;
+    if (!text.trim()) return;
+    if (!me || !activeId) {
+      await insertMessage({ content: text.trim() }); // surfaces toast
+      return;
+    }
     setSending(true);
     const content = text.trim();
     setText('');
-    await insertMessage({ content });
-    setSending(false);
+    try {
+      await insertMessage({ content });
+    } finally {
+      setSending(false);
+    }
   };
 
   const uploadAndSend = async (file: Blob, mediaType: 'image' | 'audio', ext: string) => {
