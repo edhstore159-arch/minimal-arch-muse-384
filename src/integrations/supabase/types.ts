@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      calls: {
+        Row: {
+          caller_avatar: string | null
+          caller_id: string
+          caller_name: string | null
+          created_at: string
+          id: string
+          kind: string
+          receiver_id: string
+          room: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          caller_avatar?: string | null
+          caller_id: string
+          caller_name?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          receiver_id: string
+          room: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          caller_avatar?: string | null
+          caller_id?: string
+          caller_name?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          receiver_id?: string
+          room?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_registrations: {
         Row: {
           event_id: string
