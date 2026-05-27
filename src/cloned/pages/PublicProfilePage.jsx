@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video } from 'lucide-react';
+import { toast } from 'sonner';
 
 const TABS = [
   { id: 'presentation', label: 'Apresentação' },
@@ -79,12 +80,37 @@ export default function PublicProfilePage() {
               )}
               <p className="text-xs text-green-600 mt-0.5">● Online</p>
             </div>
-            <Button
-              onClick={() => navigate(`/servicos/chat?userId=${userId}`)}
-              className="bg-green-600 hover:bg-green-700 sm:self-end"
-            >
-              <MessageCircle className="w-4 h-4 mr-1.5" /> Enviar mensagem
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 sm:self-end">
+              <Button
+                onClick={() => navigate(`/servicos/chat?userId=${userId}`)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <MessageCircle className="w-4 h-4 mr-1.5" /> Enviar mensagem
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (profile.phone) {
+                    window.location.href = `tel:${profile.phone}`;
+                  } else {
+                    toast.error('Esse usuário não cadastrou telefone.');
+                  }
+                }}
+                title="Ligar"
+              >
+                <Phone className="w-4 h-4 mr-1.5" /> Ligar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const room = `pertodemim-${(userId || 'sala').toString().slice(0, 16)}`;
+                  window.open(`https://meet.jit.si/${room}`, '_blank', 'noopener');
+                }}
+                title="Chamada de vídeo"
+              >
+                <Video className="w-4 h-4 mr-1.5" /> Vídeo
+              </Button>
+            </div>
           </div>
 
           {/* Tabs */}
