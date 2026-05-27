@@ -342,6 +342,55 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Painel de voluntário: casos e pessoas que precisam de ajuda */}
+        {isVolunteer && (
+          <div className="bg-white rounded-3xl shadow-card p-6 mb-6" data-testid="volunteer-panel">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h3 className="font-bold text-textPrimary flex items-center gap-2">
+                  <HandHeart size={20} className="text-primary" />
+                  Casos e pessoas que precisam de ajuda
+                </h3>
+                <p className="text-xs text-textMuted mt-1">
+                  Pedidos visíveis apenas para voluntários responsáveis.
+                </p>
+              </div>
+              <Button
+                onClick={() => navigate('/volunteers')}
+                className="rounded-full bg-primary hover:bg-primary-hover text-white shrink-0"
+                size="sm"
+                data-testid="want-to-help-btn"
+              >
+                Quero ajudar <ArrowRight size={14} className="ml-1" />
+              </Button>
+            </div>
+
+            {helpRequests.length > 0 ? (
+              <div className="space-y-3">
+                {helpRequests.map((p) => (
+                  <div key={p.id} className="p-4 rounded-2xl border border-gray-100 hover:border-primary/40 transition">
+                    <p className="font-semibold text-textPrimary text-sm">{p.title}</p>
+                    {p.description && (
+                      <p className="text-xs text-textSecondary mt-1 line-clamp-2">{p.description}</p>
+                    )}
+                    {p.address && (
+                      <p className="text-xs text-textMuted mt-1 flex items-center gap-1">
+                        <MapPin size={12} /> {p.address}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-sm text-textMuted">
+                Nenhum pedido de ajuda no momento.
+              </div>
+            )}
+          </div>
+        )}
+
+
+
         {/* Tab: Apresentação */}
         {activeTab === 'presentation' && (
           <div className="bg-white rounded-3xl p-6 shadow-card space-y-6" data-testid="tab-presentation">
