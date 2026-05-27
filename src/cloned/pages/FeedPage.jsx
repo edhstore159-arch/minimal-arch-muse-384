@@ -122,14 +122,14 @@ const PostCard = ({ post, onChat }) => {
                   <div
                     key={idx}
                     data-testid={`post-card-img-${idx}`}
-                    className={`relative overflow-hidden rounded-md border border-gray-200 bg-gray-50 ${images.length === 1 ? 'flex items-center justify-center max-h-[420px]' : 'aspect-square'}`}
+                    className={`relative overflow-hidden rounded-md border border-gray-200 bg-gray-50 ${images.length === 1 ? 'w-full' : 'aspect-square'}`}
                   >
                     <img
                       src={img}
                       alt={`Mídia ${idx + 1}`}
                       className={
                         images.length === 1
-                          ? 'max-h-[420px] w-auto max-w-full object-contain'
+                          ? 'w-full h-auto max-h-[600px] object-cover'
                           : 'w-full h-full object-cover'
                       }
                       onError={(e) => { e.target.style.display = 'none'; }}
@@ -155,6 +155,22 @@ const PostCard = ({ post, onChat }) => {
               <MapPin className="w-3 h-3" />
               <span>{location}</span>
             </div>
+
+            {(post.location?.lat && post.location?.lng) && (
+              <div className="mt-2 mb-1">
+                <p className="text-xs font-semibold text-gray-800 mb-1">Où se situe votre demande</p>
+                <div className="rounded-md overflow-hidden border border-gray-200">
+                  <iframe
+                    title={`map-${post.id}`}
+                    width="100%"
+                    height="220"
+                    loading="lazy"
+                    style={{ border: 0, display: 'block' }}
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${post.location.lng - 0.005}%2C${post.location.lat - 0.003}%2C${post.location.lng + 0.005}%2C${post.location.lat + 0.003}&layer=mapnik&marker=${post.location.lat}%2C${post.location.lng}`}
+                  />
+                </div>
+              </div>
+            )}
             {budget && (
               <p className="text-[10px] text-gray-700 mt-0.5">
                 Orçamento: <span className="font-semibold">{budget}</span>
@@ -215,6 +231,7 @@ export default function FeedPage() {
   // Form fields
   const [postDescription, setPostDescription] = useState('');
   const [postAddress, setPostAddress] = useState('');
+  const [postCoords, setPostCoords] = useState(null); // {lat, lng}
   const [detectingAddress, setDetectingAddress] = useState(false);
 
   const detectAddress = React.useCallback(() => {
@@ -223,6 +240,7 @@ export default function FeedPage() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
+        setPostCoords({ lat: latitude, lng: longitude });
         try {
           const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
           const d = await r.json();
@@ -286,7 +304,7 @@ export default function FeedPage() {
           likes_count: 0,
           comments_count: 0,
           created_at: p.created_at,
-          location: { address: p.address || 'Paris', city: 'Paris' },
+          location: { address: p.address || 'Paris', city: 'Paris', lat: p.lat, lng: p.lng },
           user: {
             name: profMap[p.user_id]?.display_name || 'Usuário',
             avatar: profMap[p.user_id]?.avatar_url,
@@ -394,7 +412,7 @@ export default function FeedPage() {
         likes_count: 0,
         comments_count: 0,
         created_at: new Date().toISOString(),
-        location: { address: postAddress, city: 'Paris' },
+        location: { address: postAddress, city: 'Paris', lat: postCoords?.lat, lng: postCoords?.lng },
         user: { name: user?.name || 'Você', avatar: user?.avatar },
       };
 
@@ -410,6 +428,8 @@ export default function FeedPage() {
           budget_range: postBudget || null,
           category_slug: postCategory || null,
           address: postAddress || null,
+          lat: postCoords?.lat ?? null,
+          lng: postCoords?.lng ?? null,
           post_type: modalMode === 'offer' ? 'volunteer' : 'paid',
           status: 'open',
         });
