@@ -473,14 +473,16 @@ export default function FeedPage() {
       }
       const uid = session.session.user.id;
 
-      // Upload photos to public storage so other users can see them
+      // Upload photos and videos to public storage so other users can see them
       const uploadedUrls = await uploadPhotosToStorage(uid, selectedPhotos);
+      const uploadedVideos = await uploadVideosToStorage(uid, selectedVideos);
 
       const insertPayload = {
         user_id: uid,
         title: postDescription.slice(0, 60),
         description: postDescription,
         photos: uploadedUrls,
+        videos: uploadedVideos,
         budget_range: postBudget || null,
         category_slug: ['limpeza','reformas','jardinagem','mudancas','aulas','cuidados','tecnologia','beleza','transporte','outros'].includes(postCategory) ? postCategory : 'outros',
         address: postAddress || null,
