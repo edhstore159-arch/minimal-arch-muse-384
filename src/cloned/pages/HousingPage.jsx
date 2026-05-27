@@ -114,14 +114,18 @@ export default function HousingPage() {
   ];
 
   const cities = [
-    { name: 'Paris', emoji: '🗼' },
-    { name: 'Lyon', emoji: '🦁' },
-    { name: 'Marseille', emoji: '⚓' },
-    { name: 'Toulouse', emoji: '🌹' },
-    { name: 'Nice', emoji: '🌴' },
-    { name: 'Bordeaux', emoji: '🍷' },
-    { name: 'Lille', emoji: '🏛️' },
-    { name: 'Nantes', emoji: '🐘' }
+    { name: 'Todo o Brasil', emoji: '🇧🇷' },
+    { name: 'Jataí - GO', emoji: '🌾' },
+    { name: 'Goiânia - GO', emoji: '🌆' },
+    { name: 'Rio Verde - GO', emoji: '🌿' },
+    { name: 'Brasília - DF', emoji: '🏛️' },
+    { name: 'São Paulo - SP', emoji: '🏙️' },
+    { name: 'Rio de Janeiro - RJ', emoji: '🏖️' },
+    { name: 'Belo Horizonte - MG', emoji: '⛰️' },
+    { name: 'Curitiba - PR', emoji: '🌲' },
+    { name: 'Salvador - BA', emoji: '🌴' },
+    { name: 'Fortaleza - CE', emoji: '☀️' },
+    { name: 'Recife - PE', emoji: '🌊' }
   ];
 
   useEffect(() => {
