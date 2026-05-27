@@ -65,6 +65,8 @@ export default {
           orange: "hsl(var(--brand-orange))",
           "orange-light": "hsl(var(--brand-orange-light))",
           "orange-dark": "hsl(var(--brand-orange-dark))",
+          coral: "hsl(var(--brand-coral))",
+          "coral-dark": "hsl(var(--brand-coral-dark))",
         },
       },
       borderRadius: {
