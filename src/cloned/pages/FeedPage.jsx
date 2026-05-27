@@ -325,7 +325,7 @@ export default function FeedPage() {
         title: p.title,
         description: p.description,
         images: p.photos || [],
-        videos: [],
+        videos: p.videos || [],
         budget: p.budget_range,
         likes_count: 0,
         comments_count: 0,
@@ -388,20 +388,20 @@ export default function FeedPage() {
       return;
     }
     files.forEach((file) => {
-      if (file.size > 4_000_000) {
-        toast.error(`Vídeo muito grande (${(file.size / 1_000_000).toFixed(1)}MB). Máximo 4MB.`);
+      if (file.size > 50_000_000) {
+        toast.error(`Vídeo muito grande (${(file.size / 1_000_000).toFixed(1)}MB). Máximo 50MB.`);
         e.target.value = '';
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedVideos((prev) => [
-          ...prev,
-          { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, dataUrl: reader.result },
-        ]);
-        toast.success('Vídeo adicionado!');
-      };
-      reader.readAsDataURL(file);
+      setSelectedVideos((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+          dataUrl: URL.createObjectURL(file),
+        },
+      ]);
+      toast.success('Vídeo adicionado!');
     });
     e.target.value = '';
   };
@@ -433,6 +433,25 @@ export default function FeedPage() {
         const { data } = supabase.storage.from('svc-photos').getPublicUrl(path);
         if (data?.publicUrl) urls.push(data.publicUrl);
       } catch (e) { console.warn('photo upload error', e); }
+    }
+    return urls;
+  };
+
+  const uploadVideosToStorage = async (uid, videos) => {
+    const urls = [];
+    for (const v of videos) {
+      if (!v?.file) continue;
+      try {
+        const file = v.file;
+        const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
+        const path = `${uid}/posts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('social-media').upload(path, file, {
+          contentType: file.type || 'video/mp4', upsert: false,
+        });
+        if (upErr) { console.warn('video upload failed', upErr); continue; }
+        const { data } = supabase.storage.from('social-media').getPublicUrl(path);
+        if (data?.publicUrl) urls.push(data.publicUrl);
+      } catch (e) { console.warn('video upload error', e); }
     }
     return urls;
   };
