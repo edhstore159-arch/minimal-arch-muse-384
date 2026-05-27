@@ -91,6 +91,8 @@ export const ErrorDebugPopup: React.FC = () => {
   const [attachError, setAttachError] = useState<string | null>(null);
   const [minimized, setMinimized] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   const [pos, setPos] = useState<{ x: number; y: number }>(() => ({
     x: typeof window !== "undefined" ? Math.max(16, window.innerWidth - 380) : 16,
@@ -172,8 +174,16 @@ export const ErrorDebugPopup: React.FC = () => {
     e.stopPropagation();
   };
 
+  useEffect(() => {
+    return () => {
+      files.forEach((file) => {
+        if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
+      });
+    };
+  }, [files]);
+
   const addFiles = useCallback(
-    async (fileList: FileList | File[]) => {
+    (fileList: FileList | File[]) => {
       setAttachError(null);
       const incoming = Array.from(fileList);
       if (incoming.length === 0) return;
@@ -191,24 +201,16 @@ export const ErrorDebugPopup: React.FC = () => {
           break;
         }
         const isImage = file.type.startsWith("image/");
-        try {
-          const dataUrl = isImage ? await fileToDataUrl(file) : "";
-          newFiles.push({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            name: file.name,
-            type: file.type || "application/octet-stream",
-            size: file.size,
-            dataUrl,
-            isImage,
-          });
-          currentTotal += file.size;
-          // Para não-imagens, guardamos o File via closure no upload — recriamos abaixo
-          if (!isImage) {
-            (newFiles[newFiles.length - 1] as AttachedFile & { _file?: File })._file = file;
-          }
-        } catch {
-          setAttachError(`Falha ao ler "${file.name}".`);
-        }
+        newFiles.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          file,
+          previewUrl: isImage ? URL.createObjectURL(file) : undefined,
+          isImage,
+        });
+        currentTotal += file.size;
       }
 
       if (newFiles.length > 0) {
@@ -254,18 +256,11 @@ export const ErrorDebugPopup: React.FC = () => {
   };
 
   const removeFile = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
-  };
-
-  const [uploading, setUploading] = useState(false);
-
-  const dataUrlToBlob = (dataUrl: string): Blob => {
-    const [header, base64] = dataUrl.split(",");
-    const mime = header.match(/data:(.*?);base64/)?.[1] || "application/octet-stream";
-    const bin = atob(base64);
-    const arr = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    return new Blob([arr], { type: mime });
+    setFiles((prev) => {
+      const target = prev.find((f) => f.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((f) => f.id !== id);
+    });
   };
 
   const fireError = useCallback(async () => {
