@@ -386,7 +386,16 @@ export default function HomePage() {
   const filterPosts = () => {
     let filtered = posts;
     
-    if (categoryFilter !== 'all') {
+    if (categoryFilter === 'recommended') {
+      const interest = (user?.categories?.[0] || '').toLowerCase().trim();
+      const city = (user?.city || '').toLowerCase().trim();
+      filtered = filtered.filter(p => {
+        const hay = `${p.title || ''} ${p.description || ''} ${p.address || ''} ${p.category || ''}`.toLowerCase();
+        const matchInterest = interest ? hay.includes(interest) : true;
+        const matchCity = city ? hay.includes(city.split(',')[0].trim()) : true;
+        return (interest || city) ? (matchInterest || matchCity) : true;
+      });
+    } else if (categoryFilter !== 'all') {
       filtered = filtered.filter(p => p.category === categoryFilter);
     }
     
