@@ -393,12 +393,6 @@ export default function FeedPage() {
         e.target.value = '';
         return;
       }
-      const mime = (file.type || '').toLowerCase();
-      if (mime.includes('quicktime') || file.name.toLowerCase().endsWith('.mov')) {
-        toast.error('Formato MOV não roda em todos os navegadores. Use MP4.');
-        e.target.value = '';
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedVideos((prev) => [
