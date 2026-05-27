@@ -23,15 +23,20 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
   const [password, setPassword] = useState('');
 
   // signup fields
-  const [role, setRole] = useState('migrant'); // migrant = Procuro / helper = Ofereço
-  const [name, setName] = useState('');
+  const [role, setRole] = useState('migrant');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [location, setLocation] = useState('');
+  const [mobile, setMobile] = useState('');
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const fileRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
+
+  const name = `${firstName} ${lastName}`.trim();
+
 
   const detectLocation = React.useCallback(() => {
     if (!navigator.geolocation) {
