@@ -4,7 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ArrowLeft, MapPin, MessageCircle, Star } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar } from 'lucide-react';
+
+const TABS = [
+  { id: 'presentation', label: 'Apresentação' },
+  { id: 'photos', label: 'Fotos' },
+  { id: 'reviews', label: 'Avaliações' },
+  { id: 'activity', label: 'Atividade' },
+];
 
 export default function PublicProfilePage() {
   const { userId } = useParams();
@@ -12,12 +19,14 @@ export default function PublicProfilePage() {
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('presentation');
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       const [{ data: p }, { data: pp }] = await Promise.all([
         supabase.from('svc_profiles').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('svc_posts').select('*').eq('user_id', userId).eq('status', 'open').order('created_at', { ascending: false }).limit(20),
+        supabase.from('svc_posts').select('*').eq('user_id', userId).eq('status', 'open').order('created_at', { ascending: false }).limit(50),
       ]);
       setProfile(p);
       setPosts(pp || []);
@@ -25,70 +34,173 @@ export default function PublicProfilePage() {
     })();
   }, [userId]);
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Carregando...</div>;
-  if (!profile) return <div className="p-8 text-center text-gray-500">Perfil não encontrado.</div>;
+  if (loading) return <div className="p-12 text-center text-gray-500">Carregando…</div>;
+  if (!profile) return <div className="p-12 text-center text-gray-500">Perfil não encontrado.</div>;
 
   const initial = (profile.display_name || '?').charAt(0).toUpperCase();
+  const allPhotos = posts.flatMap((p) => p.photos || []).filter(Boolean);
+  const registeredAt = profile.created_at
+    ? new Date(profile.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '—';
+  const hasCoords = profile.lat && profile.lng;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-[#f5f7fb] pb-20">
       <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 h-12 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="text-gray-700"><ArrowLeft className="w-5 h-5" /></button>
+        <div className="max-w-5xl mx-auto px-4 h-12 flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="text-gray-700 hover:text-gray-900"><ArrowLeft className="w-5 h-5" /></button>
           <h1 className="font-semibold text-sm">Perfil</h1>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="w-16 h-16">
-              <AvatarImage src={profile.avatar_url} />
-              <AvatarFallback>{initial}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <h2 className="font-bold text-lg truncate">{profile.display_name}</h2>
+      <main className="max-w-5xl mx-auto">
+        {/* Cover */}
+        <div className="h-32 sm:h-40 bg-gradient-to-b from-slate-200 to-slate-100" />
+
+        {/* Identity */}
+        <div className="bg-white">
+          <div className="px-4 sm:px-8 pb-4 -mt-14 sm:-mt-16 flex flex-col sm:flex-row sm:items-end gap-4">
+            <div className="relative shrink-0">
+              <Avatar className="w-28 h-28 sm:w-32 sm:h-32 ring-4 ring-white shadow-md">
+                <AvatarImage src={profile.avatar_url} />
+                <AvatarFallback className="text-2xl">{initial}</AvatarFallback>
+              </Avatar>
+              <span className="absolute bottom-2 right-2 w-4 h-4 rounded-full bg-green-500 ring-2 ring-white" />
+            </div>
+            <div className="flex-1 min-w-0 sm:pb-2">
+              <div className="flex items-start gap-2">
+                <h2 className="font-bold text-xl sm:text-2xl truncate">{profile.display_name}</h2>
+                <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full mt-1.5 capitalize">
+                  {profile.role === 'helper' || profile.role === 'volunteer' ? 'Ofertante' : 'Particular'}
+                </span>
+              </div>
               {profile.city && (
-                <p className="text-xs text-gray-600 flex items-center gap-1"><MapPin className="w-3 h-3" />{profile.city}</p>
+                <p className="text-sm text-gray-600 flex items-center gap-1 mt-1"><MapPin className="w-3.5 h-3.5" />{profile.city}</p>
               )}
-              {Number(profile.rating) > 0 && (
-                <p className="text-xs text-gray-600 flex items-center gap-1"><Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />{Number(profile.rating).toFixed(1)}</p>
-              )}
+              <p className="text-xs text-green-600 mt-0.5">● Online</p>
             </div>
             <Button
-              size="sm"
               onClick={() => navigate(`/servicos/chat?with=${userId}`)}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 sm:self-end"
             >
-              <MessageCircle className="w-4 h-4 mr-1" /> Mensagem
+              <MessageCircle className="w-4 h-4 mr-1.5" /> Enviar mensagem
             </Button>
           </div>
-          {profile.bio && <p className="text-sm text-gray-700 mt-3 whitespace-pre-wrap">{profile.bio}</p>}
-          {profile.categories?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {profile.categories.map((c) => (
-                <span key={c} className="text-[10px] px-2 py-0.5 bg-gray-100 rounded-full capitalize">{c}</span>
+
+          {/* Tabs */}
+          <div className="border-t border-gray-100">
+            <div className="px-4 sm:px-8 flex gap-1 sm:gap-6 overflow-x-auto">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`px-3 py-3 text-sm whitespace-nowrap border-b-2 transition-colors ${
+                    tab === t.id
+                      ? 'border-gray-900 text-gray-900 font-semibold'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {t.label}
+                </button>
               ))}
             </div>
-          )}
-        </Card>
+          </div>
+        </div>
 
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Anúncios ({posts.length})</h3>
-          {posts.length === 0 ? (
-            <Card className="p-6 text-center text-sm text-gray-500">Nenhum anúncio publicado.</Card>
-          ) : (
-            <ul className="space-y-2">
-              {posts.map((p) => (
-                <Card key={p.id} className="p-3">
-                  <p className="font-medium text-sm">{p.title}</p>
-                  <p className="text-xs text-gray-600 line-clamp-2 mt-1">{p.description}</p>
-                  {p.photos?.[0] && (
-                    <img src={p.photos[0]} alt="" className="mt-2 w-full aspect-square object-cover rounded-md" />
-                  )}
-                </Card>
-              ))}
-            </ul>
+        {/* Body */}
+        <div className="px-4 sm:px-8 py-6">
+          {tab === 'presentation' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="p-4 md:col-span-1 space-y-4">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 text-gray-800">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <span className="font-semibold">{Number(profile.rating) > 0 ? Number(profile.rating).toFixed(1) : '—'}/5</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Nenhuma avaliação</p>
+                </div>
+                <hr />
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 text-gray-800">
+                    <Calendar className="w-4 h-4" />
+                    <span className="font-semibold text-sm">{registeredAt}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">data de inscrição</p>
+                </div>
+                <hr />
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 text-gray-800">
+                    <Users className="w-4 h-4" />
+                    <span className="font-semibold">{posts.length}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">anúncios publicados</p>
+                </div>
+              </Card>
+
+              <Card className="p-4 md:col-span-2 space-y-4">
+                {profile.bio ? (
+                  <p className="text-sm text-gray-800 italic">« {profile.bio} »</p>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">Sem apresentação.</p>
+                )}
+                {profile.categories?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.categories.map((c) => (
+                      <span key={c} className="text-xs px-2.5 py-1 bg-green-50 text-green-700 rounded-full capitalize">{c}</span>
+                    ))}
+                  </div>
+                )}
+                {hasCoords && (
+                  <div className="rounded-md overflow-hidden border border-gray-200">
+                    <iframe
+                      title="profile-map"
+                      width="100%"
+                      height="260"
+                      loading="lazy"
+                      style={{ border: 0, display: 'block' }}
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${profile.lng - 0.04}%2C${profile.lat - 0.025}%2C${profile.lng + 0.04}%2C${profile.lat + 0.025}&layer=mapnik&marker=${profile.lat}%2C${profile.lng}`}
+                    />
+                  </div>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {tab === 'photos' && (
+            allPhotos.length === 0 ? (
+              <Card className="p-8 text-center text-sm text-gray-500">Nenhuma foto publicada.</Card>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {allPhotos.map((url, i) => (
+                  <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-md" />
+                ))}
+              </div>
+            )
+          )}
+
+          {tab === 'reviews' && (
+            <Card className="p-8 text-center text-sm text-gray-500">Ainda não há avaliações.</Card>
+          )}
+
+          {tab === 'activity' && (
+            posts.length === 0 ? (
+              <Card className="p-8 text-center text-sm text-gray-500">Sem atividade recente.</Card>
+            ) : (
+              <ul className="space-y-2">
+                {posts.map((p) => (
+                  <Card key={p.id} className="p-3 flex gap-3">
+                    {p.photos?.[0] && (
+                      <img src={p.photos[0]} alt="" className="w-20 h-20 object-cover rounded-md shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{p.title}</p>
+                      <p className="text-xs text-gray-600 line-clamp-2 mt-0.5">{p.description}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">{new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </Card>
+                ))}
+              </ul>
+            )
           )}
         </div>
       </main>
