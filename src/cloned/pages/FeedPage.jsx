@@ -272,6 +272,30 @@ export default function FeedPage() {
 
   useEffect(() => {
     fetchPosts();
+
+    // Realtime: refetch when any svc_posts row changes
+    const channel = supabase
+      .channel('svc_posts_feed')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'svc_posts' }, () => {
+        fetchPosts();
+      })
+      .subscribe();
+
+    // Mobile: refetch when app returns to foreground or window regains focus
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchPosts(); };
+    const onFocus = () => fetchPosts();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+
+    // Safety net: poll every 30s in case realtime/websocket is blocked on mobile networks
+    const interval = setInterval(fetchPosts, 30000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      clearInterval(interval);
+    };
   }, []);
 
   const fetchPosts = async () => {
