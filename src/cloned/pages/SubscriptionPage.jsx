@@ -131,37 +131,76 @@ export default function SubscriptionPage() {
     } catch (e) { console.error(e); }
   };
 
+  // ---- Gerador local de BR Code PIX (EMV) ----
+  const PIX_KEY = 'pix@jataitrabalho.com.br';
+  const MERCHANT_NAME = 'JATAI REGIAO TRABALHO';
+  const MERCHANT_CITY = 'JATAI';
+
+  const crc16 = (payload) => {
+    let crc = 0xffff;
+    for (let i = 0; i < payload.length; i++) {
+      crc ^= payload.charCodeAt(i) << 8;
+      for (let j = 0; j < 8; j++) {
+        crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
+      }
+    }
+    return crc.toString(16).toUpperCase().padStart(4, '0');
+  };
+  const tlv = (id, value) => `${id}${String(value.length).padStart(2, '0')}${value}`;
+
+  const buildBrcode = (amount, txid) => {
+    const gui = tlv('00', 'br.gov.bcb.pix');
+    const key = tlv('01', PIX_KEY);
+    const merchantAccount = tlv('26', gui + key);
+    const payload =
+      tlv('00', '01') +
+      tlv('01', '12') +
+      merchantAccount +
+      tlv('52', '0000') +
+      tlv('53', '986') +
+      tlv('54', amount.toFixed(2)) +
+      tlv('58', 'BR') +
+      tlv('59', MERCHANT_NAME.slice(0, 25)) +
+      tlv('60', MERCHANT_CITY.slice(0, 15)) +
+      tlv('62', tlv('05', txid.slice(0, 25))) +
+      '6304';
+    return payload + crc16(payload);
+  };
+
   const startSubscription = async () => {
     setLoadingPix(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error('Faça login primeiro'); return; }
-      const { data, error } = await supabase.functions.invoke('pix-brcode', { body: { amount: 35.9 } });
-      if (error || !data?.brcode) throw new Error(error?.message || 'Falha ao gerar PIX');
+
+      const amount = 35.9;
+      const txid = `JRT${Date.now().toString(36).toUpperCase()}`.slice(0, 25);
+      const brcode = buildBrcode(amount, txid);
 
       const trialEnds = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
       const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      const { data: existing } = await supabase
-        .from('svc_subscriptions').select('id').eq('user_id', session.user.id).maybeSingle();
-
-      if (existing) {
-        await supabase.from('svc_subscriptions').update({
-          pix_brcode: data.brcode, pix_txid: data.txid, status: 'pix',
-          amount_brl: 35.9, expires_at: expires,
-        }).eq('id', existing.id);
-      } else {
-        await supabase.from('svc_subscriptions').insert({
-          user_id: session.user.id, pix_brcode: data.brcode, pix_txid: data.txid,
-          status: 'pix', amount_brl: 35.9, trial_ends_at: trialEnds, expires_at: expires,
-        });
-      }
+      try {
+        const { data: existing } = await supabase
+          .from('svc_subscriptions').select('id').eq('user_id', session.user.id).maybeSingle();
+        if (existing) {
+          await supabase.from('svc_subscriptions').update({
+            pix_brcode: brcode, pix_txid: txid, status: 'pix',
+            amount_brl: amount, expires_at: expires,
+          }).eq('id', existing.id);
+        } else {
+          await supabase.from('svc_subscriptions').insert({
+            user_id: session.user.id, pix_brcode: brcode, pix_txid: txid,
+            status: 'pix', amount_brl: amount, trial_ends_at: trialEnds, expires_at: expires,
+          });
+        }
+      } catch (dbErr) { console.warn('[PIX] salvar sub:', dbErr); }
 
       setPixData({
-        brcode: data.brcode,
-        amount: data.amount,
+        brcode,
+        amount,
         trial_ends_at: trialEnds,
-        qr_code_base64: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data.brcode)}`,
+        qr_code_base64: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(brcode)}`,
       });
       setShowPaymentModal(true);
       toast.success('Você ganhou 3 dias grátis!');
