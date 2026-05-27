@@ -22,6 +22,7 @@ import JobsPage from './pages/JobsPage';
 import HousingPage from './pages/HousingPage';
 import SubscriptionPage from './pages/SubscriptionPage';
 import PublicProfilePage from './pages/PublicProfilePage';
+import CallPage from './pages/CallPage';
 import { AuthContext } from './ClonedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, normalizeAuthUser } from './lib/authProfile';
