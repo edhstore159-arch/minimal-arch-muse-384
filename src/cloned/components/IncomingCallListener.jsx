@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from '../ClonedAuthContext';
 import { Phone, PhoneOff, Video } from 'lucide-react';
