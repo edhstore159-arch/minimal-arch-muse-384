@@ -40,7 +40,7 @@ export default function IncomingCallListener() {
   const accept = async () => {
     try {
       await supabase.from('calls').update({ status: 'accepted' }).eq('id', incoming.id);
-      window.open(`https://meet.jit.si/${incoming.room}`, '_blank', 'noopener');
+      navigate(`/call/${incoming.room}?kind=${incoming.kind || 'video'}`);
     } catch (e) { console.error('[call] accept failed', e); }
     setIncoming(null);
   };
