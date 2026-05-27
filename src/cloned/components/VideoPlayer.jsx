@@ -64,7 +64,7 @@ export default function VideoPlayer({ src, className = '', testid }) {
     <video
       ref={videoRef}
       data-testid={testid}
-      className={`w-full max-h-[400px] rounded-md border border-gray-200 bg-black object-cover ${className}`}
+      className={`w-full max-h-[600px] rounded-md border border-gray-200 bg-black object-cover ${className}`}
       controls
       autoPlay
       muted

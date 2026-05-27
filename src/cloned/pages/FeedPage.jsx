@@ -140,7 +140,10 @@ const PostCard = ({ post, onChat }) => {
                     <img
                       src={img}
                       alt={`Mídia ${idx + 1}`}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
+                      style={{ imageRendering: 'auto' }}
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   </div>
@@ -363,8 +366,8 @@ export default function FeedPage() {
       return;
     }
     files.forEach((file) => {
-      if (file.size > 5_000_000) {
-        toast.error(`${file.name}: máx. 5MB`);
+      if (file.size > 15_000_000) {
+        toast.error(`${file.name}: máx. 15MB`);
         return;
       }
       const reader = new FileReader();
@@ -388,8 +391,8 @@ export default function FeedPage() {
       return;
     }
     files.forEach((file) => {
-      if (file.size > 50_000_000) {
-        toast.error(`Vídeo muito grande (${(file.size / 1_000_000).toFixed(1)}MB). Máximo 50MB.`);
+      if (file.size > 150_000_000) {
+        toast.error(`Vídeo muito grande (${(file.size / 1_000_000).toFixed(1)}MB). Máximo 150MB.`);
         e.target.value = '';
         return;
       }
