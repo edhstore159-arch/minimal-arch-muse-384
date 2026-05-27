@@ -440,21 +440,31 @@ export default function FeedPage() {
   const uploadVideosToStorage = async (uid, videos) => {
     const urls = [];
     for (const v of videos) {
-      if (!v?.file) continue;
+      if (!v?.file) { console.warn('[video] item sem file', v); continue; }
       try {
         const file = v.file;
         const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
         const path = `${uid}/posts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        console.log('[video] enviando', { path, type: file.type, size: file.size });
         const { error: upErr } = await supabase.storage.from('social-media').upload(path, file, {
           contentType: file.type || 'video/mp4', upsert: false,
         });
-        if (upErr) { console.warn('video upload failed', upErr); continue; }
+        if (upErr) {
+          console.error('[video] upload falhou', upErr);
+          toast.error('Falha ao enviar vídeo: ' + upErr.message);
+          continue;
+        }
         const { data } = supabase.storage.from('social-media').getPublicUrl(path);
+        console.log('[video] OK', data?.publicUrl);
         if (data?.publicUrl) urls.push(data.publicUrl);
-      } catch (e) { console.warn('video upload error', e); }
+      } catch (e) {
+        console.error('[video] erro', e);
+        toast.error('Erro no vídeo: ' + (e?.message || e));
+      }
     }
     return urls;
   };
+
 
   const handlePostSubmit = async () => {
     if (!postDescription.trim()) {
