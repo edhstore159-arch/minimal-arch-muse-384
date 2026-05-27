@@ -453,14 +453,6 @@ export default function SubscriptionPage() {
             <p className="text-center text-xs text-white/90 mt-3">
               3 dias grátis · A partir de R$ 35,90 / mês
             </p>
-            <div className="mt-4 rounded-2xl overflow-hidden bg-black/20 border border-white/20">
-              <img
-                src={paymentPixImg}
-                alt="Exemplo de pagamento via PIX com QR Code"
-                className="w-full h-auto block"
-                loading="lazy"
-              />
-            </div>
           </div>
         </aside>
       </div>
