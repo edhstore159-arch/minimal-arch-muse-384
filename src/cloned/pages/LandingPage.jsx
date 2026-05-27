@@ -79,8 +79,8 @@ export default function LandingPage() {
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="mb-8">
+          <div className="text-center lg:text-left">
+            <div className="mb-8 flex justify-center lg:justify-start">
               <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full mb-4">
                 <span className="text-primary font-semibold flex items-center space-x-1">
                   <Star className="w-4 h-4 fill-secondary text-secondary" />
@@ -100,11 +100,11 @@ export default function LandingPage() {
             <p className="text-base text-gray-600 mb-4">
               Agronegócio, indústria, comércio, serviços e tecnologia: encontre oportunidades reais perto de você ou anuncie sua vaga em minutos.
             </p>
-            <div className="flex items-center space-x-2 mb-8 text-sm text-gray-600">
+            <div className="flex items-center justify-center lg:justify-start space-x-2 mb-8 text-sm text-gray-600">
               <MapPin className="w-5 h-5 text-primary" />
               <span>Goiânia, Anápolis, Aparecida, Rio Verde, Jataí, Catalão e mais</span>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 mb-12 items-center justify-center lg:justify-start">
               <Button
                 onClick={() => openAuth('signup')}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground h-14 px-8 text-base rounded-full"
