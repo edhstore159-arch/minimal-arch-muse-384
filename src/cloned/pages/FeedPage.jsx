@@ -980,7 +980,7 @@ export default function FeedPage() {
                 >
                   <Film className="w-6 h-6 text-gray-400" />
                   <span className="text-[11px] text-gray-500 mt-1">Adicionar vídeo (MP4)</span>
-                  <input type="file" accept="video/mp4,video/webm" onChange={handleVideoSelect} className="hidden" />
+                  <input type="file" accept="video/*" onChange={handleVideoSelect} className="hidden" />
                 </label>
               )}
             </div>
