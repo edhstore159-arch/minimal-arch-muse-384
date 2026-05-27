@@ -9,7 +9,8 @@ import {
   Phone, MessageCircle, CheckCheck, MoreVertical, Camera, Search, Star,
   Home as HomeIcon, Users as UsersIcon, Plus, BarChart3, MessageSquare,
   Video as VideoIcon, X as XIcon, Calendar, CreditCard, Star as StarIcon,
-  Share2, Pin, Archive, Flag, Ban, ChevronRight, Copy, Clock, MoreHorizontal
+  Share2, Pin, Archive, Flag, Ban, ChevronRight, Copy, Clock, MoreHorizontal,
+  ThumbsUp, FileText, Receipt, History, ClipboardList, Wallet, Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import MapPreview from '../components/MapPreview';
