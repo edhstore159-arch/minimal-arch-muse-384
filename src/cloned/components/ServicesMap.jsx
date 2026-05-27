@@ -12,7 +12,10 @@ import { MapPin, Loader2 } from 'lucide-react';
  * permissão (voluntários/admin) por causa das RLS policies já existentes.
  */
 export default function ServicesMap({ height = 400, showHelpRequests = true }) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const apiKey =
+    import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ||
+    import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
+    '';
   const [helpers, setHelpers] = useState([]);
   const [requests, setRequests] = useState([]);
   const [userLoc, setUserLoc] = useState(null);
