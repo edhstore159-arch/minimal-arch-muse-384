@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video } from 'lucide-react';
+import { toast } from 'sonner';
 
 const TABS = [
   { id: 'presentation', label: 'Apresentação' },
