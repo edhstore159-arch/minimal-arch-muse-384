@@ -9,6 +9,7 @@ import BottomNav from '../components/BottomNav';
 import { MessageCircle, Plus, Check, Heart, Users, Sparkles, MapPin, Image as ImageIcon, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import ServicesMap from '../components/ServicesMap';
 
 // Imagens de pessoas felizes sendo ajudadas
 const HERO_IMAGES = [
@@ -540,6 +541,15 @@ export default function VolunteersPage() {
 
       {/* Conteúdo Principal */}
       <div className="container mx-auto px-4 py-6 max-w-4xl">
+        {/* Mapa: voluntários/prestadores e pedidos de ajuda próximos */}
+        <div className="bg-white rounded-3xl shadow-card p-4 mb-6">
+          <h3 className="font-bold text-textPrimary mb-3 flex items-center gap-2">
+            <MapPin size={18} className="text-primary" />
+            Mapa: voluntários e pessoas que precisam de ajuda
+          </h3>
+          <ServicesMap height={380} showHelpRequests={true} />
+        </div>
+
         {/* Cards de inspiração */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="relative h-40 rounded-2xl overflow-hidden">
