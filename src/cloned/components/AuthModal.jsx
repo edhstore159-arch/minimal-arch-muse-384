@@ -29,6 +29,8 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
   const [location, setLocation] = useState('');
   const [mobile, setMobile] = useState('');
   const [serviceWanted, setServiceWanted] = useState('');
+  const [topics, setTopics] = useState([]);
+  const [urgentItems, setUrgentItems] = useState('');
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const fileRef = useRef(null);
@@ -89,8 +91,40 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
     setLocation('');
     setMobile('');
     setServiceWanted('');
+    setTopics([]);
+    setUrgentItems('');
     setAvatarFile(null);
     setAvatarPreview(null);
+  };
+
+  const VOLUNTEER_TOPICS = [
+    'Distribuição de alimentos',
+    'Roupas e agasalhos',
+    'Apoio jurídico',
+    'Aulas de idioma',
+    'Saúde / primeiros socorros',
+    'Transporte',
+    'Acolhimento / abrigo',
+    'Tradução',
+    'Apoio psicológico',
+    'Cuidado infantil',
+  ];
+
+  const HELP_TOPICS = [
+    'Alimentos',
+    'Roupas',
+    'Abrigo',
+    'Medicamentos',
+    'Documentação',
+    'Trabalho',
+    'Transporte',
+    'Apoio jurídico',
+    'Apoio psicológico',
+    'Material escolar',
+  ];
+
+  const toggleTopic = (t) => {
+    setTopics((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   };
 
 
@@ -143,7 +177,10 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
           display_name: name,
           role,
           city: location,
-          categories: serviceWanted ? [serviceWanted.trim()] : [],
+          categories: (role === 'volunteer' || role === 'needs_help')
+            ? topics
+            : (serviceWanted ? [serviceWanted.trim()] : []),
+          bio: role === 'needs_help' && urgentItems ? `Precisa urgentemente de: ${urgentItems}` : undefined,
         });
         if (avatarFile && data.user) {
           const path = `${data.user.id}/avatar`;
@@ -243,33 +280,30 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
               <ArrowLeft className="w-5 h-5" />
             </button>
 
-            {/* role toggle (compacto) */}
-            <div className="flex gap-2 mt-2 mb-4">
-              <button
-                type="button"
-                onClick={() => setRole('migrant')}
-                className={`flex-1 text-xs font-medium py-1.5 rounded-full border transition ${
-                  role === 'migrant'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-                data-testid="role-procuro"
-              >
-                Procuro serviço
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('helper')}
-                className={`flex-1 text-xs font-medium py-1.5 rounded-full border transition ${
-                  role === 'helper'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-                data-testid="role-ofereco"
-              >
-                Ofereço serviço
-              </button>
+            {/* role toggle */}
+            <div className="grid grid-cols-2 gap-2 mt-2 mb-4">
+              {[
+                { key: 'migrant', label: 'Procuro serviço' },
+                { key: 'helper', label: 'Ofereço serviço' },
+                { key: 'volunteer', label: 'Sou voluntário' },
+                { key: 'needs_help', label: 'Preciso de ajuda' },
+              ].map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => { setRole(r.key); setTopics([]); }}
+                  className={`text-xs font-medium py-1.5 rounded-full border transition ${
+                    role === r.key
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                  data-testid={`role-${r.key}`}
+                >
+                  {r.label}
+                </button>
+              ))}
             </div>
+
 
             {/* avatar (opcional, discreto) */}
             <div className="flex justify-center mb-4">
@@ -347,13 +381,69 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
                 data-testid="signup-mobile"
               />
 
-              <input
-                value={serviceWanted}
-                onChange={(e) => setServiceWanted(e.target.value)}
-                placeholder={role === 'migrant' ? 'Serviço que procura (ex: pedreiro, garçom)' : 'Serviço que oferece (ex: eletricista)'}
-                className="w-full h-11 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                data-testid="signup-service-wanted"
-              />
+              {(role === 'migrant' || role === 'helper') && (
+                <input
+                  value={serviceWanted}
+                  onChange={(e) => setServiceWanted(e.target.value)}
+                  placeholder={role === 'migrant' ? 'Serviço que procura (ex: pedreiro, garçom)' : 'Serviço que oferece (ex: eletricista)'}
+                  className="w-full h-11 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  data-testid="signup-service-wanted"
+                />
+              )}
+
+              {role === 'volunteer' && (
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-1.5">Como você pode ajudar?</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {VOLUNTEER_TOPICS.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => toggleTopic(t)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                          topics.includes(t)
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {role === 'needs_help' && (
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs font-medium text-gray-700 mb-1.5">Do que você precisa urgentemente?</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {HELP_TOPICS.map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => toggleTopic(t)}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                            topics.includes(t)
+                              ? 'border-red-500 bg-red-50 text-red-600'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    value={urgentItems}
+                    onChange={(e) => setUrgentItems(e.target.value)}
+                    placeholder="Objetos/itens específicos que precisa (ex: fralda P, leite, cobertor)"
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                  />
+                </div>
+              )}
+
 
               <input
                 required
