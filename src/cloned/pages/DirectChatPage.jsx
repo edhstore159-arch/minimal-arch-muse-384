@@ -693,13 +693,14 @@ export default function DirectChatPage() {
             )}
           </div>
 
-          {/* Action buttons (Recusar / Agendar / Pagamento / Avaliar) - desktop only */}
+          {/* Action buttons (Recusar / Agendar / Pagamento / Avaliar) - mobile + desktop */}
           {canChat && (
-            <div className="hidden md:block border-t border-gray-100 px-6 py-3">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="border-t border-gray-100 px-3 md:px-6 py-2.5 bg-white">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                 <ActionBtn icon={<XIcon size={16} className="text-red-500" />} label="Recusar" onClick={() => setActiveModal('refuse')} testid="action-refuse" />
-                <ActionBtn icon={<Calendar size={16} className="text-blue-500" />} label="Agendar" onClick={() => setActiveModal('schedule')} testid="action-schedule" />
-                <ActionBtn icon={<CreditCard size={16} className="text-green-500" />} label="Pagamento" onClick={() => setActiveModal('payment')} testid="action-payment" />
+                <ActionBtn icon={<Calendar size={16} className="text-blue-500" />} label="Encontro" onClick={() => setActiveModal('schedule')} testid="action-schedule" />
+                <ActionBtn icon={<CreditCard size={16} className="text-brand-coral" />} label="Pagamento" onClick={() => setActiveModal('payment')} testid="action-payment" />
+                <ActionBtn icon={<StarIcon size={16} className="text-amber-500" />} label="Avaliação" onClick={openRating} testid="action-rate" />
                 <ActionBtn icon={<MoreHorizontal size={16} />} label="Ver tudo" onClick={() => setActiveModal('more')} testid="action-more" />
               </div>
             </div>
