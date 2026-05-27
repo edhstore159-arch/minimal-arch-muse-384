@@ -88,6 +88,7 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
     setLastName('');
     setLocation('');
     setMobile('');
+    setServiceWanted('');
     setAvatarFile(null);
     setAvatarPreview(null);
   };
