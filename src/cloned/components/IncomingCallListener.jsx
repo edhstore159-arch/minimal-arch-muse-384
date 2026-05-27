@@ -10,6 +10,7 @@ import { Phone, PhoneOff, Video } from 'lucide-react';
  */
 export default function IncomingCallListener() {
   const { user } = useContext(AuthContext) || {};
+  const navigate = useNavigate();
   const [incoming, setIncoming] = useState(null);
 
   useEffect(() => {
