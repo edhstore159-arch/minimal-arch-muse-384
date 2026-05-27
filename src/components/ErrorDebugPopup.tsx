@@ -420,7 +420,7 @@ export const ErrorDebugPopup: React.FC = () => {
                   <div key={f.id} className="relative group">
                     {f.isImage ? (
                       <img
-                        src={f.dataUrl}
+                        src={f.previewUrl}
                         alt={f.name}
                         className="h-14 w-14 object-cover rounded border border-border"
                       />
@@ -452,6 +452,9 @@ export const ErrorDebugPopup: React.FC = () => {
 
             {attachError && (
               <p className="text-[10px] text-destructive">{attachError}</p>
+            )}
+            {uploadProgress && (
+              <p className="text-[10px] text-muted-foreground">{uploadProgress}</p>
             )}
           </div>
 
