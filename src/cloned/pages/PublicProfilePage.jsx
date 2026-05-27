@@ -89,23 +89,14 @@ export default function PublicProfilePage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => {
-                  if (profile.phone) {
-                    window.location.href = `tel:${profile.phone}`;
-                  } else {
-                    toast.error('Esse usuário não cadastrou telefone.');
-                  }
-                }}
+                onClick={() => ringUser('audio')}
                 title="Ligar"
               >
                 <Phone className="w-4 h-4 mr-1.5" /> Ligar
               </Button>
               <Button
                 variant="outline"
-                onClick={() => {
-                  const room = `pertodemim-${(userId || 'sala').toString().slice(0, 16)}`;
-                  window.open(`https://meet.jit.si/${room}`, '_blank', 'noopener');
-                }}
+                onClick={() => ringUser('video')}
                 title="Chamada de vídeo"
               >
                 <Video className="w-4 h-4 mr-1.5" /> Vídeo
