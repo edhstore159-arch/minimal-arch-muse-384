@@ -796,19 +796,32 @@ export default function DirectChatPage() {
                   <div className="flex items-center gap-3 mt-4">
                     <button
                       data-testid="video-call-btn"
-                      onClick={() => toast.info('Chamada de vídeo em breve')}
+                      onClick={() => {
+                        const room = `pertodemim-${(otherUser?.id || activeUserId || 'sala').toString().slice(0, 16)}`;
+                        window.open(`https://meet.jit.si/${room}`, '_blank', 'noopener');
+                      }}
                       className="w-11 h-11 rounded-full border border-gray-200 hover:border-[#16a34a] hover:text-[#16a34a] grid place-items-center transition"
+                      title="Iniciar chamada de vídeo"
                     >
                       <VideoIcon size={18} />
                     </button>
                     <button
                       data-testid="phone-call-btn"
-                      onClick={() => toast.info('Chamada de voz em breve')}
+                      onClick={() => {
+                        const phone = otherUser?.phone || otherUser?.whatsapp;
+                        if (phone) {
+                          window.location.href = `tel:${phone}`;
+                        } else {
+                          toast.error('Esse usuário não cadastrou telefone.');
+                        }
+                      }}
                       className="w-11 h-11 rounded-full border border-gray-200 hover:border-[#16a34a] hover:text-[#16a34a] grid place-items-center transition"
+                      title="Ligar"
                     >
                       <Phone size={18} />
                     </button>
                   </div>
+
 
                   <button
                     data-testid="view-profile-btn"

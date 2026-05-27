@@ -285,7 +285,7 @@ export default function MessagesPage() {
                 return (
                   <button
                     key={u.id}
-                    onClick={() => setActiveUserId(u.id)}
+                    onClick={() => navigate(`/direct-chat/${u.id}`)}
                     className={`w-full px-3 py-3 mb-1 rounded-2xl flex items-start gap-3 transition-all text-left group ${
                       isActive
                         ? 'bg-gradient-to-r from-green-50 to-emerald-50 shadow-sm ring-1 ring-green-200'
