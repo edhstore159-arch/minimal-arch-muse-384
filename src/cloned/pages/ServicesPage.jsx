@@ -1,93 +1,60 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../ClonedAuthContext';
+import React, { useState, useEffect, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import BottomNav from '../components/BottomNav';
-import { Search, MapPin, Phone, Clock } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { Search, MapPin, Tag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function ServicesPage() {
-  const { token } = useContext(AuthContext);
-  const { t } = useTranslation();
-  const [services, setServices] = useState([]);
-  const [filteredServices, setFilteredServices] = useState([]);
+  const navigate = useNavigate();
+  const [posts, setPosts] = useState([]);
+  const [categories, setCategories] = useState([{ value: 'all', label: 'Todas' }]);
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
   const [loading, setLoading] = useState(true);
 
-  const categories = [
-    { value: 'all', label: 'Todos' },
-    { value: 'food', label: t('food') },
-    { value: 'legal', label: t('legal') },
-    { value: 'health', label: t('health') },
-    { value: 'housing', label: t('housing') },
-    { value: 'work', label: t('work') },
-    { value: 'education', label: t('education') }
-  ];
-
   useEffect(() => {
-    fetchServices();
+    (async () => {
+      setLoading(true);
+      const [{ data: cats }, { data: svc, error }] = await Promise.all([
+        supabase.from('svc_categories').select('slug, name').order('sort_order'),
+        supabase.from('svc_posts').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(100),
+      ]);
+      if (error) console.warn('svc_posts fetch error', error);
+      setCategories([
+        { value: 'all', label: 'Todas' },
+        ...((cats ?? []).map((c) => ({ value: c.slug, label: c.name }))),
+      ]);
+      setPosts(svc ?? []);
+      setLoading(false);
+    })();
   }, []);
 
-  useEffect(() => {
-    filterServices();
-  }, [searchTerm, category, services]);
-
-  const fetchServices = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ""}/api/services`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setServices(data);
-        setFilteredServices(data);
-      }
-    } catch (error) {
-      console.error('Error fetching services:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterServices = () => {
-    let filtered = services;
-
-    if (category !== 'all') {
-      filtered = filtered.filter(s => s.category === category);
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(s => 
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return posts.filter((p) => {
+      if (category !== 'all' && (p.category_slug || 'outros') !== category) return false;
+      if (!term) return true;
+      return (
+        (p.title || '').toLowerCase().includes(term) ||
+        (p.description || '').toLowerCase().includes(term) ||
+        (p.address || '').toLowerCase().includes(term)
       );
-    }
+    });
+  }, [posts, searchTerm, category]);
 
-    setFilteredServices(filtered);
-  };
-
-  const getCategoryColor = (cat) => {
-    const colors = {
-      food: 'bg-green-100 text-green-700',
-      legal: 'bg-blue-100 text-blue-700',
-      health: 'bg-red-100 text-red-700',
-      housing: 'bg-orange-100 text-orange-700',
-      work: 'bg-yellow-100 text-yellow-700',
-      education: 'bg-orange-100 text-orange-700'
-    };
-    return colors[cat] || 'bg-gray-100 text-gray-700';
-  };
+  const categoryLabel = (slug) => categories.find((c) => c.value === slug)?.label || slug;
 
   return (
     <div className="min-h-screen bg-background pb-20" data-testid="services-page">
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-10 glassmorphism">
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 space-y-4">
-          <h1 className="text-2xl font-heading font-bold text-textPrimary">{t('search')} Serviços</h1>
-          
+          <h1 className="text-2xl font-heading font-bold">Buscar Serviços</h1>
+
           <div className="flex gap-3">
             <div className="flex-1 relative">
-              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <Input
                 data-testid="search-input"
                 value={searchTerm}
@@ -101,7 +68,7 @@ export default function ServicesPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {categories.map(cat => (
+                {categories.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -112,49 +79,44 @@ export default function ServicesPage() {
 
       <div className="container mx-auto px-4 py-6">
         {loading ? (
-          <div className="text-center py-12 text-textMuted">Carregando serviços...</div>
-        ) : filteredServices.length === 0 ? (
-          <div className="text-center py-12 text-textMuted" data-testid="no-services-message">
+          <div className="text-center py-12 text-gray-500">Carregando serviços...</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12 text-gray-500" data-testid="no-services-message">
             Nenhum serviço encontrado
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredServices.map((service) => (
-              <div 
-                key={service.id}
+            {filtered.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => navigate('/home')}
                 data-testid="service-card"
-                className="bg-white rounded-3xl p-6 shadow-card card-hover"
+                className="text-left bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-bold text-textPrimary flex-1">{service.name}</h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(service.category)}`}>
-                    {categories.find(c => c.value === service.category)?.label}
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <h3 className="text-base font-bold flex-1 line-clamp-2">{p.title}</h3>
+                  <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 whitespace-nowrap">
+                    {categoryLabel(p.category_slug || 'outros')}
                   </span>
                 </div>
-                {service.description && (
-                  <p className="text-textSecondary mb-3 text-sm leading-relaxed">{service.description}</p>
+                {p.description && (
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-3">{p.description}</p>
                 )}
-                <div className="space-y-2 text-sm text-textMuted">
-                  {service.address && (
-                    <div className="flex items-start gap-2">
-                      <MapPin size={16} className="flex-shrink-0 mt-0.5" />
-                      <span>{service.address}</span>
+                <div className="space-y-1 text-xs text-gray-500">
+                  {p.address && (
+                    <div className="flex items-start gap-1.5">
+                      <MapPin size={14} className="flex-shrink-0 mt-0.5" />
+                      <span className="line-clamp-1">{p.address}</span>
                     </div>
                   )}
-                  {service.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone size={16} />
-                      <span>{service.phone}</span>
-                    </div>
-                  )}
-                  {service.hours && (
-                    <div className="flex items-center gap-2">
-                      <Clock size={16} />
-                      <span>{service.hours}</span>
+                  {p.budget_range && (
+                    <div className="flex items-center gap-1.5">
+                      <Tag size={14} />
+                      <span>{p.budget_range}</span>
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
