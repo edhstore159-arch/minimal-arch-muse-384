@@ -391,8 +391,8 @@ export default function FeedPage() {
       return;
     }
     files.forEach((file) => {
-      if (file.size > 50_000_000) {
-        toast.error(`Vídeo muito grande (${(file.size / 1_000_000).toFixed(1)}MB). Máximo 50MB.`);
+      if (file.size > 150_000_000) {
+        toast.error(`Vídeo muito grande (${(file.size / 1_000_000).toFixed(1)}MB). Máximo 150MB.`);
         e.target.value = '';
         return;
       }
