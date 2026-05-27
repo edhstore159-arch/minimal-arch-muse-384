@@ -857,9 +857,15 @@ export default function DirectChatPage() {
                   <div className="flex items-center gap-3 mt-4">
                     <button
                       data-testid="video-call-btn"
-                      onClick={() => {
+                      onClick={async () => {
                         const room = `pertodemim-${(otherUser?.id || userId || 'sala').toString().slice(0, 16)}`;
-                        window.open(`https://meet.jit.si/${room}`, '_blank', 'noopener');
+                        const url = `https://meet.jit.si/${room}`;
+                        try {
+                          await sendSystemMessage(`📹 Chamada de vídeo iniciada. Entre pelo link: ${url}`);
+                        } catch (err) {
+                          console.error('[video-call] system msg failed', err);
+                        }
+                        window.open(url, '_blank', 'noopener');
                       }}
                       className="w-11 h-11 rounded-full border border-gray-200 hover:border-[#16a34a] hover:text-[#16a34a] grid place-items-center transition"
                       title="Iniciar chamada de vídeo"
