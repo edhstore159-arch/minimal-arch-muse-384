@@ -177,7 +177,10 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
           display_name: name,
           role,
           city: location,
-          categories: serviceWanted ? [serviceWanted.trim()] : [],
+          categories: (role === 'volunteer' || role === 'needs_help')
+            ? topics
+            : (serviceWanted ? [serviceWanted.trim()] : []),
+          bio: role === 'needs_help' && urgentItems ? `Precisa urgentemente de: ${urgentItems}` : undefined,
         });
         if (avatarFile && data.user) {
           const path = `${data.user.id}/avatar`;
