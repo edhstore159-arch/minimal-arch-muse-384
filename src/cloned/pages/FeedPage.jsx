@@ -686,32 +686,32 @@ export default function FeedPage() {
                 <p className="text-[10px] text-gray-600 mb-2 leading-relaxed">
                   Aumente suas chances em 25% ilustrando sua necessidade.
                 </p>
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="flex gap-1.5 mb-3">
                   {[0, 1, 2].map((index) => {
                     const photo = selectedPhotos[index];
                     return (
-                      <div key={index} className="relative aspect-square">
+                      <div key={index} className="relative w-14 h-14">
                         {photo ? (
                           <>
                             <img
                               src={photo.dataUrl}
                               alt="Preview"
-                              className="w-full h-full object-cover rounded-lg border-2 border-gray-300"
+                              className="w-full h-full object-cover rounded-md border border-gray-300"
                             />
                             <button
                               onClick={() => removePhoto(photo.id)}
-                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-lg"
+                              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow"
                               data-testid={`remove-feed-photo-${index}`}
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-2.5 h-2.5" />
                             </button>
                           </>
                         ) : (
                           <label
-                            className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-green-400 hover:bg-white transition-all bg-white"
+                            className="w-full h-full border border-dashed border-gray-300 rounded-md flex items-center justify-center cursor-pointer hover:border-green-400 hover:bg-white transition-all bg-white"
                             data-testid={`feed-photo-slot-${index}`}
                           >
-                            <Camera className="w-5 h-5 text-gray-400" />
+                            <Camera className="w-4 h-4 text-gray-400" />
                             <input
                               type="file"
                               accept="image/*"
@@ -726,6 +726,7 @@ export default function FeedPage() {
                   })}
                 </div>
               </div>
+
 
               <div className="mb-3">
                 <label className="text-xs font-semibold mb-1 block">Endereço</label>
