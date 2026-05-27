@@ -140,21 +140,19 @@ export default function HousingPage() {
   const fetchListings = async () => {
     try {
       setLoading(true);
-      let url = `${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ""}/api/housing?`;
-      if (filterType !== 'all') url += `type=${filterType}&`;
-      if (filterCity) url += `city=${filterCity}&`;
-      
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setListings(data);
+      // No backend housing API configured yet — load from localStorage
+      const stored = localStorage.getItem('housing_listings');
+      let data = stored ? JSON.parse(stored) : [];
+      if (filterType !== 'all') {
+        data = data.filter((l) => l.listing_type === filterType);
       }
+      if (filterCity && filterCity !== 'Todo o Brasil') {
+        data = data.filter((l) => l.city === filterCity);
+      }
+      setListings(data);
     } catch (error) {
       console.error('Error fetching housing listings:', error);
-      toast.error(t('errorLoadingListings'));
+      setListings([]);
     } finally {
       setLoading(false);
     }
