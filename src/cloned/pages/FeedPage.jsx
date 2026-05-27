@@ -971,7 +971,7 @@ export default function FeedPage() {
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-gray-900 mb-1">Adicione um vídeo</h4>
               <p className="text-[11px] text-gray-500 mb-3">
-                Opcional · MP4/WebM/MOV até 4MB.
+                Opcional · MP4/WebM/MOV até 50MB.
               </p>
               {selectedVideos.length > 0 ? (
                 <div className="relative">
