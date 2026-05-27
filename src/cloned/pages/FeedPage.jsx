@@ -445,7 +445,7 @@ export default function FeedPage() {
         description: postDescription,
         photos: uploadedUrls,
         budget_range: postBudget || null,
-        category_slug: postCategory || null,
+        category_slug: ['limpeza','reformas','jardinagem','mudancas','aulas','cuidados','tecnologia','beleza','transporte','outros'].includes(postCategory) ? postCategory : 'outros',
         address: postAddress || null,
         lat: postCoords?.lat ?? null,
         lng: postCoords?.lng ?? null,
