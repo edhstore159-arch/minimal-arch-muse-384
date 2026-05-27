@@ -387,6 +387,10 @@ export default function ProfilePage() {
                 Nenhum pedido de ajuda no momento.
               </div>
             )}
+
+            <div className="mt-5">
+              <ServicesMap height={320} showHelpRequests={true} />
+            </div>
           </div>
         )}
 
