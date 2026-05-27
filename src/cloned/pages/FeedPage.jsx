@@ -122,12 +122,16 @@ const PostCard = ({ post, onChat }) => {
                   <div
                     key={idx}
                     data-testid={`post-card-img-${idx}`}
-                    className={`relative overflow-hidden rounded-md border border-gray-200 bg-gray-50 ${images.length === 1 ? 'max-h-[500px]' : 'aspect-square'}`}
+                    className={`relative overflow-hidden rounded-md border border-gray-200 bg-gray-50 ${images.length === 1 ? 'flex items-center justify-center max-h-[420px]' : 'aspect-square'}`}
                   >
                     <img
                       src={img}
                       alt={`Mídia ${idx + 1}`}
-                      className={`w-full h-full ${images.length === 1 ? 'object-contain' : 'object-cover'}`}
+                      className={
+                        images.length === 1
+                          ? 'max-h-[420px] w-auto max-w-full object-contain'
+                          : 'w-full h-full object-cover'
+                      }
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   </div>
