@@ -35,6 +35,32 @@ export default function PublicProfilePage() {
     })();
   }, [userId]);
 
+  const ringUser = async (kind) => {
+    try {
+      const { data: { user: me } } = await supabase.auth.getUser();
+      if (!me) { toast.error('Faça login para chamar.'); return; }
+      if (me.id === userId) { toast.error('Você não pode chamar a si mesmo.'); return; }
+      const room = `pertodemim-${userId.toString().slice(0, 8)}-${Date.now().toString(36)}`;
+      const { data: myProfile } = await supabase
+        .from('svc_profiles').select('display_name, avatar_url').eq('user_id', me.id).maybeSingle();
+      const { error } = await supabase.from('calls').insert({
+        caller_id: me.id,
+        receiver_id: userId,
+        caller_name: myProfile?.display_name || me.email,
+        caller_avatar: myProfile?.avatar_url || null,
+        room,
+        kind,
+        status: 'ringing',
+      });
+      if (error) throw error;
+      toast.success(`Chamando ${profile.display_name}…`);
+      window.open(`https://meet.jit.si/${room}`, '_blank', 'noopener');
+    } catch (e) {
+      console.error('[call] failed', e);
+      toast.error('Não foi possível iniciar a chamada.');
+    }
+  };
+
   if (loading) return <div className="p-12 text-center text-gray-500">Carregando…</div>;
   if (!profile) return <div className="p-12 text-center text-gray-500">Perfil não encontrado.</div>;
 
