@@ -165,26 +165,21 @@ export default function HousingPage() {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ""}/api/housing`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...newListing,
-          listing_type: listingType
-        })
-      });
-
-      if (response.ok) {
-        toast.success(listingType === 'offer' ? t('housingOfferCreated') : t('housingRequestCreated'));
-        setShowCreateModal(false);
-        resetForm();
-        fetchListings();
-      } else {
-        throw new Error('Failed to create listing');
-      }
+      const stored = localStorage.getItem('housing_listings');
+      const existing = stored ? JSON.parse(stored) : [];
+      const item = {
+        ...newListing,
+        listing_type: listingType,
+        id: `local-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        user_id: user?.id || null,
+      };
+      const updated = [item, ...existing];
+      localStorage.setItem('housing_listings', JSON.stringify(updated));
+      toast.success(listingType === 'offer' ? t('housingOfferCreated') : t('housingRequestCreated'));
+      setShowCreateModal(false);
+      resetForm();
+      fetchListings();
     } catch (error) {
       toast.error(t('errorCreatingListing'));
     }
