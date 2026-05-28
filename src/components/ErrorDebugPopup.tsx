@@ -79,6 +79,8 @@ const uploadLargeFile = async (
  * CustomEvent("lovable-debug-error") com mensagem prefixada. Arquivos são
  * enviados ao bucket "debug-uploads" e suas URLs públicas embutidas no texto
  * do erro. Nada é enviado por chat/mutation — apenas evento de janela.
+ * 
+ * Pressione a tecla "T" para mostrar/ocultar o painel.
  */
 export const ErrorDebugPopup: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -88,6 +90,7 @@ export const ErrorDebugPopup: React.FC = () => {
   const [files, setFiles] = useState<AttachedFile[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [minimized, setMinimized] = useState(false);
+  const [isVisible, setIsVisible] = useState(false); // Novo: controla visibilidade com tecla T
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -136,6 +139,19 @@ export const ErrorDebugPopup: React.FC = () => {
       authSubscription.subscription.unsubscribe();
     };
   }, []);
+
+  // Novo: listener para tecla T
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Detecta se a tecla pressionada é "t" ou "T"
+      if ((e.key === 't' || e.key === 'T') && isAdmin && hasSession) {
+        setIsVisible((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAdmin, hasSession]);
 
   const onHeaderMouseDown = (e: React.MouseEvent) => {
     dragRef.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
@@ -313,6 +329,11 @@ export const ErrorDebugPopup: React.FC = () => {
     zIndex: 2147483600,
   };
 
+  // Se não está visível, não renderiza nada
+  if (!isVisible) {
+    return null;
+  }
+
   if (isCheckingAccess) {
     return (
       <div
@@ -380,7 +401,7 @@ export const ErrorDebugPopup: React.FC = () => {
         className="flex items-center justify-between px-3 py-2 bg-muted cursor-move select-none border-b border-border"
       >
         <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-          Debug Tool (admin)
+          Debug Tool (admin) - Pressione T para ocultar
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -432,7 +453,7 @@ export const ErrorDebugPopup: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => removeFile(f.id)}
-                      className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 text-[10px] leading-none flex items-center justify-center hover:opacity-90"
+                      className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 text-[10px] leading-none flex items-center justify-center hover:opacity-80"
                       aria-label={`Remover ${f.name}`}
                     >
                       ×
