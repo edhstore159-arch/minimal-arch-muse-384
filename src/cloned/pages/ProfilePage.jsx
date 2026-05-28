@@ -632,6 +632,8 @@ export default function ProfilePage() {
           </div>
         )}
 
+        <ChangePasswordCard />
+
         <div className="bg-white rounded-3xl p-6 shadow-card mt-6">
           <Button
             data-testid="logout-button"
@@ -649,3 +651,61 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+function ChangePasswordCard() {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast.error('A senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success('Senha alterada com sucesso');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      toast.error(err.message || 'Erro ao alterar senha');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-3xl p-6 shadow-card mt-6">
+      <h3 className="font-semibold text-textPrimary mb-4 flex items-center gap-2">
+        <Shield size={18} /> Alterar senha
+      </h3>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Input
+          type="password"
+          placeholder="Nova senha"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Confirmar nova senha"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+        />
+        <Button type="submit" disabled={loading} className="w-full rounded-full">
+          {loading ? 'Salvando...' : 'Salvar nova senha'}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
