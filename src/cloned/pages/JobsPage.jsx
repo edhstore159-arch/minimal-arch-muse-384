@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/
 import BottomNav from '../components/BottomNav';
 import { Search, MapPin, Clock, MessageCircle, Plus, Filter, Wrench, Brush, Lightbulb, Droplets, Hammer, BrickWall, Sparkles, Leaf, Truck, Settings, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 import { saveLastJobSearch } from '../lib/jobSearchBridge';
@@ -154,6 +154,7 @@ export default function JobsPage() {
   const { user } = useContext(AuthContext);
   const { location: sharedLocation } = useUserLocation();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
   const profileCategories = Array.isArray(user?.categories) ? user.categories.filter(Boolean) : [];
   const [requestedCategories, setRequestedCategories] = useState([]);
   const userInterestCategories = Array.from(new Set([...profileCategories, ...requestedCategories])).filter(Boolean);
