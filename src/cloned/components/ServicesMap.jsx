@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Loader2, ExternalLink } from 'lucide-react';
 import { modernMapStyle, pinIcon, dotIcon, jobPinIcon } from './mapStyle';
@@ -55,6 +56,7 @@ const buildSearchJobMarkers = ({ userId, categories, userLocation, requests, ena
 };
 
 export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = EMPTY_CATEGORIES, radiusKm = 0, userLocation = null, userId = null, showSearchJobs = true }) {
+  const navigate = useNavigate();
   const apiKey = getGoogleMapsBrowserKey();
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -234,6 +236,13 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
                         <MapPin size={10} /> {selected.data.address}
                       </p>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/jobs?postId=${selected.data.id}`)}
+                      className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
+                    >
+                      <ExternalLink size={10} /> Abrir emprego
+                    </button>
                   </>
                 )}
               </div>
