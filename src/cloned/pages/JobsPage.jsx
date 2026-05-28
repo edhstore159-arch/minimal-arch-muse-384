@@ -335,7 +335,34 @@ export default function JobsPage() {
     toast.success(`Abrindo ${platform.name}...`);
   };
 
-  const displayData = viewMode === 'offers' ? jobOffers : jobSeekers;
+  const itemMatchesCategories = (item, categories) => {
+    if (!categories.length) return true;
+    const itemCategory = item.category || item.category_slug || '';
+    const haystack = normalizeText(`${item.title || ''} ${item.description || ''} ${itemCategory} ${prettifyCategoryLabel(itemCategory)}`);
+    return categories.some((category) => {
+      const label = prettifyCategoryLabel(category);
+      return itemCategory === category || haystack.includes(normalizeText(category)) || haystack.includes(normalizeText(label));
+    });
+  };
+
+  const filterAndSortCommunityItems = (items) => {
+    const filtered = selectedCategory === 'all'
+      ? items
+      : items.filter((item) => itemMatchesCategories(item, [selectedCategory]));
+
+    if (!userInterestCategories.length) return filtered;
+
+    return [...filtered].sort((a, b) => {
+      const aMatch = itemMatchesCategories(a, userInterestCategories) ? 1 : 0;
+      const bMatch = itemMatchesCategories(b, userInterestCategories) ? 1 : 0;
+      return bMatch - aMatch;
+    });
+  };
+
+  const visibleJobOffers = filterAndSortCommunityItems(jobOffers);
+  const visibleJobSeekers = filterAndSortCommunityItems(jobSeekers);
+  const displayData = viewMode === 'offers' ? visibleJobOffers : visibleJobSeekers;
+  const selectedCategoryLabel = selectedCategory === 'all' ? 'todos os tipos de trabalho' : prettifyCategoryLabel(selectedCategory);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-20" data-testid="jobs-page">
