@@ -467,7 +467,7 @@ export default function JobsPage() {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              🛠️ Serviços ({jobOffers.length})
+              🛠️ Ofertas ({visibleJobOffers.length})
             </button>
             <button
               onClick={() => setViewMode('seekers')}
@@ -477,9 +477,15 @@ export default function JobsPage() {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              👥 Procuram ({jobSeekers.length})
+              👥 Pedidos ({visibleJobSeekers.length})
             </button>
           </div>
+
+          {userInterestCategories.length > 0 && (
+            <div className="mb-3 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
+              <strong>Conectado ao seu perfil:</strong> priorizando ofertas para {userInterestCategories.map(prettifyCategoryLabel).join(', ')}.
+            </div>
+          )}
 
           {/* Categorias de Serviços */}
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
