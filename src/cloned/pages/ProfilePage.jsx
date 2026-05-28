@@ -104,15 +104,20 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('svc_posts')
         .select('id, title, description, address, created_at, post_type, category_slug, user_id')
-        .eq('user_id', user.id)
+        .neq('post_type', 'volunteer')
         .order('created_at', { ascending: false })
-        .limit(30);
+        .limit(50);
+      if (selectedCategories && selectedCategories.length > 0) {
+        const cats = selectedCategories.filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
+        if (cats.length > 0) query = query.in('category_slug', cats);
+      }
+      const { data } = await query;
       setHelpRequests(data || []);
     })();
-  }, [user?.id]);
+  }, [user?.id, selectedCategories]);
 
   const [helpFilter, setHelpFilter] = useState('all');
   const groupedHelp = React.useMemo(() => {
@@ -533,10 +538,10 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
                   <HandHeart size={22} className="text-rose-500" />
-                  Meus pedidos de trabalho
+                  Trabalhos do seu interesse
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} · com localização
+                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} · filtrados pelas suas categorias e com localização
                 </p>
               </div>
               <Button
