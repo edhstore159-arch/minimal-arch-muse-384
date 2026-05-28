@@ -114,7 +114,8 @@ export default function ProfilePage() {
       .order('created_at', { ascending: false })
       .limit(80);
     const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
-    if (cats.length > 0) query = query.in('category_slug', cats);
+    if (cats.length === 0) { setHelpRequests([]); return; }
+    query = query.in('category_slug', cats);
     const { data } = await query;
     let rows = data || [];
     // Distance filter (haversine) — only when user has location and posts have lat/lng
