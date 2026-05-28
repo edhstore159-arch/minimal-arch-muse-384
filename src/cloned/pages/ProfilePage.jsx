@@ -42,6 +42,10 @@ export default function ProfilePage() {
   const coverInputRef = useRef(null);
   const photoInputRef = useRef(null);
   const [helpRequests, setHelpRequests] = useState([]);
+  const [radiusKm, setRadiusKm] = useState(() => {
+    const v = parseInt(localStorage.getItem('svc_radius_km') || '25', 10);
+    return Number.isFinite(v) ? v : 25;
+  });
   const isVolunteer = user?.role === 'volunteer' || user?.role === 'helper' || user?.role === 'admin';
 
   const avatarSrc = avatarOverride || user?.avatar_url;
