@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
+import { saveLastJobSearch } from '../lib/jobSearchBridge';
 
 // Plataformas de emprego externas (Brasil)
 const JOB_PLATFORMS = [
@@ -263,6 +264,7 @@ export default function JobsPage() {
       setTotalJobs(combinedJobs.length);
       setCurrentPage(page);
       setViewMode(nextViewMode);
+      saveLastJobSearch({ userId: user?.id, query: q, location: loc, category: selectedCategory, jobs: combinedJobs });
 
       if (combinedJobs.length > 0) {
         toast.success(`${combinedJobs.length} opções de emprego carregadas!`);
@@ -287,6 +289,7 @@ export default function JobsPage() {
       toast.info('Busca externa instável; mostrando plataformas brasileiras para pesquisar direto.');
       setExternalJobs(fallbackJobs);
       setTotalJobs(fallbackJobs.length);
+      saveLastJobSearch({ userId: user?.id, query: q, location: loc, category: selectedCategory, jobs: fallbackJobs });
     } finally {
       setSearchLoading(false);
     }

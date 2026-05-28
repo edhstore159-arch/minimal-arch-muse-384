@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import BottomNav from '../components/BottomNav';
-import { User, Mail, Globe, LogOut, Edit, Check, Heart, MapPin, Shield, Sparkles, Camera, HandHeart, ArrowRight, Image as ImageIcon, Wand2, Loader2 } from 'lucide-react';
+import { User, Mail, Globe, LogOut, Edit, Check, Heart, MapPin, Shield, Sparkles, Camera, HandHeart, ArrowRight, Image as ImageIcon, Wand2, Loader2, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -600,11 +600,12 @@ export default function ProfilePage() {
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
-                  <HandHeart size={22} className="text-rose-500" />
+                  {isVolunteer ? <HandHeart size={22} className="text-rose-500" /> : <Briefcase size={22} className="text-rose-500" />}
                   {isVolunteer ? 'Pedidos próximos para ajudar' : 'Propostas de emprego do seu interesse'}
+                  {!isVolunteer && <span className="inline-block animate-bounce">💼</span>}
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} {isVolunteer ? 'pedido' : 'proposta'}{helpRequests.length !== 1 ? 's' : ''} · perfil diferenciado por categoria e localização
+                  {helpRequests.length} {isVolunteer ? 'pedido' : 'proposta'}{helpRequests.length !== 1 ? 's' : ''} · mapa conectado ao buscador por categoria e localização
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
@@ -697,9 +698,11 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="font-semibold text-textPrimary text-sm truncate">{p.title}</p>
+                            <p className="font-semibold text-textPrimary text-sm truncate flex items-center gap-1">
+                              {p.title} {isOffer && <VerifiedBadge size={14} title="Proposta verificada" />}
+                            </p>
                             <span className="text-[10px] uppercase tracking-wide text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              {isOffer ? 'Oferta' : 'Pedido'} · {info.label}
+                              <span className="inline-block animate-pulse">{isOffer ? '💼' : '🤝'}</span> {isOffer ? 'Oferta' : 'Pedido'} · {info.label}
                             </span>
                           </div>
                           {p.description && (
@@ -724,7 +727,7 @@ export default function ProfilePage() {
             )}
 
             <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} postTypeFilter={profilePostTypeFilter} categories={interestCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
+              <ServicesMap height={320} showHelpRequests={true} postTypeFilter={profilePostTypeFilter} categories={interestCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} userId={user?.id} showSearchJobs={!isVolunteer} />
             </div>
           </div>
 
