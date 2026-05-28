@@ -10,6 +10,7 @@ import BottomNav from '../components/BottomNav';
 import AuthModal from '../components/AuthModal';
 import { Briefcase, Check, Sparkles, Star, Plus, MapPin, Image as ImageIcon, X, Crown, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80',
