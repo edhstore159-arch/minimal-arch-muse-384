@@ -53,12 +53,15 @@ interface Event {
   target_date: string;
 }
 
+const ADMIN_EMAIL = 'admin@pertodemim.app';
+
 const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -70,6 +73,17 @@ const Admin = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate('/auth');
+      return;
+    }
+
+    // Verificar se é o email admin específico
+    if (session.user.email !== ADMIN_EMAIL) {
+      toast({
+        title: 'Acesso negado',
+        description: 'Este dashboard é acessível apenas pelo email administrativo autorizado',
+        variant: 'destructive',
+      });
+      navigate('/');
       return;
     }
 
@@ -92,6 +106,7 @@ const Admin = () => {
     }
 
     setIsAdmin(true);
+    setIsAuthorizedAdmin(true);
     setLoading(false);
     fetchEvents();
   };
@@ -247,7 +262,7 @@ const Admin = () => {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
 
-  if (!isAdmin) {
+  if (!isAdmin || !isAuthorizedAdmin) {
     return null;
   }
 
