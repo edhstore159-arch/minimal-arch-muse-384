@@ -72,14 +72,36 @@ const PREVIEW_POSTS = [
   },
 ];
 
+const EMOJIS = ['❤️','😂','😍','👍','🙏','🔥','🎉','😢','😮','👏','💯','🤝'];
+const storageKey = (id) => `feed_post_${id}`;
+const loadState = (id) => {
+  try { return JSON.parse(localStorage.getItem(storageKey(id))) || {}; } catch { return {}; }
+};
+const saveState = (id, data) => {
+  try { localStorage.setItem(storageKey(id), JSON.stringify(data)); } catch {}
+};
+
 // Jataí-style PostCard rendering PertoDeMimServicos posts
 const PostCard = ({ post, onChat }) => {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.likes_count || 0);
+  const initial = loadState(post.id);
+  const [liked, setLiked] = useState(!!initial.liked);
+  const [likeCount, setLikeCount] = useState(initial.likeCount ?? (post.likes_count || 0));
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState([]);
+  const [comments, setComments] = useState(initial.comments || []);
   const [commentText, setCommentText] = useState('');
+  const [showEmoji, setShowEmoji] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    saveState(post.id, { liked, likeCount, comments });
+  }, [liked, likeCount, comments, post.id]);
+
+  const toggleLike = () => {
+    setLiked((prev) => {
+      setLikeCount((c) => prev ? c - 1 : c + 1);
+      return !prev;
+    });
+  };
 
   const handleRespond = () => {
     if (onChat && post.user_id) {
@@ -98,7 +120,10 @@ const PostCard = ({ post, onChat }) => {
       { id: Date.now(), author: 'Você', text, created_at: new Date().toISOString() },
     ]);
     setCommentText('');
+    setShowEmoji(false);
   };
+
+  const addEmoji = (emoji) => setCommentText((t) => t + emoji);
 
   const displayName = post.user?.name || 'Usuário';
   const avatarFallback = displayName.charAt(0).toUpperCase();
@@ -207,7 +232,7 @@ const PostCard = ({ post, onChat }) => {
 
         <div className="flex items-center justify-start gap-3 pt-2 border-t border-gray-100">
           <button
-            onClick={() => { setLiked(!liked); setLikeCount(p => liked ? p - 1 : p + 1); }}
+            onClick={toggleLike}
             className={`flex items-center gap-1.5 text-xs transition-colors ${liked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}
             data-testid="post-like-btn"
           >
@@ -255,7 +280,29 @@ const PostCard = ({ post, onChat }) => {
                 </div>
               </div>
             ))}
-            <form onSubmit={handleAddComment} className="flex items-center gap-2 pt-1">
+            <form onSubmit={handleAddComment} className="flex items-center gap-2 pt-1 relative">
+              <button
+                type="button"
+                onClick={() => setShowEmoji((v) => !v)}
+                className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-base"
+                aria-label="Adicionar emoji"
+              >
+                😊
+              </button>
+              {showEmoji && (
+                <div className="absolute bottom-10 left-0 z-10 bg-white border border-gray-200 rounded-xl shadow-lg p-2 grid grid-cols-6 gap-1">
+                  {EMOJIS.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => addEmoji(e)}
+                      className="w-8 h-8 text-lg hover:bg-gray-100 rounded"
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              )}
               <Input
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
