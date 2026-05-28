@@ -478,7 +478,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={uploadingAvatar}
-                  className="absolute -bottom-1 -right-1 w-10 h-10 bg-primary rounded-full shadow-lg flex items-center justify-center border-2 border-white hover:bg-primary/90 transition disabled:opacity-60"
+                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary rounded-full shadow-lg flex items-center justify-center border-2 border-white hover:bg-primary/90 transition disabled:opacity-60"
                   title="Alterar foto de perfil"
                   data-testid="change-avatar-btn"
                 >
