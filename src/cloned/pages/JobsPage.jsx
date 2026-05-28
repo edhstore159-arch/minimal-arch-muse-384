@@ -503,8 +503,17 @@ export default function JobsPage() {
                   placeholder="Cidade"
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
-                  className="pl-10 rounded-xl bg-white h-12 w-full sm:w-36"
+                  className="pl-10 pr-10 rounded-xl bg-white h-12 w-full sm:w-44"
                 />
+                <button
+                  type="button"
+                  title="Usar minha localização"
+                  onClick={() => autoLocateAndSearch({ forceBrowser: true })}
+                  disabled={locating}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-blue-50 text-blue-600 disabled:opacity-50"
+                >
+                  {locating ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
+                </button>
               </div>
               <Button 
                 onClick={handleSearch}
