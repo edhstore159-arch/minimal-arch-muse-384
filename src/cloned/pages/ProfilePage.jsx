@@ -601,10 +601,10 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
                   <HandHeart size={22} className="text-rose-500" />
-                  Propostas do seu interesse
+                  {isVolunteer ? 'Pedidos próximos para ajudar' : 'Propostas de emprego do seu interesse'}
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} emprego{helpRequests.length !== 1 ? 's' : ''} · pelas categorias do perfil e dos pedidos solicitados
+                  {helpRequests.length} {isVolunteer ? 'pedido' : 'proposta'}{helpRequests.length !== 1 ? 's' : ''} · perfil diferenciado por categoria e localização
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
@@ -719,12 +719,12 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-8 text-sm text-textMuted bg-white/60 rounded-2xl">
                 <HandHeart size={32} className="mx-auto mb-2 text-rose-300" />
-                Nenhum emprego encontrado para as categorias que você solicitou.
+                {isVolunteer ? 'Nenhum pedido encontrado para suas categorias.' : 'Nenhuma proposta de emprego encontrada para as categorias que você solicitou.'}
               </div>
             )}
 
             <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={interestCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
+              <ServicesMap height={320} showHelpRequests={true} postTypeFilter={profilePostTypeFilter} categories={interestCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
             </div>
           </div>
 
