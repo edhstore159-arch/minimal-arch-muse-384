@@ -370,13 +370,14 @@ export default function JobsPage() {
   const visibleJobSeekers = filterAndSortCommunityItems(jobSeekers);
   const displayData = viewMode === 'offers' ? visibleJobOffers : visibleJobSeekers;
   const selectedCategoryLabel = selectedCategory === 'all' ? 'todos os tipos de trabalho' : prettifyCategoryLabel(selectedCategory);
+  const matchedOfferCount = jobOffers.filter((item) => itemMatchesCategories(item, userInterestCategories)).length;
 
   useEffect(() => {
-    if (openedMatchedOffers || !userInterestCategories.length || !visibleJobOffers.length) return;
+    if (openedMatchedOffers || !userInterestCategories.length || !matchedOfferCount) return;
     setSelectedCategory(userInterestCategories[0]);
     setViewMode('offers');
     setOpenedMatchedOffers(true);
-  }, [openedMatchedOffers, userInterestCategories.join('|'), visibleJobOffers.length]);
+  }, [openedMatchedOffers, userInterestCategories.join('|'), matchedOfferCount]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-20" data-testid="jobs-page">
