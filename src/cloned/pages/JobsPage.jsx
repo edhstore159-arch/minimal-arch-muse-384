@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 import { saveLastJobSearch } from '../lib/jobSearchBridge';
 import { requestLocationPermission } from '../utils/geolocation';
+import { useUserLocation, setUserLocation as setSharedLocation } from '../lib/userLocation';
 import { Loader2, Navigation } from 'lucide-react';
 
 const extractCityFromAddress = (address = '') => {
