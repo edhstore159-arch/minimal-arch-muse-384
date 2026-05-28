@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import { X } from 'lucide-react';
 import { Button } from './ui/button';
+import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
 
 const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
   const [map, setMap] = useState(null);
@@ -10,7 +11,16 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
   const mapContainerStyle = {
     width: '100%',
     height: '400px',
-    borderRadius: '8px'
+    borderRadius: '16px'
+  };
+
+  const mapOptions = {
+    styles: modernMapStyle,
+    disableDefaultUI: true,
+    zoomControl: true,
+    clickableIcons: false,
+    gestureHandling: 'greedy',
+    backgroundColor: '#f5f5f7',
   };
 
   const center = userLocation || {
@@ -35,46 +45,37 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
   }
 
   return (
-    <div className="relative">
+    <div className="relative rounded-2xl overflow-hidden shadow-lg ring-1 ring-black/5">
       {onClose && (
         <Button
           onClick={onClose}
           variant="ghost"
           size="sm"
-          className="absolute top-2 right-2 z-10 bg-white shadow-md"
+          className="absolute top-3 right-3 z-10 bg-white/90 backdrop-blur-md shadow-md rounded-full h-9 w-9 p-0"
         >
           <X className="w-4 h-4" />
         </Button>
       )}
-      
+
       <LoadScript googleMapsApiKey={apiKey}>
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
           zoom={13}
+          options={mapOptions}
           onLoad={onLoad}
           onUnmount={onUnmount}
         >
-          {/* User location marker */}
           {userLocation && (
-            <Marker
-              position={userLocation}
-              icon={{
-                url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-              }}
-              title="Sua localização"
-            />
+            <Marker position={userLocation} icon={{ url: dotIcon('#3b82f6') }} title="Sua localização" />
           )}
 
-          {/* Location markers */}
           {locations && locations.map((location, index) => (
             <Marker
               key={index}
               position={{ lat: location.latitude, lng: location.longitude }}
               title={location.name}
-              icon={{
-                url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-              }}
+              icon={{ url: pinIcon('#ef4444') }}
             />
           ))}
         </GoogleMap>

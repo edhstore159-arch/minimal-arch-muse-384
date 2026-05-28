@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Loader2 } from 'lucide-react';
+import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
 
 /**
  * Mapa com:
@@ -71,27 +72,35 @@ export default function ServicesMap({ height = 400, showHelpRequests = true }) {
   }
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-gray-100" style={{ height }}>
+    <div className="relative rounded-2xl overflow-hidden border border-border shadow-lg ring-1 ring-black/5" style={{ height }}>
       {loading && (
-        <div className="absolute inset-0 z-10 bg-white/60 flex items-center justify-center">
+        <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center">
           <Loader2 className="animate-spin text-primary" />
         </div>
       )}
       <LoadScript googleMapsApiKey={apiKey}>
-        <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={center} zoom={12}>
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          center={center}
+          zoom={12}
+          options={{
+            styles: modernMapStyle,
+            disableDefaultUI: true,
+            zoomControl: true,
+            clickableIcons: false,
+            gestureHandling: 'greedy',
+            backgroundColor: '#f5f5f7',
+          }}
+        >
           {userLoc && (
-            <Marker
-              position={userLoc}
-              icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }}
-              title="Você"
-            />
+            <Marker position={userLoc} icon={{ url: dotIcon('#3b82f6') }} title="Você" />
           )}
 
           {helpers.map((h) => (
             <Marker
               key={`h-${h.user_id}`}
               position={{ lat: h.lat, lng: h.lng }}
-              icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' }}
+              icon={{ url: pinIcon('#10b981') }}
               title={`${h.display_name} (${h.role === 'volunteer' ? 'Voluntário' : 'Prestador'})`}
               onClick={() => setSelected({ type: 'helper', data: h })}
             />
@@ -101,7 +110,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true }) {
             <Marker
               key={`r-${r.id}`}
               position={{ lat: r.lat, lng: r.lng }}
-              icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' }}
+              icon={{ url: pinIcon('#ef4444') }}
               title={r.title}
               onClick={() => setSelected({ type: 'request', data: r })}
             />
@@ -136,10 +145,13 @@ export default function ServicesMap({ height = 400, showHelpRequests = true }) {
         </GoogleMap>
       </LoadScript>
 
-      <div className="absolute bottom-2 left-2 bg-white/95 rounded-lg px-3 py-1.5 text-xs shadow flex items-center gap-3">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> Voluntários/Prestadores</span>
+      <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md rounded-full px-4 py-2 text-xs shadow-lg ring-1 ring-black/5 flex items-center gap-4 font-medium">
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100" /> Voluntários</span>
         {showHelpRequests && (
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Pedidos de ajuda</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" /> Pedidos</span>
+        )}
+        {userLoc && (
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-blue-100" /> Você</span>
         )}
       </div>
     </div>
