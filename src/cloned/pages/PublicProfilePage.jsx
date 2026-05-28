@@ -24,6 +24,32 @@ export default function PublicProfilePage() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('presentation');
+  const [me, setMe] = useState(null);
+  const [friend, setFriend] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMe(data?.user || null));
+  }, []);
+
+  useEffect(() => {
+    setFriend(isFriend(me?.id, userId));
+    const onChange = () => setFriend(isFriend(me?.id, userId));
+    window.addEventListener('svc:friends-change', onChange);
+    return () => window.removeEventListener('svc:friends-change', onChange);
+  }, [me?.id, userId]);
+
+  const toggleFriend = () => {
+    if (!me?.id) { toast.error('Faça login para adicionar amigos.'); return; }
+    if (me.id === userId) { toast.error('Você não pode adicionar a si mesmo.'); return; }
+    if (friend) {
+      removeFriend(me.id, userId);
+      toast.success('Amizade desfeita.');
+    } else {
+      addFriend(me.id, { user_id: userId, display_name: profile?.display_name, avatar_url: profile?.avatar_url });
+      toast.success('Amigo adicionado!');
+    }
+  };
 
   useEffect(() => {
     (async () => {
