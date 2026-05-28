@@ -13,19 +13,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, updateSvcProfile } from '../lib/authProfile';
 import ServicesMap from '../components/ServicesMap';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, getWorkCategoryInfo } from '../lib/serviceCategories';
 
-const HELP_CATEGORIES = [
-  { value: 'food', label: 'Alimentação', icon: '🍽️' },
-  { value: 'legal', label: 'Jurídico', icon: '⚖️' },
-  { value: 'health', label: 'Saúde', icon: '🏥' },
-  { value: 'housing', label: 'Moradia', icon: '🏠' },
-  { value: 'work', label: 'Trabalho', icon: '💼' },
-  { value: 'education', label: 'Educação', icon: '📚' },
-  { value: 'social', label: 'Social', icon: '🤝' },
-  { value: 'clothes', label: 'Roupas', icon: '👕' },
-  { value: 'furniture', label: 'Móveis', icon: '🪑' },
-  { value: 'transport', label: 'Transporte', icon: '🚗' }
-];
+const HELP_CATEGORIES = WORK_SERVICE_CATEGORIES;
 
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useContext(AuthContext);
@@ -36,6 +26,7 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [useDisplayName, setUseDisplayName] = useState(user?.use_display_name || false);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [customHelpCategory, setCustomHelpCategory] = useState('');
   const [savingCategories, setSavingCategories] = useState(false);
   const [activeTab, setActiveTab] = useState('presentation');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
