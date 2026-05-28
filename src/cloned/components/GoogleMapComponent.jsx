@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import React, { useState } from 'react';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { X } from 'lucide-react';
 import { Button } from './ui/button';
 import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
