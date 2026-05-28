@@ -872,7 +872,7 @@ export default function JobsPage() {
                     />
                   ) : (
                     <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-                      {selectedJob.company?.charAt(0)}
+                      {selectedJob.company?.charAt(0) || '💼'}
                     </div>
                   )}
                   <div>
@@ -912,12 +912,16 @@ export default function JobsPage() {
                 {selectedJob.description && (
                   <div>
                     <h4 className="font-bold mb-2">📝 Descrição da Vaga</h4>
-                    <div 
-                      className="text-sm text-gray-600 prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ 
-                        __html: selectedJob.description.substring(0, 2000) 
-                      }}
-                    />
+                    {selectedJob.isCommunityPost ? (
+                      <p className="text-sm text-gray-600 whitespace-pre-line">{selectedJob.description}</p>
+                    ) : (
+                      <div 
+                        className="text-sm text-gray-600 prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ 
+                          __html: selectedJob.description.substring(0, 2000) 
+                        }}
+                      />
+                    )}
                   </div>
                 )}
 
@@ -939,11 +943,18 @@ export default function JobsPage() {
                 {/* Botões de ação */}
                 <div className="flex gap-3 pt-4 border-t">
                   <Button
-                    onClick={() => window.open(selectedJob.url, '_blank')}
+                    onClick={() => {
+                      if (selectedJob.isCommunityPost && selectedJob.user_id) {
+                        setShowJobDetails(false);
+                        navigate(`/direct-chat/${selectedJob.user_id}`);
+                        return;
+                      }
+                      if (selectedJob.url) window.open(selectedJob.url, '_blank');
+                    }}
                     className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700"
                   >
                     <ExternalLink size={16} className="mr-2" />
-                    Candidatar-se Agora
+                    {selectedJob.isCommunityPost ? 'Conversar sobre a vaga' : 'Candidatar-se Agora'}
                   </Button>
                   <Button
                     onClick={() => setShowJobDetails(false)}
@@ -955,7 +966,7 @@ export default function JobsPage() {
                 </div>
                 
                 <p className="text-xs text-gray-400 text-center">
-                  Fonte: {selectedJob.source} • Você será redirecionado para o site original
+                  {selectedJob.isCommunityPost ? 'Publicado dentro do app' : `Fonte: ${selectedJob.source} • Você será redirecionado para o site original`}
                 </p>
               </div>
             )}
