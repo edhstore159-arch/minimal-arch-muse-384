@@ -560,6 +560,11 @@ export default function FeedPage() {
       toast.error('Adicione uma descrição');
       return;
     }
+    const customCategoryName = customPostCategory.trim();
+    if (postCategory === CUSTOM_CATEGORY_VALUE && !customCategoryName) {
+      toast.error('Escreva sua categoria');
+      return;
+    }
     setLoadingPost(true);
     try {
       // Require auth so post is visible to everyone
@@ -575,6 +580,14 @@ export default function FeedPage() {
       // Upload photos and videos to public storage so other users can see them
       const uploadedUrls = await uploadPhotosToStorage(uid, selectedPhotos);
       const uploadedVideos = await uploadVideosToStorage(uid, selectedVideos);
+      let categorySlug = CATEGORY_OPTIONS.some((category) => category.value === postCategory) ? postCategory : 'reformas';
+      if (postCategory === CUSTOM_CATEGORY_VALUE) {
+        const { data: createdSlug, error: categoryError } = await supabase.rpc('ensure_svc_category', {
+          _name: customCategoryName,
+        });
+        if (categoryError) throw categoryError;
+        categorySlug = createdSlug || 'outros';
+      }
 
       const insertPayload = {
         user_id: uid,
@@ -583,7 +596,7 @@ export default function FeedPage() {
         photos: uploadedUrls,
         videos: uploadedVideos,
         budget_range: postBudget || null,
-        category_slug: CATEGORY_OPTIONS.some((category) => category.value === postCategory) ? postCategory : 'reformas',
+        category_slug: categorySlug,
         address: postAddress || null,
         lat: postCoords?.lat ?? null,
         lng: postCoords?.lng ?? null,
@@ -601,6 +614,7 @@ export default function FeedPage() {
       toast.success(modalMode === 'need' ? 'Sua demanda foi publicada!' : 'Seu serviço foi publicado!');
       setShowCreateModal(false);
       setPostDescription('');
+      setCustomPostCategory('');
       setSelectedPhotos([]);
       setSelectedVideos([]);
       await fetchPosts();
