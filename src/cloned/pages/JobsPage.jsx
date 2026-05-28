@@ -214,6 +214,17 @@ export default function JobsPage() {
     }
   }, [selectedCategory]);
 
+  // Reage quando a localização compartilhada muda (perfil, GPS automático, etc.)
+  useEffect(() => {
+    if (!sharedLocation?.address && !sharedLocation?.lat) return;
+    const city = extractCityFromAddress(sharedLocation.address) || locationQuery;
+    if (city && city !== locationQuery) {
+      setLocationQuery(city);
+      const term = (searchQuery && searchQuery.trim()) || SEARCH_SUGGESTIONS[selectedCategory]?.[0] || 'emprego';
+      searchExternalJobs(term, city);
+    }
+  }, [sharedLocation?.lat, sharedLocation?.lng, sharedLocation?.address]);
+
   const fetchJobs = async () => {
     setLoading(true);
     try {
