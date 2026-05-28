@@ -14,6 +14,7 @@ import { getOrCreateSvcProfile, updateSvcProfile } from '../lib/authProfile';
 import ServicesMap from '../components/ServicesMap';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, getWorkCategoryInfo } from '../lib/serviceCategories';
+import { useUserLocation } from '../lib/userLocation';
 
 const HELP_CATEGORIES = WORK_SERVICE_CATEGORIES;
 
