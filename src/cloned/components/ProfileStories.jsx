@@ -90,47 +90,65 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
   };
 
   return (
-    <div className="px-6 sm:px-10 py-4 border-b border-gray-100">
-      <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
-        {/* Add story / your own */}
-        <button
-          onClick={onAddStory}
-          className="flex flex-col items-center gap-1 flex-shrink-0"
-          title="Adicionar story"
-        >
-          <div className="relative w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
-            <div className="w-full h-full rounded-full bg-white p-[2px]">
-              <div className="w-full h-full rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                {avatarSrc ? (
-                  <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-gray-500 text-xs">Eu</span>
-                )}
+    <div className="py-2">
+      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+        {/* Botão único: Story + Ao vivo (menu) */}
+        <div className="relative flex-shrink-0">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex flex-col items-center gap-1"
+            title="Publicar story ou iniciar ao vivo"
+          >
+            <div className={`relative w-16 h-16 rounded-full p-[2px] ${live ? 'bg-red-500 animate-pulse' : 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600'}`}>
+              <div className="w-full h-full rounded-full bg-white p-[2px]">
+                <div className="w-full h-full rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                  {avatarSrc ? (
+                    <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-gray-500 text-xs">Eu</span>
+                  )}
+                </div>
               </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-primary rounded-full border-2 border-white flex items-center justify-center shadow">
+                <Plus size={14} className="text-white" />
+              </div>
+              {live && (
+                <span className="absolute -top-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded uppercase">
+                  AO VIVO
+                </span>
+              )}
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-primary rounded-full border-2 border-white flex items-center justify-center">
-              <Plus size={12} className="text-white" />
-            </div>
-          </div>
-          <span className="text-xs text-textPrimary truncate max-w-[64px]">Seu story</span>
-        </button>
+            <span className="text-xs text-textPrimary">{live ? 'Encerrar' : 'Story / Ao vivo'}</span>
+          </button>
 
-        {/* Go live */}
-        <button
-          onClick={live ? stopLive : startLive}
-          className="flex flex-col items-center gap-1 flex-shrink-0"
-          title={live ? 'Encerrar transmissão' : 'Iniciar transmissão ao vivo'}
-        >
-          <div className={`relative w-16 h-16 rounded-full p-[2px] ${live ? 'bg-red-500 animate-pulse' : 'bg-gradient-to-tr from-red-500 to-pink-500'}`}>
-            <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-              <Radio size={26} className={live ? 'text-red-500' : 'text-red-500'} />
+          {menuOpen && !live && (
+            <div className="absolute z-20 top-20 left-1/2 -translate-x-1/2 w-48 bg-white rounded-xl shadow-lg ring-1 ring-black/5 py-2">
+              <button
+                onClick={() => { setMenuOpen(false); onAddStory(); }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <ImagePlus size={16} className="text-primary" /> Publicar story
+              </button>
+              <button
+                onClick={() => { setMenuOpen(false); startLive(); }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Radio size={16} className="text-red-500" /> Iniciar ao vivo
+              </button>
             </div>
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded uppercase">
-              {live ? 'AO VIVO' : 'Live'}
-            </span>
-          </div>
-          <span className="text-xs text-textPrimary">{live ? 'Encerrar' : 'Ao vivo'}</span>
-        </button>
+          )}
+          {menuOpen && live && (
+            <div className="absolute z-20 top-20 left-1/2 -translate-x-1/2 w-48 bg-white rounded-xl shadow-lg ring-1 ring-black/5 py-2">
+              <button
+                onClick={() => { setMenuOpen(false); stopLive(); }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+              >
+                <Radio size={16} /> Encerrar transmissão
+              </button>
+            </div>
+          )}
+        </div>
+
 
         {/* Existing stories */}
         {stories.map((s) => (
