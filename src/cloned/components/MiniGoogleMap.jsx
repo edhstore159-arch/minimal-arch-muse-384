@@ -1,11 +1,45 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Map as MapIcon, Eye } from 'lucide-react';
 import { modernMapStyle, pinIcon } from './mapStyle';
 import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './googleMapsConfig';
 
+const StreetViewPanel = ({ position, height, visible, panoramaData }) => {
+  const containerRef = useRef(null);
+  const panoramaRef = useRef(null);
+
+  useEffect(() => {
+    if (!visible || !panoramaData || !containerRef.current || !window.google?.maps) return;
+
+    const panoramaOptions = {
+      pano: panoramaData.location?.pano,
+      position: panoramaData.location?.latLng || position,
+      pov: { heading: 0, pitch: 0 },
+      zoom: 0,
+      addressControl: false,
+      fullscreenControl: false,
+      motionTracking: false,
+      motionTrackingControl: false,
+      panControl: false,
+      zoomControl: true,
+      linksControl: true,
+      enableCloseButton: false,
+    };
+
+    if (!panoramaRef.current) {
+      panoramaRef.current = new window.google.maps.StreetViewPanorama(containerRef.current, panoramaOptions);
+    } else {
+      panoramaRef.current.setOptions(panoramaOptions);
+    }
+  }, [panoramaData, position, visible]);
+
+  return <div ref={containerRef} style={{ width: '100%', height, display: visible ? 'block' : 'none' }} />;
+};
+
 const MiniGoogleMap = ({ lat, lng, height = 200, zoom = 15, color = '#ef4444' }) => {
   const [showStreetView, setShowStreetView] = useState(false);
+  const [panoramaData, setPanoramaData] = useState(null);
+  const [streetViewStatus, setStreetViewStatus] = useState('idle');
   const apiKey = getGoogleMapsBrowserKey();
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -13,6 +47,40 @@ const MiniGoogleMap = ({ lat, lng, height = 200, zoom = 15, color = '#ef4444' })
     channel: getGoogleMapsChannel(),
     preventGoogleFontsLoading: true,
   });
+
+  const position = useMemo(() => ({ lat, lng }), [lat, lng]);
+
+  useEffect(() => {
+    if (!isLoaded || !Number.isFinite(lat) || !Number.isFinite(lng) || !window.google?.maps) return;
+
+    let cancelled = false;
+    setStreetViewStatus('loading');
+
+    const service = new window.google.maps.StreetViewService();
+    service.getPanorama(
+      {
+        location: position,
+        radius: 120,
+        source: window.google.maps.StreetViewSource.OUTDOOR,
+      },
+      (data, status) => {
+        if (cancelled) return;
+
+        if (status === window.google.maps.StreetViewStatus.OK && data?.location) {
+          setPanoramaData(data);
+          setStreetViewStatus('ready');
+          return;
+        }
+
+        setPanoramaData(null);
+        setStreetViewStatus('unavailable');
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, lat, lng, position]);
 
   if (!apiKey || loadError || !Number.isFinite(lat) || !Number.isFinite(lng)) {
     return <MapFallback height={height} />;
@@ -22,20 +90,11 @@ const MiniGoogleMap = ({ lat, lng, height = 200, zoom = 15, color = '#ef4444' })
     return <div style={{ height }} className="bg-gray-100 animate-pulse rounded-xl" />;
   }
 
-  const position = { lat, lng };
-  const streetViewUrl = `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}&location=${lat},${lng}&heading=0&pitch=0&fov=90`;
-
   return (
     <div className="relative rounded-xl overflow-hidden" style={{ height }}>
-      {showStreetView ? (
-        <iframe
-          title="Street View"
-          src={streetViewUrl}
-          style={{ width: '100%', height: '100%', border: 0 }}
-          loading="lazy"
-          allowFullScreen
-        />
-      ) : (
+      <StreetViewPanel position={position} height={height} visible={showStreetView && streetViewStatus === 'ready'} panoramaData={panoramaData} />
+
+      {(!showStreetView || streetViewStatus !== 'ready') && (
         <GoogleMap
           mapContainerStyle={{ width: '100%', height: '100%' }}
           center={position}
@@ -53,6 +112,19 @@ const MiniGoogleMap = ({ lat, lng, height = 200, zoom = 15, color = '#ef4444' })
           <Marker position={position} icon={{ url: pinIcon(color) }} />
         </GoogleMap>
       )}
+
+      {showStreetView && streetViewStatus === 'loading' && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/75 text-xs font-semibold text-foreground backdrop-blur-sm">
+          Carregando Street View...
+        </div>
+      )}
+
+      {showStreetView && streetViewStatus === 'unavailable' && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 px-4 text-center text-xs font-semibold text-foreground backdrop-blur-sm">
+          Street View indisponível para este local
+        </div>
+      )}
+
       <button
         type="button"
         onClick={(e) => {
