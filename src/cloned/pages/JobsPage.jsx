@@ -4,10 +4,11 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import BottomNav from '../components/BottomNav';
-import { Search, MapPin, Star, Clock, MessageCircle, Plus, Filter, Briefcase, Wrench, Home, Car, Utensils, Heart, GraduationCap, Monitor, Baby, Flower2, Package, MoreHorizontal, ExternalLink, Globe } from 'lucide-react';
+import { Search, MapPin, Clock, MessageCircle, Plus, Filter, Wrench, Brush, Lightbulb, Droplets, Hammer, BrickWall, Sparkles, Leaf, Truck, Settings, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 
 // Plataformas de emprego externas (Brasil)
 const JOB_PLATFORMS = [
@@ -93,35 +94,44 @@ const JOB_PLATFORMS = [
   }
 ];
 
-// Categorias de serviços (estilo AlloVoisins)
+const CATEGORY_ICONS = {
+  reformas: Wrench,
+  pintura: Brush,
+  eletrica: Lightbulb,
+  hidraulica: Droplets,
+  marcenaria: Hammer,
+  pedreiro: BrickWall,
+  limpeza: Sparkles,
+  jardinagem: Leaf,
+  transporte: Truck,
+  mecanica: Settings,
+  outros: Plus,
+};
+
 const SERVICE_CATEGORIES = [
   { value: 'all', label: 'Todos', icon: Filter },
-  { value: 'bricolage', label: 'Bricolagem', icon: Wrench, emoji: '🔧' },
-  { value: 'cleaning', label: 'Limpeza', icon: Home, emoji: '🧹' },
-  { value: 'transport', label: 'Transporte', icon: Car, emoji: '🚗' },
-  { value: 'food', label: 'Alimentação', icon: Utensils, emoji: '🍽️' },
-  { value: 'care', label: 'Bem-estar', icon: Heart, emoji: '💆' },
-  { value: 'education', label: 'Aulas', icon: GraduationCap, emoji: '📚' },
-  { value: 'tech', label: 'Informática', icon: Monitor, emoji: '💻' },
-  { value: 'childcare', label: 'Crianças', icon: Baby, emoji: '👶' },
-  { value: 'garden', label: 'Jardinagem', icon: Flower2, emoji: '🌱' },
-  { value: 'moving', label: 'Mudança', icon: Package, emoji: '📦' },
-  { value: 'other', label: 'Outros', icon: MoreHorizontal, emoji: '➕' }
+  ...WORK_SERVICE_CATEGORIES.map((category) => ({
+    ...category,
+    icon: CATEGORY_ICONS[category.value] || Wrench,
+  })),
 ];
 
 // Termos de busca sugeridos por categoria (Brasil - Português)
 const SEARCH_SUGGESTIONS = {
-  'bricolage': ['eletricista', 'encanador', 'marceneiro', 'pintor'],
-  'cleaning': ['auxiliar de limpeza', 'faxineira', 'diarista'],
-  'transport': ['motorista', 'entregador', 'motoboy'],
-  'food': ['cozinheiro', 'garçom', 'auxiliar de cozinha', 'atendente'],
-  'care': ['cuidador de idosos', 'técnico de enfermagem', 'enfermeiro'],
-  'education': ['professor', 'instrutor', 'monitor'],
-  'tech': ['desenvolvedor', 'analista de sistemas', 'técnico de TI'],
-  'childcare': ['babá', 'auxiliar de creche', 'pajem'],
-  'garden': ['jardineiro', 'paisagista'],
-  'moving': ['ajudante de mudança', 'carregador', 'logística']
+  reformas: ['reformas', 'manutenção residencial', 'faz tudo', 'reparos'],
+  pintura: ['pintor', 'pintura residencial', 'pintura de parede'],
+  eletrica: ['eletricista', 'instalação elétrica', 'manutenção elétrica'],
+  hidraulica: ['encanador', 'bombeiro hidráulico', 'vazamento'],
+  marcenaria: ['marceneiro', 'carpinteiro', 'móveis planejados'],
+  pedreiro: ['pedreiro', 'construção civil', 'alvenaria'],
+  limpeza: ['auxiliar de limpeza', 'faxineira', 'diarista'],
+  jardinagem: ['jardineiro', 'paisagista', 'poda de jardim'],
+  transporte: ['motorista', 'entregador', 'frete', 'mudança'],
+  mecanica: ['mecânico', 'mecânico de autos', 'manutenção automotiva'],
+  outros: ['serviços gerais', 'ajudante', 'profissional autônomo'],
 };
+
+const normalizeText = (value = '') => String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 export default function JobsPage() {
   const { token, user } = useContext(AuthContext);
