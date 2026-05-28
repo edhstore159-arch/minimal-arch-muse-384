@@ -16,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import DirectChatPage from './pages/DirectChatPage';
 import VolunteersPage from './pages/VolunteersPage';
 import VolunteerRegisterPage from './pages/VolunteerRegisterPage';
+import OfferServicesPage from './pages/OfferServicesPage';
 import NearbyHelpersPage from './pages/NearbyHelpersPage';
 import MapPage from './pages/MapPage';
 import JobsPage from './pages/JobsPage';
