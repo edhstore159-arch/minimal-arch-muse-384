@@ -527,26 +527,25 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Painel de voluntário: casos e pessoas que precisam de ajuda */}
-        {isVolunteer && (
-          <div className="bg-gradient-to-br from-rose-50 via-white to-orange-50 rounded-3xl shadow-card p-6 mb-6 border border-rose-100" data-testid="volunteer-panel">
+        {/* Meus pedidos de trabalho */}
+        <div className="bg-gradient-to-br from-rose-50 via-white to-orange-50 rounded-3xl shadow-card p-6 mb-6 border border-rose-100" data-testid="my-requests-panel">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
                   <HandHeart size={22} className="text-rose-500" />
-                  Casos e pessoas que precisam de ajuda
+                  Meus pedidos de trabalho
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} ativo{helpRequests.length !== 1 ? 's' : ''} · organizados por categoria
+                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} · com localização
                 </p>
               </div>
               <Button
-                onClick={() => navigate('/volunteers')}
+                onClick={() => navigate('/offer-services')}
                 className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shrink-0 shadow-md"
                 size="sm"
-                data-testid="want-to-help-btn"
+                data-testid="new-request-btn"
               >
-                Quero ajudar <ArrowRight size={14} className="ml-1" />
+                Novo pedido <ArrowRight size={14} className="ml-1" />
               </Button>
             </div>
 
