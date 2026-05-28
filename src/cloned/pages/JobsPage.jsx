@@ -469,8 +469,8 @@ export default function JobsPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-20" data-testid="jobs-page">
       {/* Header */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto max-w-4xl px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="container mx-auto max-w-4xl px-3 sm:px-4 py-2 sm:py-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-4">
             <h1 className="text-xl font-bold text-gray-800">💼 Buscar Emprego</h1>
             <Button
               onClick={() => navigate('/home')}
