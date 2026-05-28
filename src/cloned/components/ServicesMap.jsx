@@ -128,15 +128,18 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
             />
           ))}
 
-          {requests.map((r) => (
+          {requests.map((r) => {
+            const isOffer = r.post_type === 'volunteer';
+            return (
             <Marker
               key={`r-${r.id}`}
               position={{ lat: r.lat, lng: r.lng }}
-              icon={{ url: pinIcon('#ef4444') }}
+              icon={{ url: pinIcon(isOffer ? '#f59e0b' : '#ef4444') }}
               title={r.title}
               onClick={() => setSelected({ type: 'request', data: r })}
             />
-          ))}
+            );
+          })}
 
           {selected && (
             <InfoWindow
@@ -154,6 +157,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
                 ) : (
                   <>
                     <p className="font-semibold text-sm">{selected.data.title}</p>
+                    <p className="text-xs text-gray-500">{selected.data.post_type === 'volunteer' ? 'Proposta de emprego' : 'Pedido de ajuda'}</p>
                     {selected.data.address && (
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <MapPin size={10} /> {selected.data.address}
@@ -170,7 +174,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
       <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md rounded-full px-4 py-2 text-xs shadow-lg ring-1 ring-black/5 flex items-center gap-4 font-medium">
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100" /> Voluntários</span>
         {showHelpRequests && (
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" /> Empregos filtrados</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" /> {postTypeFilter === 'offers' ? 'Propostas' : 'Pedidos'}</span>
         )}
         {userLoc && (
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-blue-100" /> Você</span>
