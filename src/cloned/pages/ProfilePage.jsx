@@ -575,6 +575,10 @@ export default function ProfilePage() {
           </div>
 
           {/* Stories + Live (estilo Instagram) */}
+          <div className="px-6 sm:px-10 pt-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-textPrimary uppercase tracking-wide">Stories e Ao vivo</h3>
+            <span className="text-xs text-textMuted">Toque em <b>+</b> para publicar ou <b>Ao vivo</b> para transmitir</span>
+          </div>
           <ProfileStories avatarSrc={avatarSrc} userName={user?.display_name || user?.name || 'Você'} />
 
           {/* Tabs */}
