@@ -363,7 +363,7 @@ export default function FeedPage() {
 
   useEffect(() => { detectAddress(); }, [detectAddress]);
   const [postBudget, setPostBudget] = useState('Sob orçamento');
-  const [postCategory, setPostCategory] = useState('social');
+  const [postCategory, setPostCategory] = useState('reformas');
   const [selectedPhotos, setSelectedPhotos] = useState([]); // [{id, dataUrl}]
   const [selectedVideos, setSelectedVideos] = useState([]); // [{id, dataUrl}]
 
@@ -445,7 +445,7 @@ export default function FeedPage() {
     setModalMode(mode);
     setPostDescription('');
     setPostBudget(mode === 'need' ? 'Sob orçamento' : 'A combinar');
-    setPostCategory('social');
+    setPostCategory('reformas');
     setSelectedPhotos([]);
     setSelectedVideos([]);
     setShowCreateModal(true);
@@ -591,7 +591,7 @@ export default function FeedPage() {
         photos: uploadedUrls,
         videos: uploadedVideos,
         budget_range: postBudget || null,
-        category_slug: ['limpeza','reformas','jardinagem','mudancas','aulas','cuidados','tecnologia','beleza','transporte','outros'].includes(postCategory) ? postCategory : 'outros',
+        category_slug: CATEGORY_OPTIONS.some((category) => category.value === postCategory) ? postCategory : 'reformas',
         address: postAddress || null,
         lat: postCoords?.lat ?? null,
         lng: postCoords?.lng ?? null,
