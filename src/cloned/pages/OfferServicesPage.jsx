@@ -291,6 +291,9 @@ export default function OfferServicesPage() {
           <div className="text-center mb-6">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Escolha seu plano</h2>
             <p className="text-gray-500">Comece grátis ou destaque-se com o Premier</p>
+            <div className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 text-xs font-semibold border border-orange-200">
+              🎁 3 dias grátis no Premier — depois 1 mês sem compromisso, cancele quando quiser
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -300,11 +303,11 @@ export default function OfferServicesPage() {
                 <div
                   key={plan.id}
                   className={`relative rounded-2xl p-6 border-2 transition-all hover:shadow-xl ${
-                    isPremier ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-red-50' : 'border-gray-200 bg-white'
+                    isPremier ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-red-50 shadow-lg scale-[1.02]' : 'border-gray-200 bg-white'
                   }`}
                 >
                   {plan.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
                       <Crown size={12} /> {plan.badge}
                     </div>
                   )}
@@ -316,10 +319,15 @@ export default function OfferServicesPage() {
                     )}
                     <h3 className={`text-2xl font-bold ${isPremier ? 'text-orange-600' : 'text-gray-900'}`}>{plan.name}</h3>
                   </div>
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <span className={`text-3xl font-bold ${isPremier ? 'text-orange-600' : 'text-gray-900'}`}>{plan.price}</span>
                     <span className="text-sm text-gray-500 ml-1">{plan.sub}</span>
                   </div>
+                  {plan.highlight && (
+                    <div className="mb-4 px-3 py-2 rounded-lg bg-white/70 border border-orange-200 text-xs font-semibold text-orange-700 text-center">
+                      {plan.highlight}
+                    </div>
+                  )}
                   <ul className="space-y-2 mb-6">
                     {plan.features.map((f, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
@@ -332,12 +340,15 @@ export default function OfferServicesPage() {
                     onClick={() => handlePlanClick(plan.id)}
                     className={`w-full rounded-full h-11 ${
                       isPremier
-                        ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'
+                        ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-md'
                         : 'bg-gray-900 hover:bg-gray-800 text-white'
                     }`}
                   >
                     {plan.cta}
                   </Button>
+                  {isPremier && (
+                    <p className="text-[11px] text-orange-700/80 mt-2 text-center">Sem cobrança nos primeiros 3 dias</p>
+                  )}
                 </div>
               );
             })}
