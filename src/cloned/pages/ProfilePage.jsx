@@ -663,6 +663,7 @@ export default function ProfilePage() {
                 {(helpFilter === 'all' ? helpRequests : groupedHelp[helpFilter] || []).map((p) => {
                   const cat = p.category_slug || 'reformas';
                   const info = getCategoryInfo(cat);
+                  const isOffer = p.post_type === 'volunteer';
                   return (
                     <div key={p.id} className="p-4 rounded-2xl bg-white border border-gray-100 hover:border-rose-300 hover:shadow-md transition group">
                       <div className="flex items-start gap-3">
@@ -673,7 +674,7 @@ export default function ProfilePage() {
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-semibold text-textPrimary text-sm truncate">{p.title}</p>
                             <span className="text-[10px] uppercase tracking-wide text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              {info.label}
+                              {isOffer ? 'Oferta' : 'Pedido'} · {info.label}
                             </span>
                           </div>
                           {p.description && (
