@@ -151,7 +151,7 @@ export default function PublicProfilePage() {
 
         {/* Identity */}
         <div className="bg-white">
-          <div className="px-4 sm:px-8 pb-4 -mt-14 sm:-mt-16 flex flex-col sm:flex-row sm:items-end gap-4">
+          <div className="px-4 sm:px-8 pb-4 -mt-14 sm:-mt-16 flex flex-col sm:flex-row sm:items-end gap-4 overflow-visible">
             <div className="relative shrink-0 mx-auto sm:mx-0">
               <Avatar className="w-28 h-28 sm:w-32 sm:h-32 ring-4 ring-white shadow-md">
                 <AvatarImage src={profile.avatar_url} className="object-cover" />
@@ -159,7 +159,7 @@ export default function PublicProfilePage() {
               </Avatar>
               <span className="absolute bottom-2 right-2 w-4 h-4 rounded-full bg-green-500 ring-2 ring-white" />
             </div>
-            <div className="flex-1 min-w-0 sm:pb-2 text-center sm:text-left">
+            <div className="flex-1 min-w-0 sm:pb-2 text-center sm:text-left overflow-visible">
               <div className="flex flex-col sm:flex-row sm:items-start items-center gap-1 sm:gap-2">
                 <h2 className="font-bold text-xl sm:text-2xl break-words max-w-full inline-flex items-center gap-1.5">{profile.display_name}<VerifiedBadge size={18} /></h2>
                 <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full sm:mt-1.5 capitalize">
@@ -170,7 +170,7 @@ export default function PublicProfilePage() {
                 <p className="text-sm text-gray-600 flex items-center justify-center sm:justify-start gap-1 mt-1"><MapPin className="w-3.5 h-3.5" />{profile.city}</p>
               )}
               {me?.id === userId && (
-                <div className="mt-2 flex justify-center sm:justify-start">
+                <div className="mt-2 relative z-[60] flex justify-center sm:justify-start overflow-visible pb-2">
                   <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
                 </div>
               )}
