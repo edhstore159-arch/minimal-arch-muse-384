@@ -76,6 +76,9 @@ const PREVIEW_POSTS = [
 const PostCard = ({ post, onChat }) => {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes_count || 0);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
   const navigate = useNavigate();
 
   const handleRespond = () => {
@@ -84,6 +87,17 @@ const PostCard = ({ post, onChat }) => {
     } else {
       toast.info('Abrindo conversa...');
     }
+  };
+
+  const handleAddComment = (e) => {
+    e?.preventDefault?.();
+    const text = commentText.trim();
+    if (!text) return;
+    setComments((prev) => [
+      ...prev,
+      { id: Date.now(), author: 'Você', text, created_at: new Date().toISOString() },
+    ]);
+    setCommentText('');
   };
 
   const displayName = post.user?.name || 'Usuário';
@@ -189,7 +203,7 @@ const PostCard = ({ post, onChat }) => {
         </div>
 
         <div className="text-right text-[10px] text-gray-500 mb-1.5">{likeCount} curtidas</div>
-        <div className="text-right text-[10px] text-gray-500 mb-2">{post.comments_count || 0} respostas</div>
+        <div className="text-right text-[10px] text-gray-500 mb-2">{(post.comments_count || 0) + comments.length} respostas</div>
 
         <div className="flex items-center justify-start gap-3 pt-2 border-t border-gray-100">
           <button
@@ -208,6 +222,14 @@ const PostCard = ({ post, onChat }) => {
             <span>Recomendar</span>
           </button>
           <button
+            onClick={() => setShowComments((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-purple-600 transition-colors"
+            data-testid="post-comment-btn"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Comentar</span>
+          </button>
+          <button
             onClick={handleRespond}
             className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-green-600 transition-colors"
             data-testid="post-respond-btn"
@@ -216,6 +238,34 @@ const PostCard = ({ post, onChat }) => {
             <span>Responder</span>
           </button>
         </div>
+
+        {showComments && (
+          <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+            {comments.length === 0 && (
+              <p className="text-[11px] text-gray-500 italic">Seja o primeiro a comentar.</p>
+            )}
+            {comments.map((c) => (
+              <div key={c.id} className="flex items-start gap-2 text-xs">
+                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-semibold text-gray-600 shrink-0">
+                  {c.author.charAt(0)}
+                </div>
+                <div className="flex-1 bg-gray-50 rounded-xl px-3 py-1.5">
+                  <p className="font-semibold text-[11px] text-gray-800">{c.author}</p>
+                  <p className="text-[12px] text-gray-700">{c.text}</p>
+                </div>
+              </div>
+            ))}
+            <form onSubmit={handleAddComment} className="flex items-center gap-2 pt-1">
+              <Input
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Escreva um comentário..."
+                className="h-8 text-xs"
+              />
+              <Button type="submit" size="sm" className="h-8 px-3 text-xs">Enviar</Button>
+            </form>
+          </div>
+        )}
       </div>
     </Card>
   );
