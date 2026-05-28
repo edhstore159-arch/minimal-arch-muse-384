@@ -342,6 +342,13 @@ export default function JobsPage() {
     toast.success(`Abrindo ${platform.name}...`);
   };
 
+  const itemMatchesSearch = (item, term) => {
+    if (!term) return true;
+    const itemCategory = item.category || item.category_slug || '';
+    const haystack = normalizeText(`${item.title || ''} ${item.description || ''} ${item.location || ''} ${item.address || ''} ${item.budget_range || ''} ${item.user?.name || ''} ${itemCategory} ${prettifyCategoryLabel(itemCategory)}`);
+    return haystack.includes(term);
+  };
+
   const itemMatchesCategories = (item, categories) => {
     if (!categories.length) return true;
     const itemCategory = item.category || item.category_slug || '';
@@ -353,9 +360,11 @@ export default function JobsPage() {
   };
 
   const filterAndSortCommunityItems = (items) => {
-    const filtered = selectedCategory === 'all'
-      ? items
-      : items.filter((item) => itemMatchesCategories(item, [selectedCategory]));
+    const searchTerm = normalizeText(searchQuery.trim());
+    const filtered = items.filter((item) => {
+      const matchesCategory = selectedCategory === 'all' || itemMatchesCategories(item, [selectedCategory]);
+      return matchesCategory && itemMatchesSearch(item, searchTerm);
+    });
 
     if (!userInterestCategories.length) return filtered;
 
