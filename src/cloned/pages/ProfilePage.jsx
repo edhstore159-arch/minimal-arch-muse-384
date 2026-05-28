@@ -575,14 +575,47 @@ export default function ProfilePage() {
                   {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} · filtrados pelas suas categorias e com localização
                 </p>
               </div>
-              <Button
-                onClick={() => navigate('/offer-services')}
-                className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shrink-0 shadow-md"
-                size="sm"
-                data-testid="new-request-btn"
-              >
-                Novo pedido <ArrowRight size={14} className="ml-1" />
-              </Button>
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <Button
+                  onClick={() => setShowCategoriesDialog(true)}
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  data-testid="change-interests-btn"
+                >
+                  Mudar categorias
+                </Button>
+                <Button
+                  onClick={() => navigate('/offer-services')}
+                  className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shadow-md"
+                  size="sm"
+                  data-testid="new-request-btn"
+                >
+                  Novo pedido <ArrowRight size={14} className="ml-1" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Radius selector */}
+            <div className="mb-4 p-3 rounded-2xl bg-white border border-rose-100 flex items-center gap-3">
+              <MapPin size={16} className="text-rose-500 shrink-0" />
+              <label className="text-xs font-semibold text-textSecondary whitespace-nowrap">
+                Raio: <span className="text-rose-600">{radiusKm} km</span>
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={100}
+                step={1}
+                value={radiusKm}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  setRadiusKm(v);
+                  localStorage.setItem('svc_radius_km', String(v));
+                }}
+                className="flex-1 accent-rose-500"
+                data-testid="radius-slider"
+              />
             </div>
 
             {/* Filtro por categoria */}
