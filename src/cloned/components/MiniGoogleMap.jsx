@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, StreetViewPanorama } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Map as MapIcon, Eye } from 'lucide-react';
 import { modernMapStyle, pinIcon } from './mapStyle';
 import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './googleMapsConfig';
@@ -23,38 +23,36 @@ const MiniGoogleMap = ({ lat, lng, height = 200, zoom = 15, color = '#ef4444' })
   }
 
   const position = { lat, lng };
+  const streetViewUrl = `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}&location=${lat},${lng}&heading=0&pitch=0&fov=90`;
 
   return (
     <div className="relative rounded-xl overflow-hidden" style={{ height }}>
-      <GoogleMap
-        mapContainerStyle={{ width: '100%', height: '100%' }}
-        center={position}
-        zoom={zoom}
-        options={{
-          styles: modernMapStyle,
-          disableDefaultUI: true,
-          zoomControl: true,
-          clickableIcons: false,
-          gestureHandling: 'cooperative',
-          backgroundColor: '#f5f5f7',
-          streetViewControl: false,
-        }}
-      >
-        <Marker position={position} icon={{ url: pinIcon(color) }} />
-        {showStreetView && (
-          <StreetViewPanorama
-            position={position}
-            visible
-            options={{
-              addressControl: false,
-              fullscreenControl: false,
-              motionTracking: false,
-              motionTrackingControl: false,
-              enableCloseButton: false,
-            }}
-          />
-        )}
-      </GoogleMap>
+      {showStreetView ? (
+        <iframe
+          title="Street View"
+          src={streetViewUrl}
+          style={{ width: '100%', height: '100%', border: 0 }}
+          loading="lazy"
+          allowFullScreen
+        />
+      ) : (
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          center={position}
+          zoom={zoom}
+          options={{
+            styles: modernMapStyle,
+            disableDefaultUI: true,
+            zoomControl: true,
+            clickableIcons: false,
+            gestureHandling: 'cooperative',
+            backgroundColor: '#f5f5f7',
+            streetViewControl: false,
+          }}
+        >
+          <Marker position={position} icon={{ url: pinIcon(color) }} />
+        </GoogleMap>
+      )}
       <button
         type="button"
         onClick={(e) => {
