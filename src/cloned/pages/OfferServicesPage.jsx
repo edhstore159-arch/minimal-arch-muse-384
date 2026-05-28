@@ -108,9 +108,7 @@ export default function OfferServicesPage() {
   const toggleOfferCategory = (category) => {
     setServiceOffer((prev) => ({
       ...prev,
-      categories: prev.categories.includes(category)
-        ? prev.categories.filter((c) => c !== category)
-        : [...prev.categories, category],
+      categories: prev.categories.includes(category) ? [] : [category],
     }));
   };
 
@@ -159,8 +157,14 @@ export default function OfferServicesPage() {
       toast.error('Preencha título e descrição');
       return;
     }
-    if (serviceOffer.categories.length === 0) {
+    const selectedCategory = serviceOffer.categories[0];
+    const customCategoryName = serviceOffer.customCategory?.trim();
+    if (!selectedCategory) {
       toast.error('Selecione pelo menos uma categoria');
+      return;
+    }
+    if (selectedCategory === CUSTOM_CATEGORY_VALUE && !customCategoryName) {
+      toast.error('Escreva sua categoria');
       return;
     }
     try {
@@ -185,13 +189,22 @@ export default function OfferServicesPage() {
         photoUrls.push(pub.publicUrl);
       }
 
+      let categorySlug = normalizeCategorySlug(selectedCategory);
+      if (selectedCategory === CUSTOM_CATEGORY_VALUE) {
+        const { data: createdSlug, error: categoryError } = await supabase.rpc('ensure_svc_category', {
+          _name: customCategoryName,
+        });
+        if (categoryError) throw categoryError;
+        categorySlug = createdSlug || 'outros';
+      }
+
       const payload = {
         user_id: user.id,
         title: serviceOffer.title,
         description: serviceOffer.description + (serviceOffer.price ? `\n\nPreço: ${serviceOffer.price}` : ''),
         post_type: 'volunteer', // offer of service
         status: 'open',
-        category_slug: normalizeCategorySlug(serviceOffer.categories[0]),
+        category_slug: categorySlug,
         photos: photoUrls,
         lat: serviceOffer.location?.lat ?? null,
         lng: serviceOffer.location?.lng ?? null,
@@ -204,7 +217,7 @@ export default function OfferServicesPage() {
 
       toast.success('Serviço publicado!');
       setShowOfferModal(false);
-      setServiceOffer({ title: '', description: '', price: '', categories: [], location: null, images: [] });
+      setServiceOffer({ title: '', description: '', price: '', categories: [], customCategory: '', location: null, images: [] });
       navigate('/home');
     } catch (e) {
       console.error('submitOffer error', e);
