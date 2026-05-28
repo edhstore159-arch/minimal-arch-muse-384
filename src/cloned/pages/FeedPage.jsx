@@ -1181,6 +1181,7 @@ export default function FeedPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <SupportChatWidget />
     </div>
   );
 }
