@@ -71,9 +71,18 @@ export default function ServicesMap({ height = 400, showHelpRequests = true }) {
     return <MapFallback height={height} />;
   }
 
+  if (!apiKey || loadError) {
+    return <MapFallback height={height} />;
+  }
+
   return (
     <div className="relative rounded-2xl overflow-hidden border border-border shadow-lg ring-1 ring-black/5" style={{ height }}>
-      {loading && (
+      {(loading || !isLoaded) && (
+        <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center">
+          <Loader2 className="animate-spin text-primary" />
+        </div>
+      )}
+      {isLoaded && (
         <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center">
           <Loader2 className="animate-spin text-primary" />
         </div>
