@@ -403,8 +403,9 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-3xl font-heading font-bold text-textPrimary leading-tight" data-testid="user-name">
+                  <h2 className="text-3xl font-heading font-bold text-textPrimary leading-tight flex items-center gap-1.5" data-testid="user-name">
                     {user?.use_display_name && user?.display_name ? user.display_name : user?.name}
+                    <VerifiedBadge size={22} />
                   </h2>
                   <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
                     <DialogTrigger asChild>
