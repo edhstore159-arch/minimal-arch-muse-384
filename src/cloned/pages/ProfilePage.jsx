@@ -20,6 +20,9 @@ const HELP_CATEGORIES = WORK_SERVICE_CATEGORIES;
 
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useContext(AuthContext);
+  const { location: sharedLocation, setManualLocation, refreshAuto } = useUserLocation();
+  const [locInput, setLocInput] = useState('');
+  const [locatingShared, setLocatingShared] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [showEditDialog, setShowEditDialog] = useState(false);
