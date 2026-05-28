@@ -197,8 +197,18 @@ export default function AuthModal({ open, onClose, mode = 'login', onModeChange 
         toast.success('Conta criada!');
         onClose?.();
       } else {
-        toast.success('Verifique seu email para confirmar a conta');
-        setMode('login');
+        // Auto-confirm está ativo: faz login imediato para evitar e-mail de confirmação
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        const profile = await getOrCreateSvcProfile(signInData.user, {
+          display_name: name,
+          role,
+          city: location,
+        });
+        await login(signInData.session?.access_token, normalizeAuthUser(signInData.user, profile));
+        await refreshUser?.();
+        toast.success('Conta criada!');
+        onClose?.();
         resetSignup();
       }
     } catch (err) {
