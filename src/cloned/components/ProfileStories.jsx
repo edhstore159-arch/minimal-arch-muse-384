@@ -62,8 +62,14 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
 
   const startLive = async () => {
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        alert('Seu navegador não liberou câmera/microfone neste dispositivo.');
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       liveStreamRef.current = stream;
+      setCamOn(true);
+      setMicOn(true);
       setLive(true);
       setViewers(1);
       setTimeout(() => {
@@ -91,8 +97,8 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
   };
 
   return (
-    <div className="py-2">
-      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+    <div className="relative py-2 overflow-visible">
+      <div className="flex items-center gap-3 overflow-x-auto overflow-y-visible no-scrollbar pb-1">
         {/* Botão único: Story + Ao vivo (menu) */}
         <div className="relative flex-shrink-0">
           <button
@@ -123,26 +129,26 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
           </button>
 
           {menuOpen && !live && (
-            <div className="absolute z-20 top-20 left-1/2 -translate-x-1/2 w-48 bg-white rounded-xl shadow-lg ring-1 ring-black/5 py-2">
+            <div className="fixed left-4 right-4 bottom-24 z-[120] bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 py-2 sm:absolute sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-20 sm:w-48 sm:-translate-x-1/2 sm:rounded-xl">
               <button
                 onClick={() => { setMenuOpen(false); onAddStory(); }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                className="w-full px-4 py-3 sm:py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <ImagePlus size={16} className="text-primary" /> Publicar story
               </button>
               <button
                 onClick={() => { setMenuOpen(false); startLive(); }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                className="w-full px-4 py-3 sm:py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <Radio size={16} className="text-red-500" /> Iniciar ao vivo
               </button>
             </div>
           )}
           {menuOpen && live && (
-            <div className="absolute z-20 top-20 left-1/2 -translate-x-1/2 w-48 bg-white rounded-xl shadow-lg ring-1 ring-black/5 py-2">
+            <div className="fixed left-4 right-4 bottom-24 z-[120] bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 py-2 sm:absolute sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-20 sm:w-48 sm:-translate-x-1/2 sm:rounded-xl">
               <button
                 onClick={() => { setMenuOpen(false); stopLive(); }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                className="w-full px-4 py-3 sm:py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
               >
                 <Radio size={16} /> Encerrar transmissão
               </button>
