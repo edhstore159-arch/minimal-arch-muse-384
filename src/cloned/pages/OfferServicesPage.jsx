@@ -437,12 +437,13 @@ export default function OfferServicesPage() {
               <Label className="text-sm font-bold mb-2 block">📂 Categorias</Label>
               <div className="grid grid-cols-4 gap-2">
                 {SERVICE_CATEGORIES.map((cat) => {
-                  const sel = serviceOffer.categories.includes(cat.value);
+                  const categoryValue = cat.value === 'outros' ? CUSTOM_CATEGORY_VALUE : cat.value;
+                  const sel = serviceOffer.categories.includes(categoryValue);
                   return (
                     <button
                       key={cat.value}
                       type="button"
-                      onClick={() => toggleOfferCategory(cat.value)}
+                      onClick={() => toggleOfferCategory(categoryValue)}
                       className={`p-2 rounded-xl border text-xs ${
                         sel ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white'
                       }`}
@@ -453,6 +454,15 @@ export default function OfferServicesPage() {
                   );
                 })}
               </div>
+              {serviceOffer.categories.includes(CUSTOM_CATEGORY_VALUE) && (
+                <Input
+                  value={serviceOffer.customCategory}
+                  onChange={(e) => setServiceOffer({ ...serviceOffer, customCategory: e.target.value })}
+                  placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
+                  maxLength={40}
+                  className="mt-3 rounded-xl bg-white"
+                />
+              )}
             </div>
 
             <div className="flex gap-2">
