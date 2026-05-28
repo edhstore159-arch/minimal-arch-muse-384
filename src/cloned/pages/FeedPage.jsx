@@ -861,7 +861,7 @@ export default function FeedPage() {
                 Responda às solicitações publicadas perto de você e ajude pessoas que precisam.
               </p>
               <Button
-                onClick={() => navigate('/volunteers')}
+                onClick={() => navigate('/oferecer-servicos')}
                 className="w-full bg-[#FF9B8A] hover:bg-[#FF8A79] text-white rounded-full h-9 font-semibold shadow-sm text-sm"
                 data-testid="monetize-cta"
               >
