@@ -154,6 +154,7 @@ export default function JobsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
+  const [openedMatchedOffers, setOpenedMatchedOffers] = useState(false);
 
   useEffect(() => {
     fetchJobs();
@@ -369,6 +370,13 @@ export default function JobsPage() {
   const visibleJobSeekers = filterAndSortCommunityItems(jobSeekers);
   const displayData = viewMode === 'offers' ? visibleJobOffers : visibleJobSeekers;
   const selectedCategoryLabel = selectedCategory === 'all' ? 'todos os tipos de trabalho' : prettifyCategoryLabel(selectedCategory);
+
+  useEffect(() => {
+    if (openedMatchedOffers || !userInterestCategories.length || !visibleJobOffers.length) return;
+    setSelectedCategory(userInterestCategories[0]);
+    setViewMode('offers');
+    setOpenedMatchedOffers(true);
+  }, [openedMatchedOffers, userInterestCategories.join('|'), visibleJobOffers.length]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-20" data-testid="jobs-page">
