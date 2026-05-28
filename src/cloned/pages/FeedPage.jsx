@@ -15,6 +15,7 @@ import { getStableDefaultAvatarUrl } from '../lib/authProfile';
 import MiniGoogleMap from '../components/MiniGoogleMap';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
+import SupportChatWidget from '../components/SupportChatWidget';
 
 // Local fallback store so the feed works even without auth/backend
 const LOCAL_KEY = 'cloned_feed_posts_v1';
