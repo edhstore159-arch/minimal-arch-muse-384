@@ -1153,7 +1153,18 @@ export default function FeedPage() {
                 {CATEGORY_OPTIONS.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
+                <option value={CUSTOM_CATEGORY_VALUE}>Outra categoria</option>
               </select>
+              {postCategory === CUSTOM_CATEGORY_VALUE && (
+                <Input
+                  value={customPostCategory}
+                  onChange={(e) => setCustomPostCategory(e.target.value)}
+                  placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
+                  maxLength={40}
+                  data-testid="modal-custom-category"
+                  className="mt-3 h-10 text-sm rounded-xl border-gray-300"
+                />
+              )}
             </div>
 
             <Button
