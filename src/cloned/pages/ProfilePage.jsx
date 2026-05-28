@@ -601,7 +601,7 @@ export default function ProfilePage() {
                   Propostas do seu interesse
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} proposta{helpRequests.length !== 1 ? 's' : ''} · filtradas pelas categorias escolhidas no perfil e com localização
+                  {helpRequests.length} emprego{helpRequests.length !== 1 ? 's' : ''} · pelas categorias do perfil e dos pedidos solicitados
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
@@ -716,12 +716,12 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-8 text-sm text-textMuted bg-white/60 rounded-2xl">
                 <HandHeart size={32} className="mx-auto mb-2 text-rose-300" />
-                Nenhuma proposta da sua categoria no momento.
+                Nenhum emprego encontrado para as categorias que você solicitou.
               </div>
             )}
 
             <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={selectedCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
+              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={interestCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
             </div>
           </div>
 
