@@ -22,6 +22,7 @@ export const normalizeAuthUser = (authUser, profile = {}) => {
     avatar: avatarUrl,
     bio: profile.bio || '',
     city: profile.city || metadata.location || '',
+    cover_url: profile.cover_url || null,
     categories: Array.isArray(profile.categories) ? profile.categories : [],
   };
 };
