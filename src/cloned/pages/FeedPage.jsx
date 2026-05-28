@@ -25,25 +25,26 @@ const saveLocalPosts = (posts) => {
 };
 
 const CATEGORY_OPTIONS = [
-  { value: 'food', label: 'Alimentação' },
-  { value: 'legal', label: 'Jurídico' },
-  { value: 'health', label: 'Saúde' },
-  { value: 'housing', label: 'Moradia' },
-  { value: 'work', label: 'Trabalho' },
-  { value: 'education', label: 'Educação' },
-  { value: 'social', label: 'Social' },
-  { value: 'clothes', label: 'Roupas' },
-  { value: 'furniture', label: 'Móveis' },
-  { value: 'transport', label: 'Transporte' },
-  { value: 'repairs', label: 'Reparos' },
+  { value: 'reformas', label: 'Reformas' },
+  { value: 'pintura', label: 'Pintura' },
+  { value: 'eletrica', label: 'Elétrica' },
+  { value: 'hidraulica', label: 'Hidráulica' },
+  { value: 'marcenaria', label: 'Marcenaria' },
+  { value: 'pedreiro', label: 'Pedreiro' },
+  { value: 'limpeza', label: 'Limpeza' },
+  { value: 'jardinagem', label: 'Jardinagem' },
+  { value: 'transporte', label: 'Transporte/Frete' },
+  { value: 'mecanica', label: 'Mecânica' },
 ];
+
+const getCategoryLabel = (value) => CATEGORY_OPTIONS.find((c) => c.value === value)?.label || 'Serviços';
 
 const PREVIEW_POSTS = [
   {
     id: 'preview-need-1',
     user_id: 'preview-migrant-1',
     type: 'need',
-    category: 'housing',
+    category: 'reformas',
     title: 'Procuro hospedagem temporária em Paris',
     description: 'Cheguei recentemente com minha família e precisamos de uma indicação segura de quarto ou acolhimento por alguns dias.',
     images: ['https://images.unsplash.com/photo-1518005020951-eccb494ad742?w=900&q=85'],
@@ -59,7 +60,7 @@ const PREVIEW_POSTS = [
     id: 'preview-offer-1',
     user_id: 'preview-helper-1',
     type: 'offer',
-    category: 'legal',
+    category: 'eletrica',
     title: 'Orientação gratuita para documentação',
     description: 'Sou voluntário e posso ajudar com leitura de cartas administrativas, agendamento e dúvidas sobre regularização.',
     images: ['https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=900&q=85'],
@@ -224,7 +225,7 @@ const PostCard = ({ post, onChat }) => {
               </p>
             )}
             <p className="text-[10px] text-gray-600 mt-0.5">
-              Categoria: <span className="font-medium capitalize">{post.category || 'geral'}</span>
+              Categoria: <span className="font-medium">{getCategoryLabel(post.category)}</span>
             </p>
           </div>
         </div>
@@ -362,7 +363,7 @@ export default function FeedPage() {
 
   useEffect(() => { detectAddress(); }, [detectAddress]);
   const [postBudget, setPostBudget] = useState('Sob orçamento');
-  const [postCategory, setPostCategory] = useState('social');
+  const [postCategory, setPostCategory] = useState('reformas');
   const [selectedPhotos, setSelectedPhotos] = useState([]); // [{id, dataUrl}]
   const [selectedVideos, setSelectedVideos] = useState([]); // [{id, dataUrl}]
 
@@ -417,7 +418,7 @@ export default function FeedPage() {
         id: p.id,
         user_id: p.user_id,
         type: p.post_type === 'volunteer' ? 'offer' : 'need',
-        category: p.category_slug || 'social',
+        category: CATEGORY_OPTIONS.some((category) => category.value === p.category_slug) ? p.category_slug : 'reformas',
         title: p.title,
         description: p.description,
         images: p.photos || [],
@@ -444,7 +445,7 @@ export default function FeedPage() {
     setModalMode(mode);
     setPostDescription('');
     setPostBudget(mode === 'need' ? 'Sob orçamento' : 'A combinar');
-    setPostCategory('social');
+    setPostCategory('reformas');
     setSelectedPhotos([]);
     setSelectedVideos([]);
     setShowCreateModal(true);
@@ -590,7 +591,7 @@ export default function FeedPage() {
         photos: uploadedUrls,
         videos: uploadedVideos,
         budget_range: postBudget || null,
-        category_slug: ['limpeza','reformas','jardinagem','mudancas','aulas','cuidados','tecnologia','beleza','transporte','outros'].includes(postCategory) ? postCategory : 'outros',
+        category_slug: CATEGORY_OPTIONS.some((category) => category.value === postCategory) ? postCategory : 'reformas',
         address: postAddress || null,
         lat: postCoords?.lat ?? null,
         lng: postCoords?.lng ?? null,
