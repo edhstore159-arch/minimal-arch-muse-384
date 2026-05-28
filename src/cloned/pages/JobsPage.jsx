@@ -166,16 +166,42 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
   const [openedMatchedOffers, setOpenedMatchedOffers] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  const autoLocateAndSearch = async ({ silent = false, forceBrowser = false } = {}) => {
+    setLocating(true);
+    const loc = await requestLocationPermission({ forceBrowser, showToast: !silent });
+    setLocating(false);
+    if (!loc) {
+      if (!silent) toast.error('Não foi possível obter sua localização');
+      return null;
+    }
+    const city = extractCityFromAddress(loc.address) || 'Brasil';
+    setLocationQuery(city);
+    if (!silent) toast.success(`📍 Buscando vagas em ${city}`);
+    const term = (searchQuery && searchQuery.trim())
+      || SEARCH_SUGGESTIONS[selectedCategory]?.[0]
+      || SEARCH_SUGGESTIONS[primaryUserCategory]?.[0]
+      || 'emprego';
+    searchExternalJobs(term, city);
+    return city;
+  };
 
   useEffect(() => {
     fetchJobs();
     const initialCategory = primaryUserCategory !== 'all' ? primaryUserCategory : 'all';
     const initialQuery = SEARCH_SUGGESTIONS[initialCategory]?.[0] || 'emprego';
-    const initialLocation = user?.city || 'Brasil';
     setSelectedCategory(initialCategory);
     setSearchQuery(initialQuery === 'emprego' ? '' : initialQuery);
-    setLocationQuery(initialLocation);
-    searchExternalJobs(initialQuery, initialLocation);
+    // Tenta detectar localização automaticamente (via IP, sem prompt)
+    (async () => {
+      const city = await autoLocateAndSearch({ silent: true });
+      if (!city) {
+        const initialLocation = user?.city || 'São Paulo';
+        setLocationQuery(initialLocation);
+        searchExternalJobs(initialQuery, initialLocation);
+      }
+    })();
   }, [user?.id]);
 
   useEffect(() => {
