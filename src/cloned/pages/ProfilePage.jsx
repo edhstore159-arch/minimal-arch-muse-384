@@ -699,7 +699,7 @@ export default function ProfilePage() {
             )}
 
             <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} />
+              <ServicesMap height={320} showHelpRequests={true} categories={selectedCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
             </div>
           </div>
 
