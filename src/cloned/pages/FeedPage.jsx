@@ -12,6 +12,7 @@ import { Dialog, DialogContent } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getStableDefaultAvatarUrl } from '../lib/authProfile';
+import MiniGoogleMap from '../components/MiniGoogleMap';
 
 // Local fallback store so the feed works even without auth/backend
 const LOCAL_KEY = 'cloned_feed_posts_v1';
