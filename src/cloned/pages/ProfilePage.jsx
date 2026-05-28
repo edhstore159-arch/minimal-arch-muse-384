@@ -567,14 +567,13 @@ export default function ProfilePage() {
                     <MapPin size={14} /> {user.location}
                   </p>
                 )}
-                <p className="text-green-600 text-sm font-medium flex items-center gap-1.5 mt-1">
-                  <span className="w-2 h-2 bg-green-500 rounded-full" /> Em linha
-                </p>
-
                 {/* Bolinha única: Stories + Ao vivo (abaixo do nome/assinatura) */}
                 <div className="mt-3">
                   <ProfileStories avatarSrc={avatarSrc} userName={user?.display_name || user?.name || 'Você'} />
                 </div>
+                <p className="text-green-600 text-sm font-medium flex items-center gap-1.5 mt-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full" /> Em linha
+                </p>
               </div>
             </div>
           </div>

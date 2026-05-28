@@ -132,13 +132,6 @@ export default function PublicProfilePage() {
       </header>
 
       <main className="max-w-5xl mx-auto">
-        {/* Stories + Ao vivo (acima do perfil, visível em mobile) */}
-        {me?.id === userId && (
-          <div className="bg-white px-4 sm:px-8 py-3 border-b">
-            <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
-          </div>
-        )}
-
         {/* Cover (com geração por IA quando dono) */}
         <div className="relative h-32 sm:h-40 bg-gradient-to-b from-slate-200 to-slate-100 overflow-hidden">
           {profile.cover_url && (
@@ -175,6 +168,11 @@ export default function PublicProfilePage() {
               </div>
               {profile.city && (
                 <p className="text-sm text-gray-600 flex items-center justify-center sm:justify-start gap-1 mt-1"><MapPin className="w-3.5 h-3.5" />{profile.city}</p>
+              )}
+              {me?.id === userId && (
+                <div className="mt-2 flex justify-center sm:justify-start">
+                  <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
+                </div>
               )}
               <p className="text-xs text-green-600 mt-0.5">● Online</p>
             </div>
