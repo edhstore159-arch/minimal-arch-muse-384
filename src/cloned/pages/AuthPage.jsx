@@ -10,19 +10,9 @@ import { ArrowLeft, Check, User, Heart, Shield, MapPin, Loader2 } from 'lucide-r
 import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, normalizeAuthUser } from '../lib/authProfile';
 import jataiWorkImage from '@/assets/jatai-work.jpg';
+import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, slugifyCategoryName } from '../lib/serviceCategories';
 
-const HELP_CATEGORIES = [
-  { value: 'food', label: 'Alimentação', icon: '🍽️', desc: 'Distribuição de alimentos, refeições' },
-  { value: 'legal', label: 'Jurídico', icon: '⚖️', desc: 'Orientação sobre documentos' },
-  { value: 'health', label: 'Saúde', icon: '🏥', desc: 'Acompanhamento médico' },
-  { value: 'housing', label: 'Moradia', icon: '🏠', desc: 'Ajuda com habitação' },
-  { value: 'work', label: 'Emprego', icon: '💼', desc: 'Orientação profissional' },
-  { value: 'education', label: 'Educação', icon: '📚', desc: 'Aulas, cursos, idiomas' },
-  { value: 'social', label: 'Apoio Social', icon: '🤝', desc: 'Integração, acolhimento' },
-  { value: 'clothes', label: 'Roupas', icon: '👕', desc: 'Doação de vestuário' },
-  { value: 'furniture', label: 'Móveis', icon: '🪑', desc: 'Doação de móveis' },
-  { value: 'transport', label: 'Transporte', icon: '🚗', desc: 'Ajuda com deslocamento' }
-];
+const HELP_CATEGORIES = WORK_SERVICE_CATEGORIES;
 
 const professionalAreas = [
   { value: 'legal', label: 'Jurídico', icon: '⚖️' },
@@ -51,6 +41,7 @@ export default function AuthPage() {
   
   // Categorias selecionadas
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [customCategory, setCustomCategory] = useState('');
   
   // Localização
   const [location, setLocation] = useState(null);
@@ -173,6 +164,15 @@ export default function AuthPage() {
       toast.error('Selecione pelo menos uma categoria de ajuda que você precisa');
       return;
     }
+
+    if (!isLogin && selectedCategories.includes(CUSTOM_CATEGORY_VALUE) && !customCategory.trim()) {
+      toast.error('Escreva sua categoria');
+      return;
+    }
+
+    const categoriesForProfile = selectedCategories.includes(CUSTOM_CATEGORY_VALUE)
+      ? [...selectedCategories.filter((category) => category !== CUSTOM_CATEGORY_VALUE), slugifyCategoryName(customCategory) || 'outros']
+      : selectedCategories;
     
     setLoading(true);
 
@@ -200,7 +200,7 @@ export default function AuthPage() {
             display_name: name,
             role,
             city: locationAddress,
-            categories: selectedCategories,
+            categories: categoriesForProfile,
           });
           await login(data.session.access_token, normalizeAuthUser(data.user, profile));
           toast.success('Conta criada com sucesso!');
