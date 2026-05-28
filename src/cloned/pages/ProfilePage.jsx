@@ -14,11 +14,15 @@ import { getOrCreateSvcProfile, updateSvcProfile } from '../lib/authProfile';
 import ServicesMap from '../components/ServicesMap';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, getWorkCategoryInfo } from '../lib/serviceCategories';
+import { useUserLocation } from '../lib/userLocation';
 
 const HELP_CATEGORIES = WORK_SERVICE_CATEGORIES;
 
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useContext(AuthContext);
+  const { location: sharedLocation, setManualLocation, refreshAuto } = useUserLocation();
+  const [locInput, setLocInput] = useState('');
+  const [locatingShared, setLocatingShared] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -726,8 +730,58 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} postTypeFilter={profilePostTypeFilter} categories={interestCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} userId={user?.id} showSearchJobs={!isVolunteer} />
+            <div className="mt-5 mb-3 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+              <div className="flex-1 flex items-center gap-2 bg-white rounded-full border border-gray-200 px-3 py-1.5">
+                <MapPin size={16} className="text-primary" />
+                <Input
+                  value={locInput}
+                  onChange={(e) => setLocInput(e.target.value)}
+                  placeholder={sharedLocation?.address || 'Digite endereço ou "lat,lng"'}
+                  className="border-0 focus-visible:ring-0 h-8 px-0 text-sm"
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const v = locInput.trim();
+                  if (!v) return;
+                  const m = v.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+                  if (m) {
+                    setManualLocation({ lat: parseFloat(m[1]), lng: parseFloat(m[2]), source: 'manual' });
+                    toast.success('📍 Localização atualizada');
+                  } else {
+                    try {
+                      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(v)}`);
+                      const d = await r.json();
+                      if (d?.[0]) {
+                        setManualLocation({ lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), address: d[0].display_name, source: 'manual' });
+                        toast.success(`📍 ${d[0].display_name}`);
+                      } else toast.error('Endereço não encontrado');
+                    } catch { toast.error('Falha ao buscar endereço'); }
+                  }
+                }}
+                className="rounded-full"
+              >
+                Salvar
+              </Button>
+              <Button
+                size="sm"
+                onClick={async () => {
+                  setLocatingShared(true);
+                  const loc = await refreshAuto({ forceBrowser: true, silent: false });
+                  setLocatingShared(false);
+                  if (loc) toast.success('📍 Localização do celular atualizada');
+                  else toast.error('Não foi possível obter localização');
+                }}
+                disabled={locatingShared}
+                className="rounded-full bg-primary hover:bg-primary/90"
+              >
+                {locatingShared ? <Loader2 size={14} className="animate-spin" /> : 'Usar GPS'}
+              </Button>
+            </div>
+            <div className="mt-2">
+              <ServicesMap height={320} showHelpRequests={true} postTypeFilter={profilePostTypeFilter} categories={interestCategories} radiusKm={radiusKm} userLocation={sharedLocation || { lat: user?.lat, lng: user?.lng }} userId={user?.id} showSearchJobs={!isVolunteer} />
             </div>
           </div>
 

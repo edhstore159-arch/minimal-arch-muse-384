@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 import { saveLastJobSearch } from '../lib/jobSearchBridge';
 import { requestLocationPermission } from '../utils/geolocation';
+import { useUserLocation, setUserLocation as setSharedLocation } from '../lib/userLocation';
 import { Loader2, Navigation } from 'lucide-react';
 
 const extractCityFromAddress = (address = '') => {
@@ -146,6 +147,7 @@ const normalizeText = (value = '') => String(value).toLowerCase().normalize('NFD
 
 export default function JobsPage() {
   const { user } = useContext(AuthContext);
+  const { location: sharedLocation } = useUserLocation();
   const navigate = useNavigate();
   const profileCategories = Array.isArray(user?.categories) ? user.categories.filter(Boolean) : [];
   const [requestedCategories, setRequestedCategories] = useState([]);
@@ -176,6 +178,7 @@ export default function JobsPage() {
       if (!silent) toast.error('Não foi possível obter sua localização');
       return null;
     }
+    setSharedLocation(loc); // sincroniza com todos os mapas do app
     const city = extractCityFromAddress(loc.address) || 'Brasil';
     setLocationQuery(city);
     if (!silent) toast.success(`📍 Buscando vagas em ${city}`);
@@ -210,6 +213,17 @@ export default function JobsPage() {
       searchExternalJobs(categoryQuery, locationQuery);
     }
   }, [selectedCategory]);
+
+  // Reage quando a localização compartilhada muda (perfil, GPS automático, etc.)
+  useEffect(() => {
+    if (!sharedLocation?.address && !sharedLocation?.lat) return;
+    const city = extractCityFromAddress(sharedLocation.address) || locationQuery;
+    if (city && city !== locationQuery) {
+      setLocationQuery(city);
+      const term = (searchQuery && searchQuery.trim()) || SEARCH_SUGGESTIONS[selectedCategory]?.[0] || 'emprego';
+      searchExternalJobs(term, city);
+    }
+  }, [sharedLocation?.lat, sharedLocation?.lng, sharedLocation?.address]);
 
   const fetchJobs = async () => {
     setLoading(true);
