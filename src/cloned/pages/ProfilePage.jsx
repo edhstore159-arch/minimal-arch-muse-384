@@ -467,7 +467,7 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-5">
               {/* Avatar grande com online dot */}
               <div className="relative flex-shrink-0">
-                <div className="w-32 h-32 rounded-full ring-4 ring-white shadow-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full ring-4 ring-white shadow-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
                   {avatarSrc ? (
                     <img key={avatarSrc} src={avatarSrc} alt="" className="w-full h-full object-cover" />
                   ) : (
