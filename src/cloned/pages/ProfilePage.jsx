@@ -42,11 +42,16 @@ export default function ProfilePage() {
   const coverInputRef = useRef(null);
   const photoInputRef = useRef(null);
   const [helpRequests, setHelpRequests] = useState([]);
+  const [requestedCategories, setRequestedCategories] = useState([]);
   const [radiusKm, setRadiusKm] = useState(() => {
     const v = parseInt(localStorage.getItem('svc_radius_km') || '25', 10);
     return Number.isFinite(v) ? v : 25;
   });
   const isVolunteer = user?.role === 'volunteer' || user?.role === 'helper' || user?.role === 'admin';
+  const interestCategories = React.useMemo(
+    () => Array.from(new Set([...(selectedCategories || []), ...(requestedCategories || [])])).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE),
+    [selectedCategories, requestedCategories]
+  );
 
   const avatarSrc = avatarOverride || user?.avatar_url;
   const coverSrc = coverOverride || user?.cover_url;
@@ -107,7 +112,7 @@ export default function ProfilePage() {
 
   const fetchHelpRequests = React.useCallback(async () => {
     if (!user?.id) return;
-    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
+    const cats = interestCategories;
     if (cats.length === 0) { setHelpRequests([]); return; }
     let query = supabase
       .from('svc_posts')
@@ -140,7 +145,7 @@ export default function ProfilePage() {
     }
     const selected = new Set(cats);
     setHelpRequests(rows.filter((p) => selected.has(p.category_slug)));
-  }, [user?.id, user?.lat, user?.lng, selectedCategories, radiusKm]);
+  }, [user?.id, user?.lat, user?.lng, interestCategories, radiusKm]);
 
   useEffect(() => {
     fetchHelpRequests();
