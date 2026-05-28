@@ -106,7 +106,7 @@ export default function ProfilePage() {
     (async () => {
       const { data } = await supabase
         .from('svc_posts')
-        .select('id, title, description, address, created_at, post_type, category, categories, user_id')
+        .select('id, title, description, address, created_at, post_type, category_slug, user_id')
         .neq('post_type', 'volunteer')
         .order('created_at', { ascending: false })
         .limit(30);
@@ -118,7 +118,7 @@ export default function ProfilePage() {
   const groupedHelp = React.useMemo(() => {
     const groups = {};
     helpRequests.forEach((p) => {
-      const cats = p.categories?.length ? p.categories : [p.category || 'social'];
+      const cats = [p.category_slug || 'reformas'];
       cats.forEach((c) => {
         if (!groups[c]) groups[c] = [];
         groups[c].push(p);
@@ -586,7 +586,7 @@ export default function ProfilePage() {
             {helpRequests.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {(helpFilter === 'all' ? helpRequests : groupedHelp[helpFilter] || []).map((p) => {
-                  const cat = (p.categories?.[0]) || p.category || 'social';
+                  const cat = p.category_slug || 'reformas';
                   const info = getCategoryInfo(cat);
                   return (
                     <div key={p.id} className="p-4 rounded-2xl bg-white border border-gray-100 hover:border-rose-300 hover:shadow-md transition group">
