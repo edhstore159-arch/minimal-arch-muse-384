@@ -358,20 +358,20 @@ export default function ProfilePage() {
 
         {/* Painel de voluntário: casos e pessoas que precisam de ajuda */}
         {isVolunteer && (
-          <div className="bg-white rounded-3xl shadow-card p-6 mb-6" data-testid="volunteer-panel">
+          <div className="bg-gradient-to-br from-rose-50 via-white to-orange-50 rounded-3xl shadow-card p-6 mb-6 border border-rose-100" data-testid="volunteer-panel">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <h3 className="font-bold text-textPrimary flex items-center gap-2">
-                  <HandHeart size={20} className="text-primary" />
+                <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
+                  <HandHeart size={22} className="text-rose-500" />
                   Casos e pessoas que precisam de ajuda
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  Pedidos visíveis apenas para voluntários responsáveis.
+                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} ativo{helpRequests.length !== 1 ? 's' : ''} · organizados por categoria
                 </p>
               </div>
               <Button
                 onClick={() => navigate('/volunteers')}
-                className="rounded-full bg-primary hover:bg-primary-hover text-white shrink-0"
+                className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shrink-0 shadow-md"
                 size="sm"
                 data-testid="want-to-help-btn"
               >
@@ -379,24 +379,74 @@ export default function ProfilePage() {
               </Button>
             </div>
 
+            {/* Filtro por categoria */}
+            {Object.keys(groupedHelp).length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1">
+                <button
+                  onClick={() => setHelpFilter('all')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition ${
+                    helpFilter === 'all'
+                      ? 'bg-textPrimary text-white border-textPrimary'
+                      : 'bg-white text-textSecondary border-gray-200 hover:border-primary'
+                  }`}
+                >
+                  Todos · {helpRequests.length}
+                </button>
+                {Object.entries(groupedHelp).map(([cat, items]) => {
+                  const info = getCategoryInfo(cat);
+                  const active = helpFilter === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setHelpFilter(cat)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition flex items-center gap-1 ${
+                        active
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-textSecondary border-gray-200 hover:border-primary'
+                      }`}
+                    >
+                      <span>{info.icon}</span> {info.label} · {items.length}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {helpRequests.length > 0 ? (
-              <div className="space-y-3">
-                {helpRequests.map((p) => (
-                  <div key={p.id} className="p-4 rounded-2xl border border-gray-100 hover:border-primary/40 transition">
-                    <p className="font-semibold text-textPrimary text-sm">{p.title}</p>
-                    {p.description && (
-                      <p className="text-xs text-textSecondary mt-1 line-clamp-2">{p.description}</p>
-                    )}
-                    {p.address && (
-                      <p className="text-xs text-textMuted mt-1 flex items-center gap-1">
-                        <MapPin size={12} /> {p.address}
-                      </p>
-                    )}
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(helpFilter === 'all' ? helpRequests : groupedHelp[helpFilter] || []).map((p) => {
+                  const cat = (p.categories?.[0]) || p.category || 'social';
+                  const info = getCategoryInfo(cat);
+                  return (
+                    <div key={p.id} className="p-4 rounded-2xl bg-white border border-gray-100 hover:border-rose-300 hover:shadow-md transition group">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-100 to-orange-100 flex items-center justify-center text-xl flex-shrink-0">
+                          {info.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-semibold text-textPrimary text-sm truncate">{p.title}</p>
+                            <span className="text-[10px] uppercase tracking-wide text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              {info.label}
+                            </span>
+                          </div>
+                          {p.description && (
+                            <p className="text-xs text-textSecondary mt-1 line-clamp-2">{p.description}</p>
+                          )}
+                          {p.address && (
+                            <p className="text-xs text-textMuted mt-2 flex items-center gap-1">
+                              <MapPin size={12} /> <span className="truncate">{p.address}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <div className="text-center py-6 text-sm text-textMuted">
+              <div className="text-center py-8 text-sm text-textMuted bg-white/60 rounded-2xl">
+                <HandHeart size={32} className="mx-auto mb-2 text-rose-300" />
                 Nenhum pedido de ajuda no momento.
               </div>
             )}
@@ -407,7 +457,79 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Mural de fotos (grande, sempre visível) */}
+        <div className="bg-white rounded-3xl shadow-card p-6 mb-6" data-testid="photo-mural">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
+                <Camera size={20} className="text-primary" />
+                Meu mural
+              </h3>
+              <p className="text-xs text-textMuted mt-1">
+                {photos.length} foto{photos.length !== 1 ? 's' : ''} · mostre seu trabalho
+              </p>
+            </div>
+            <Button
+              size="sm"
+              disabled={uploadingPhoto}
+              onClick={() => photoInputRef.current?.click()}
+              className="rounded-full bg-primary hover:bg-primary-hover"
+            >
+              <Camera size={16} className="mr-1" />
+              {uploadingPhoto ? 'Enviando...' : 'Adicionar'}
+            </Button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoUpload}
+            />
+          </div>
 
+          {photos.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 auto-rows-[140px] sm:auto-rows-[170px]">
+              {photos.map((p, i) => {
+                // Padrão: a cada 7, uma foto grande (2x2)
+                const big = i % 7 === 0;
+                return (
+                  <div
+                    key={p.name}
+                    className={`group relative rounded-2xl overflow-hidden bg-gray-100 ${
+                      big ? 'col-span-2 row-span-2' : ''
+                    }`}
+                  >
+                    <img src={p.url} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                    <button
+                      onClick={() => deletePhoto(p.name)}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white text-sm opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
+                      title="Remover"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-14 border-2 border-dashed border-gray-200 rounded-2xl">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
+                <Camera size={26} className="text-primary" />
+              </div>
+              <p className="text-sm text-textMuted mb-3">
+                Seu mural está vazio. Adicione fotos das suas realizações.
+              </p>
+              <Button
+                size="sm"
+                onClick={() => photoInputRef.current?.click()}
+                className="rounded-full bg-primary hover:bg-primary-hover"
+              >
+                <Camera size={14} className="mr-1" /> Adicionar primeira foto
+              </Button>
+            </div>
+          )}
+        </div>
 
         {/* Tab: Apresentação */}
         {activeTab === 'presentation' && (
