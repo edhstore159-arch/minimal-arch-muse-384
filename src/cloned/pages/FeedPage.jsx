@@ -225,7 +225,7 @@ const PostCard = ({ post, onChat }) => {
               </p>
             )}
             <p className="text-[10px] text-gray-600 mt-0.5">
-              Categoria: <span className="font-medium capitalize">{post.category || 'geral'}</span>
+              Categoria: <span className="font-medium">{getCategoryLabel(post.category)}</span>
             </p>
           </div>
         </div>
@@ -418,7 +418,7 @@ export default function FeedPage() {
         id: p.id,
         user_id: p.user_id,
         type: p.post_type === 'volunteer' ? 'offer' : 'need',
-        category: p.category_slug || 'social',
+        category: CATEGORY_OPTIONS.some((category) => category.value === p.category_slug) ? p.category_slug : 'reformas',
         title: p.title,
         description: p.description,
         images: p.photos || [],
