@@ -11,6 +11,7 @@ import AuthModal from '../components/AuthModal';
 import { Briefcase, Check, Sparkles, Star, Plus, MapPin, Image as ImageIcon, X, Crown, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES } from '../lib/serviceCategories';
 
 const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80',
@@ -18,18 +19,12 @@ const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1573497491208-6b1acb260507?w=1200&q=80',
 ];
 
-const SERVICE_CATEGORIES = [
-  { value: 'reformas', label: 'Reformas', icon: '🔨', color: 'from-orange-400 to-orange-600' },
-  { value: 'pintura', label: 'Pintura', icon: '🎨', color: 'from-rose-400 to-rose-600' },
-  { value: 'eletrica', label: 'Elétrica', icon: '💡', color: 'from-yellow-400 to-yellow-600' },
-  { value: 'hidraulica', label: 'Hidráulica', icon: '🚰', color: 'from-cyan-400 to-cyan-600' },
-  { value: 'marcenaria', label: 'Marcenaria', icon: '🪚', color: 'from-amber-500 to-amber-700' },
-  { value: 'pedreiro', label: 'Pedreiro', icon: '🧱', color: 'from-stone-400 to-stone-600' },
-  { value: 'limpeza', label: 'Limpeza', icon: '🧹', color: 'from-blue-400 to-blue-600' },
-  { value: 'jardinagem', label: 'Jardinagem', icon: '🌱', color: 'from-green-400 to-green-600' },
-  { value: 'transporte', label: 'Transporte/Frete', icon: '🚛', color: 'from-red-400 to-red-600' },
-  { value: 'mecanica', label: 'Mecânica', icon: '🔧', color: 'from-slate-400 to-slate-600' },
-];
+const CATEGORY_COLORS = ['from-orange-400 to-orange-600', 'from-rose-400 to-rose-600', 'from-yellow-400 to-yellow-600', 'from-cyan-400 to-cyan-600', 'from-amber-500 to-amber-700', 'from-stone-400 to-stone-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600', 'from-red-400 to-red-600', 'from-slate-400 to-slate-600', 'from-emerald-400 to-emerald-600'];
+
+const SERVICE_CATEGORIES = WORK_SERVICE_CATEGORIES.map((cat, index) => ({
+  ...cat,
+  color: CATEGORY_COLORS[index] || 'from-gray-400 to-gray-600',
+}));
 
 const normalizeCategorySlug = (slug) => {
   if (slug === 'reforma') return 'reformas';
@@ -92,6 +87,7 @@ export default function OfferServicesPage() {
     description: '',
     price: '',
     categories: [],
+    customCategory: '',
     location: null,
     images: [],
   });
