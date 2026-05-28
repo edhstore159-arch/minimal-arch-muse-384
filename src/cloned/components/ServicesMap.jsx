@@ -173,12 +173,23 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
             <Marker
               key={`r-${r.id}`}
               position={{ lat: r.lat, lng: r.lng }}
-              icon={{ url: pinIcon(isOffer ? '#f59e0b' : '#ef4444') }}
+              icon={{ url: isOffer ? jobPinIcon('#f59e0b', '🛠️') : pinIcon('#ef4444') }}
               title={r.title}
               onClick={() => setSelected({ type: 'request', data: r })}
             />
             );
           })}
+
+          {searchJobs.map((job) => (
+            <Marker
+              key={`job-${job.id}`}
+              position={{ lat: job.lat, lng: job.lng }}
+              icon={{ url: jobPinIcon('#2563eb', '💼') }}
+              title={job.title}
+              animation={window.google?.maps?.Animation?.DROP}
+              onClick={() => setSelected({ type: 'searchJob', data: job })}
+            />
+          ))}
 
           {selected && (
             <InfoWindow
@@ -192,6 +203,25 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
                     <p className="text-xs text-gray-500 capitalize">
                       {selected.data.role === 'volunteer' ? 'Voluntário' : 'Prestador'}
                     </p>
+                  </>
+                ) : selected.type === 'searchJob' ? (
+                  <>
+                    <p className="font-semibold text-sm flex items-center gap-1">💼 {selected.data.title}</p>
+                    <p className="text-xs text-gray-500">Busca do emprego · {selected.data.company}</p>
+                    {selected.data.address && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                        <MapPin size={10} /> {selected.data.address}
+                      </p>
+                    )}
+                    {selected.data.url && (
+                      <button
+                        type="button"
+                        onClick={() => window.open(selected.data.url, '_blank')}
+                        className="mt-2 inline-flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white"
+                      >
+                        <ExternalLink size={10} /> Abrir vaga
+                      </button>
+                    )}
                   </>
                 ) : (
                   <>
@@ -214,6 +244,9 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100" /> Voluntários</span>
         {showHelpRequests && (
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" /> {postTypeFilter === 'offers' ? 'Propostas' : 'Pedidos'}</span>
+        )}
+        {searchJobs.length > 0 && (
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-blue-100 animate-pulse" /> Vagas buscadas</span>
         )}
         {userLoc && (
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-blue-100" /> Você</span>
