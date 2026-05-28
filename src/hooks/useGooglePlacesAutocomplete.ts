@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 
+const getGoogleMapsBrowserKey = () => {
+  const key =
+    import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ||
+    import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
+    '';
+  return key && key !== 'undefined' && key !== 'null' ? key : '';
+};
+
+const getGoogleMapsChannel = () => {
+  const channel = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID || '';
+  return channel && channel !== 'undefined' && channel !== 'null' ? `&channel=${encodeURIComponent(channel)}` : '';
+};
+
 // Type definitions for Google Maps Places API
 type PlaceResult = {
   formatted_address?: string;
@@ -17,9 +30,7 @@ export const useGooglePlacesAutocomplete = (inputRef: React.RefObject<HTMLInputE
   const autocompleteRef = useRef<AutocompleteInstance | null>(null);
 
   useEffect(() => {
-    const apiKey =
-      import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ||
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const apiKey = getGoogleMapsBrowserKey();
     
     if (!apiKey) {
       console.warn('Google Maps API key not configured. Place autocomplete will not work.');
@@ -34,7 +45,7 @@ export const useGooglePlacesAutocomplete = (inputRef: React.RefObject<HTMLInputE
 
     // Load Google Maps script
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&loading=async${getGoogleMapsChannel()}`;
     script.async = true;
     script.defer = true;
     script.onload = () => setIsLoaded(true);

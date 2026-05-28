@@ -3,6 +3,7 @@ import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/ap
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Loader2 } from 'lucide-react';
 import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
+import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './googleMapsConfig';
 
 /**
  * Mapa com:
@@ -13,10 +14,7 @@ import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
  * permissão (voluntários/admin) por causa das RLS policies já existentes.
  */
 export default function ServicesMap({ height = 400, showHelpRequests = true }) {
-  const apiKey =
-    import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ||
-    import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-    '';
+  const apiKey = getGoogleMapsBrowserKey();
   const [helpers, setHelpers] = useState([]);
   const [requests, setRequests] = useState([]);
   const [userLoc, setUserLoc] = useState(null);
@@ -64,11 +62,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true }) {
   }, [userLoc, helpers, requests]);
 
   if (!apiKey) {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
-        Configure <code>VITE_GOOGLE_MAPS_API_KEY</code> para exibir o mapa.
-      </div>
-    );
+    return <MapFallback height={height} />;
   }
 
   return (
@@ -78,7 +72,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true }) {
           <Loader2 className="animate-spin text-primary" />
         </div>
       )}
-      <LoadScript googleMapsApiKey={apiKey}>
+      <LoadScript googleMapsApiKey={apiKey} channel={getGoogleMapsChannel()} preventGoogleFontsLoading>
         <GoogleMap
           mapContainerStyle={{ width: '100%', height: '100%' }}
           center={center}
