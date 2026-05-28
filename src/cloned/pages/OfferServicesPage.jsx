@@ -20,13 +20,15 @@ const HERO_IMAGES = [
 
 const SERVICE_CATEGORIES = [
   { value: 'reformas', label: 'Reformas', icon: '🔨', color: 'from-orange-400 to-orange-600' },
-  { value: 'limpeza', label: 'Limpeza', icon: '🧹', color: 'from-blue-400 to-blue-600' },
-  { value: 'jardinagem', label: 'Jardinagem', icon: '🌱', color: 'from-green-400 to-green-600' },
+  { value: 'pintura', label: 'Pintura', icon: '🎨', color: 'from-rose-400 to-rose-600' },
   { value: 'eletrica', label: 'Elétrica', icon: '💡', color: 'from-yellow-400 to-yellow-600' },
   { value: 'hidraulica', label: 'Hidráulica', icon: '🚰', color: 'from-cyan-400 to-cyan-600' },
-  { value: 'aulas', label: 'Aulas', icon: '📚', color: 'from-purple-400 to-purple-600' },
-  { value: 'transporte', label: 'Transporte', icon: '🚗', color: 'from-red-400 to-red-600' },
-  { value: 'beleza', label: 'Beleza', icon: '💇', color: 'from-pink-400 to-pink-600' },
+  { value: 'marcenaria', label: 'Marcenaria', icon: '🪚', color: 'from-amber-500 to-amber-700' },
+  { value: 'pedreiro', label: 'Pedreiro', icon: '🧱', color: 'from-stone-400 to-stone-600' },
+  { value: 'limpeza', label: 'Limpeza', icon: '🧹', color: 'from-blue-400 to-blue-600' },
+  { value: 'jardinagem', label: 'Jardinagem', icon: '🌱', color: 'from-green-400 to-green-600' },
+  { value: 'transporte', label: 'Transporte/Frete', icon: '🚛', color: 'from-red-400 to-red-600' },
+  { value: 'mecanica', label: 'Mecânica', icon: '🔧', color: 'from-slate-400 to-slate-600' },
 ];
 
 const normalizeCategorySlug = (slug) => {
