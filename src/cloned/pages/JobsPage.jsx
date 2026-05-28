@@ -221,6 +221,7 @@ export default function JobsPage() {
   // Buscar vagas via API pública Remotive (CORS habilitado) — sem edge function
   const searchExternalJobs = async (query, location, page = 1, nextViewMode = 'search') => {
     setSearchLoading(true);
+    setViewMode(nextViewMode);
     try {
       const q = (query || 'emprego').trim();
       const loc = (location || 'Brasil').trim();
