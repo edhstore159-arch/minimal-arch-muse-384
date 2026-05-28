@@ -10,6 +10,16 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 import { saveLastJobSearch } from '../lib/jobSearchBridge';
+import { requestLocationPermission } from '../utils/geolocation';
+import { Loader2, Navigation } from 'lucide-react';
+
+const extractCityFromAddress = (address = '') => {
+  if (!address) return '';
+  const parts = String(address).split(',').map((s) => s.trim()).filter(Boolean);
+  // nominatim returns long strings: pick a part that looks like a city (no digits, length > 2)
+  const city = parts.find((p) => !/^\d/.test(p) && p.length > 2 && !/brasil|brazil/i.test(p));
+  return city || parts[0] || '';
+};
 
 // Plataformas de emprego externas (Brasil)
 const JOB_PLATFORMS = [
