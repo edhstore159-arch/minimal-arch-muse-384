@@ -52,6 +52,27 @@ export default function PublicProfilePage() {
     }
   };
 
+  const [generatingCover, setGeneratingCover] = useState(false);
+  const generateCover = async () => {
+    if (!me?.id || me.id !== userId) return;
+    setGeneratingCover(true);
+    try {
+      const prompt = `Capa de perfil cinematográfica, abstrata e elegante para ${profile.display_name || 'um profissional'}${profile.categories?.length ? `, área: ${profile.categories.join(', ')}` : ''}, cores suaves, banner horizontal 16:9`;
+      const { data, error } = await supabase.functions.invoke('generate-cover-image', { body: { prompt } });
+      if (error) throw error;
+      const url = data?.imageUrl || data?.url || data?.image_url;
+      if (!url) throw new Error('Sem imagem retornada');
+      await supabase.from('svc_profiles').update({ cover_url: url }).eq('user_id', userId);
+      setProfile((p) => ({ ...p, cover_url: url }));
+      toast.success('Capa gerada!');
+    } catch (e) {
+      console.error('[cover] failed', e);
+      toast.error('Falha ao gerar capa: ' + (e?.message || 'erro'));
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       setLoading(true);
