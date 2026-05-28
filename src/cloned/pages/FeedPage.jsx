@@ -76,6 +76,9 @@ const PREVIEW_POSTS = [
 const PostCard = ({ post, onChat }) => {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes_count || 0);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
   const navigate = useNavigate();
 
   const handleRespond = () => {
@@ -84,6 +87,17 @@ const PostCard = ({ post, onChat }) => {
     } else {
       toast.info('Abrindo conversa...');
     }
+  };
+
+  const handleAddComment = (e) => {
+    e?.preventDefault?.();
+    const text = commentText.trim();
+    if (!text) return;
+    setComments((prev) => [
+      ...prev,
+      { id: Date.now(), author: 'Você', text, created_at: new Date().toISOString() },
+    ]);
+    setCommentText('');
   };
 
   const displayName = post.user?.name || 'Usuário';
