@@ -113,7 +113,6 @@ export default function ProfilePage() {
       .from('svc_posts')
       .select('id, title, description, address, lat, lng, created_at, post_type, category_slug, user_id')
       .eq('status', 'open')
-      .neq('post_type', 'volunteer')
       .order('created_at', { ascending: false })
       .limit(80);
     query = query.in('category_slug', cats);
@@ -577,10 +576,10 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
                   <HandHeart size={22} className="text-rose-500" />
-                  Trabalhos do seu interesse
+                  Propostas do seu interesse
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} · filtrados pelas suas categorias e com localização
+                  {helpRequests.length} proposta{helpRequests.length !== 1 ? 's' : ''} · filtradas pelas categorias escolhidas no perfil e com localização
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
@@ -694,12 +693,12 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-8 text-sm text-textMuted bg-white/60 rounded-2xl">
                 <HandHeart size={32} className="mx-auto mb-2 text-rose-300" />
-                Nenhum pedido de ajuda no momento.
+                Nenhuma proposta da sua categoria no momento.
               </div>
             )}
 
             <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} categories={selectedCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
+              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={selectedCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
             </div>
           </div>
 
