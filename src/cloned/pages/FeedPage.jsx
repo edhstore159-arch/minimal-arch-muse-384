@@ -72,14 +72,36 @@ const PREVIEW_POSTS = [
   },
 ];
 
+const EMOJIS = ['❤️','😂','😍','👍','🙏','🔥','🎉','😢','😮','👏','💯','🤝'];
+const storageKey = (id) => `feed_post_${id}`;
+const loadState = (id) => {
+  try { return JSON.parse(localStorage.getItem(storageKey(id))) || {}; } catch { return {}; }
+};
+const saveState = (id, data) => {
+  try { localStorage.setItem(storageKey(id), JSON.stringify(data)); } catch {}
+};
+
 // Jataí-style PostCard rendering PertoDeMimServicos posts
 const PostCard = ({ post, onChat }) => {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.likes_count || 0);
+  const initial = loadState(post.id);
+  const [liked, setLiked] = useState(!!initial.liked);
+  const [likeCount, setLikeCount] = useState(initial.likeCount ?? (post.likes_count || 0));
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState([]);
+  const [comments, setComments] = useState(initial.comments || []);
   const [commentText, setCommentText] = useState('');
+  const [showEmoji, setShowEmoji] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    saveState(post.id, { liked, likeCount, comments });
+  }, [liked, likeCount, comments, post.id]);
+
+  const toggleLike = () => {
+    setLiked((prev) => {
+      setLikeCount((c) => prev ? c - 1 : c + 1);
+      return !prev;
+    });
+  };
 
   const handleRespond = () => {
     if (onChat && post.user_id) {
@@ -98,7 +120,10 @@ const PostCard = ({ post, onChat }) => {
       { id: Date.now(), author: 'Você', text, created_at: new Date().toISOString() },
     ]);
     setCommentText('');
+    setShowEmoji(false);
   };
+
+  const addEmoji = (emoji) => setCommentText((t) => t + emoji);
 
   const displayName = post.user?.name || 'Usuário';
   const avatarFallback = displayName.charAt(0).toUpperCase();
