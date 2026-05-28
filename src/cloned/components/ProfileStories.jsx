@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Plus, Radio, X, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import { Plus, Radio, X, Video, VideoOff, Mic, MicOff, ImagePlus } from 'lucide-react';
 
 const STORAGE_KEY = 'svc:stories:v1';
 
