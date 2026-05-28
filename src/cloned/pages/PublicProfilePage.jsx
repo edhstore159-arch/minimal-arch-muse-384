@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video } from 'lucide-react';
 import { toast } from 'sonner';
+import MiniGoogleMap from '../components/MiniGoogleMap';
 
 const TABS = [
   { id: 'presentation', label: 'Apresentação' },
@@ -194,15 +195,8 @@ export default function PublicProfilePage() {
                   </div>
                 )}
                 {hasCoords && (
-                  <div className="rounded-md overflow-hidden border border-gray-200">
-                    <iframe
-                      title="profile-map"
-                      width="100%"
-                      height="260"
-                      loading="lazy"
-                      style={{ border: 0, display: 'block' }}
-                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${profile.lng - 0.04}%2C${profile.lat - 0.025}%2C${profile.lng + 0.04}%2C${profile.lat + 0.025}&layer=mapnik&marker=${profile.lat}%2C${profile.lng}`}
-                    />
+                  <div className="rounded-xl overflow-hidden ring-1 ring-black/5 shadow-sm">
+                    <MiniGoogleMap lat={profile.lat} lng={profile.lng} height={260} zoom={13} />
                   </div>
                 )}
               </Card>
