@@ -53,6 +53,61 @@ export default function ProfilePage() {
   const isVolunteer = user?.role === 'volunteer' || user?.role === 'helper' || user?.role === 'admin';
 
   const avatarSrc = avatarOverride || user?.avatar_url;
+  const coverSrc = coverOverride || user?.cover_url;
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    setUploadingCover(true);
+    try {
+      const path = `${user.id}/cover`;
+      const { error: upErr } = await supabase.storage.from('svc-photos').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('svc-photos').getPublicUrl(path);
+      const newUrl = `${pub.publicUrl}?v=${Date.now()}`;
+      await updateSvcProfile(user.id, { cover_url: newUrl });
+      setCoverOverride(newUrl);
+      await refreshUser?.();
+      toast.success('Capa atualizada!');
+      setShowCoverDialog(false);
+    } catch (err) {
+      toast.error(err?.message || 'Erro ao enviar capa');
+    } finally {
+      setUploadingCover(false);
+      e.target.value = '';
+    }
+  };
+
+  const generateCoverWithAI = async () => {
+    if (!coverPrompt.trim() || !user?.id) {
+      toast.error('Descreva a capa que você quer');
+      return;
+    }
+    setGeneratingCover(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-cover-image', {
+        body: { prompt: coverPrompt },
+      });
+      if (error) throw error;
+      if (!data?.b64_json) throw new Error('Sem imagem');
+      const blob = await (await fetch(`data:image/png;base64,${data.b64_json}`)).blob();
+      const path = `${user.id}/cover.png`;
+      const { error: upErr } = await supabase.storage.from('svc-photos').upload(path, blob, { upsert: true, contentType: 'image/png' });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('svc-photos').getPublicUrl(path);
+      const newUrl = `${pub.publicUrl}?v=${Date.now()}`;
+      await updateSvcProfile(user.id, { cover_url: newUrl });
+      setCoverOverride(newUrl);
+      await refreshUser?.();
+      toast.success('Capa gerada com IA!');
+      setShowCoverDialog(false);
+      setCoverPrompt('');
+    } catch (err) {
+      toast.error(err?.message || 'Erro ao gerar imagem');
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
 
   useEffect(() => {
     if (!isVolunteer) return;
