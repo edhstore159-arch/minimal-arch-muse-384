@@ -151,6 +151,23 @@ export default function ProfilePage() {
     fetchHelpRequests();
   }, [fetchHelpRequests]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from('svc_posts')
+        .select('category_slug')
+        .eq('user_id', user.id)
+        .neq('post_type', 'volunteer')
+        .eq('status', 'open');
+      if (error) {
+        console.warn('user requested categories fetch error', error);
+        return;
+      }
+      setRequestedCategories(Array.from(new Set((data || []).map((p) => p.category_slug).filter(Boolean))));
+    })();
+  }, [user?.id]);
+
   // Realtime: refresh when new job posts appear
   useEffect(() => {
     if (!user?.id) return;
