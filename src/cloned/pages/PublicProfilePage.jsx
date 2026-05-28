@@ -111,8 +111,29 @@ export default function PublicProfilePage() {
       </header>
 
       <main className="max-w-5xl mx-auto">
-        {/* Cover */}
-        <div className="h-32 sm:h-40 bg-gradient-to-b from-slate-200 to-slate-100" />
+        {/* Stories + Ao vivo (acima do perfil, visível em mobile) */}
+        {me?.id === userId && (
+          <div className="bg-white px-4 sm:px-8 py-3 border-b">
+            <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
+          </div>
+        )}
+
+        {/* Cover (com geração por IA quando dono) */}
+        <div className="relative h-32 sm:h-40 bg-gradient-to-b from-slate-200 to-slate-100 overflow-hidden">
+          {profile.cover_url && (
+            <img src={profile.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          {me?.id === userId && (
+            <button
+              onClick={generateCover}
+              disabled={generatingCover}
+              className="absolute top-2 right-2 z-10 px-3 py-1.5 bg-black/60 hover:bg-black/80 text-white text-xs font-medium rounded-full backdrop-blur-sm flex items-center gap-1.5 disabled:opacity-60"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {generatingCover ? 'Gerando…' : 'Gerar capa com IA'}
+            </button>
+          )}
+        </div>
 
         {/* Identity */}
         <div className="bg-white">
@@ -163,12 +184,6 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          {/* Bolinha única: Stories + Ao vivo (apenas dono do perfil) */}
-          {me?.id === userId && (
-            <div className="px-4 sm:px-8 pb-3">
-              <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
-            </div>
-          )}
 
           {/* Tabs */}
           <div className="border-t border-gray-100">
