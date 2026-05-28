@@ -4,10 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video, UserPlus, UserMinus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import MiniGoogleMap from '../components/MiniGoogleMap';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { isFriend, addFriend, removeFriend } from '../lib/friends';
 
 const TABS = [
   { id: 'presentation', label: 'Apresentação' },
