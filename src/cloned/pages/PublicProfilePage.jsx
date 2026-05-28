@@ -163,15 +163,11 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          {/* Stories e Ao vivo (visível para o dono do perfil) */}
+          {/* Bolinha única: Stories + Ao vivo (apenas dono do perfil) */}
           {me?.id === userId && (
-            <>
-              <div className="px-4 sm:px-8 pt-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Stories e Ao vivo</h3>
-                <span className="text-xs text-gray-500">Toque em <b>+</b> para publicar ou <b>Ao vivo</b> para transmitir</span>
-              </div>
+            <div className="px-4 sm:px-8 pb-3">
               <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
-            </>
+            </div>
           )}
 
           {/* Tabs */}
