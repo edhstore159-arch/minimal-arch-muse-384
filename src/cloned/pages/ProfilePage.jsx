@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import BottomNav from '../components/BottomNav';
-import { User, Mail, Globe, LogOut, Edit, Check, Heart, MapPin, Shield, Sparkles, Camera, HandHeart, ArrowRight } from 'lucide-react';
+import { User, Mail, Globe, LogOut, Edit, Check, Heart, MapPin, Shield, Sparkles, Camera, HandHeart, ArrowRight, Image as ImageIcon, Wand2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -41,12 +41,73 @@ export default function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [avatarOverride, setAvatarOverride] = useState(null);
+  const [coverOverride, setCoverOverride] = useState(null);
+  const [showCoverDialog, setShowCoverDialog] = useState(false);
+  const [coverPrompt, setCoverPrompt] = useState('');
+  const [generatingCover, setGeneratingCover] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const avatarInputRef = useRef(null);
+  const coverInputRef = useRef(null);
   const photoInputRef = useRef(null);
   const [helpRequests, setHelpRequests] = useState([]);
   const isVolunteer = user?.role === 'volunteer' || user?.role === 'helper' || user?.role === 'admin';
 
   const avatarSrc = avatarOverride || user?.avatar_url;
+  const coverSrc = coverOverride || user?.cover_url;
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    setUploadingCover(true);
+    try {
+      const path = `${user.id}/cover`;
+      const { error: upErr } = await supabase.storage.from('svc-photos').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('svc-photos').getPublicUrl(path);
+      const newUrl = `${pub.publicUrl}?v=${Date.now()}`;
+      await updateSvcProfile(user.id, { cover_url: newUrl });
+      setCoverOverride(newUrl);
+      await refreshUser?.();
+      toast.success('Capa atualizada!');
+      setShowCoverDialog(false);
+    } catch (err) {
+      toast.error(err?.message || 'Erro ao enviar capa');
+    } finally {
+      setUploadingCover(false);
+      e.target.value = '';
+    }
+  };
+
+  const generateCoverWithAI = async () => {
+    if (!coverPrompt.trim() || !user?.id) {
+      toast.error('Descreva a capa que você quer');
+      return;
+    }
+    setGeneratingCover(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-cover-image', {
+        body: { prompt: coverPrompt },
+      });
+      if (error) throw error;
+      if (!data?.b64_json) throw new Error('Sem imagem');
+      const blob = await (await fetch(`data:image/png;base64,${data.b64_json}`)).blob();
+      const path = `${user.id}/cover.png`;
+      const { error: upErr } = await supabase.storage.from('svc-photos').upload(path, blob, { upsert: true, contentType: 'image/png' });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('svc-photos').getPublicUrl(path);
+      const newUrl = `${pub.publicUrl}?v=${Date.now()}`;
+      await updateSvcProfile(user.id, { cover_url: newUrl });
+      setCoverOverride(newUrl);
+      await refreshUser?.();
+      toast.success('Capa gerada com IA!');
+      setShowCoverDialog(false);
+      setCoverPrompt('');
+    } catch (err) {
+      toast.error(err?.message || 'Erro ao gerar imagem');
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
 
   useEffect(() => {
     if (!isVolunteer) return;
@@ -221,8 +282,82 @@ export default function ProfilePage() {
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Hero estilo AlloVoisins */}
         <div className="bg-white rounded-3xl shadow-card overflow-hidden mb-6">
-          {/* Cover banner cinza/gradiente sutil */}
-          <div className="relative h-20 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-400" />
+          {/* Cover banner com upload / IA */}
+          <div
+            className="relative h-40 sm:h-52 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-400 bg-cover bg-center group"
+            style={coverSrc ? { backgroundImage: `url(${coverSrc})` } : undefined}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+            <button
+              type="button"
+              onClick={() => setShowCoverDialog(true)}
+              className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white text-textPrimary text-xs font-semibold shadow-md backdrop-blur transition"
+              data-testid="edit-cover-btn"
+            >
+              <Camera size={14} />
+              {coverSrc ? 'Trocar capa' : 'Adicionar capa'}
+            </button>
+          </div>
+
+          <Dialog open={showCoverDialog} onOpenChange={setShowCoverDialog}>
+            <DialogContent className="rounded-3xl max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ImageIcon size={20} className="text-primary" /> Imagem de capa
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={uploadingCover}
+                  className="w-full p-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 transition flex items-center gap-3 text-left disabled:opacity-50"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    {uploadingCover ? <Loader2 size={20} className="text-primary animate-spin" /> : <ImageIcon size={20} className="text-primary" />}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-textPrimary text-sm">Enviar do dispositivo</p>
+                    <p className="text-xs text-textMuted">PNG ou JPG até 5MB</p>
+                  </div>
+                </button>
+                <input ref={coverInputRef} type="file" accept="image/*" hidden onChange={handleCoverUpload} />
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-textMuted">ou</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Wand2 size={18} className="text-primary" />
+                    <p className="font-semibold text-textPrimary text-sm">Criar com IA</p>
+                  </div>
+                  <Input
+                    placeholder="Ex: ferramentas de construção, sol, cores quentes"
+                    value={coverPrompt}
+                    onChange={(e) => setCoverPrompt(e.target.value)}
+                    disabled={generatingCover}
+                    className="rounded-xl"
+                  />
+                  <Button
+                    onClick={generateCoverWithAI}
+                    disabled={generatingCover || !coverPrompt.trim()}
+                    className="w-full rounded-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                  >
+                    {generatingCover ? (
+                      <><Loader2 size={16} className="mr-2 animate-spin" /> Gerando...</>
+                    ) : (
+                      <><Wand2 size={16} className="mr-2" /> Gerar capa</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Linha avatar + identidade */}
           <div className="px-6 sm:px-10 pb-6 -mt-14">

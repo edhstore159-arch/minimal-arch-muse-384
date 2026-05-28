@@ -386,6 +386,7 @@ export type Database = {
           bio: string | null
           categories: string[]
           city: string | null
+          cover_url: string | null
           created_at: string
           display_name: string
           id: string
@@ -402,6 +403,7 @@ export type Database = {
           bio?: string | null
           categories?: string[]
           city?: string | null
+          cover_url?: string | null
           created_at?: string
           display_name: string
           id?: string
@@ -418,6 +420,7 @@ export type Database = {
           bio?: string | null
           categories?: string[]
           city?: string | null
+          cover_url?: string | null
           created_at?: string
           display_name?: string
           id?: string

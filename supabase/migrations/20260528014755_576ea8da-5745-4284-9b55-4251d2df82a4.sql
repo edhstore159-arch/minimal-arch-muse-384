@@ -1,0 +1,1 @@
+ALTER TABLE public.svc_profiles ADD COLUMN IF NOT EXISTS cover_url text;
