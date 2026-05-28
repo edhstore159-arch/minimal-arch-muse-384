@@ -171,15 +171,8 @@ const PostCard = ({ post, onChat }) => {
             {(post.location?.lat && post.location?.lng) && (
               <div className="mt-2 mb-1">
                 <p className="text-xs font-semibold text-gray-800 mb-1">Où se situe votre demande</p>
-                <div className="rounded-md overflow-hidden border border-gray-200">
-                  <iframe
-                    title={`map-${post.id}`}
-                    width="100%"
-                    height="220"
-                    loading="lazy"
-                    style={{ border: 0, display: 'block' }}
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${post.location.lng - 0.005}%2C${post.location.lat - 0.003}%2C${post.location.lng + 0.005}%2C${post.location.lat + 0.003}&layer=mapnik&marker=${post.location.lat}%2C${post.location.lng}`}
-                  />
+                <div className="rounded-xl overflow-hidden ring-1 ring-black/5 shadow-sm">
+                  <MiniGoogleMap lat={post.location.lat} lng={post.location.lng} height={220} zoom={15} />
                 </div>
               </div>
             )}
