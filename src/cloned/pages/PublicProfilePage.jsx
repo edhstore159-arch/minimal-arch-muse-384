@@ -7,6 +7,7 @@ import { Card } from '../components/ui/card';
 import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import MiniGoogleMap from '../components/MiniGoogleMap';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 const TABS = [
   { id: 'presentation', label: 'Apresentação' },
