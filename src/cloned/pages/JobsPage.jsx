@@ -648,7 +648,11 @@ export default function JobsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="font-bold text-gray-800 line-clamp-1">{job.title}</h3>
-                            {job.is_remote && (
+                            {job.isPlatformSearch ? (
+                              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs whitespace-nowrap">
+                                Busca direta
+                              </span>
+                            ) : job.is_remote && (
                               <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs whitespace-nowrap">
                                 🏠 Remoto
                               </span>
@@ -703,7 +707,7 @@ export default function JobsPage() {
                           size="sm"
                         >
                           <ExternalLink size={14} className="mr-1" />
-                          Candidatar-se
+                            {job.isPlatformSearch ? 'Abrir busca' : 'Candidatar-se'}
                         </Button>
                         <Button
                           onClick={(e) => {
