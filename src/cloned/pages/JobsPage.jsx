@@ -16,10 +16,15 @@ import { Loader2, Navigation } from 'lucide-react';
 
 const extractCityFromAddress = (address = '') => {
   if (!address) return '';
+  const ignored = /^(brasil|brazil|rua|avenida|av\.?|rodovia|estrada|travessa|praça|cep|state of|região|region)$/i;
   const parts = String(address).split(',').map((s) => s.trim()).filter(Boolean);
-  // nominatim returns long strings: pick a part that looks like a city (no digits, length > 2)
-  const city = parts.find((p) => !/^\d/.test(p) && p.length > 2 && !/brasil|brazil/i.test(p));
-  return city || parts[0] || '';
+  const city = parts.find((p) => !/^\d/.test(p) && p.length > 2 && !ignored.test(p));
+  return city || parts.find((p) => p.length > 2) || '';
+};
+
+const getLocationSearchCity = (loc, fallback = 'São Paulo') => {
+  if (!loc) return fallback;
+  return loc.city || extractCityFromAddress(loc.address) || loc.region || fallback;
 };
 
 // Plataformas de emprego externas (Brasil)
@@ -172,14 +177,18 @@ export default function JobsPage() {
 
   const autoLocateAndSearch = async ({ silent = false, forceBrowser = false } = {}) => {
     setLocating(true);
-    const loc = await requestLocationPermission({ forceBrowser, showToast: !silent });
+    const loc = await requestLocationPermission({
+      forceBrowser,
+      showToast: !silent,
+      fallbackLocation: sharedLocation || { lat: -23.5505, lng: -46.6333, city: user?.city || 'São Paulo', address: `${user?.city || 'São Paulo'}, Brasil`, source: 'fallback' },
+    });
     setLocating(false);
     if (!loc) {
       if (!silent) toast.error('Não foi possível obter sua localização');
       return null;
     }
     setSharedLocation(loc); // sincroniza com todos os mapas do app
-    const city = extractCityFromAddress(loc.address) || 'Brasil';
+    const city = getLocationSearchCity(loc, user?.city || locationQuery || 'São Paulo');
     setLocationQuery(city);
     if (!silent) toast.success(`📍 Buscando vagas em ${city}`);
     const term = (searchQuery && searchQuery.trim())
@@ -217,7 +226,7 @@ export default function JobsPage() {
   // Reage quando a localização compartilhada muda (perfil, GPS automático, etc.)
   useEffect(() => {
     if (!sharedLocation?.address && !sharedLocation?.lat) return;
-    const city = extractCityFromAddress(sharedLocation.address) || locationQuery;
+    const city = getLocationSearchCity(sharedLocation, locationQuery);
     if (city && city !== locationQuery) {
       setLocationQuery(city);
       const term = (searchQuery && searchQuery.trim()) || SEARCH_SUGGESTIONS[selectedCategory]?.[0] || 'emprego';
