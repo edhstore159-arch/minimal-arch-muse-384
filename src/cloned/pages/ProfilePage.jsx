@@ -467,7 +467,7 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-5">
               {/* Avatar grande com online dot */}
               <div className="relative flex-shrink-0">
-                <div className="w-32 h-32 rounded-full ring-4 ring-white shadow-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full ring-4 ring-white shadow-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
                   {avatarSrc ? (
                     <img key={avatarSrc} src={avatarSrc} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -478,7 +478,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={uploadingAvatar}
-                  className="absolute -bottom-1 -right-1 w-10 h-10 bg-primary rounded-full shadow-lg flex items-center justify-center border-2 border-white hover:bg-primary/90 transition disabled:opacity-60"
+                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary rounded-full shadow-lg flex items-center justify-center border-2 border-white hover:bg-primary/90 transition disabled:opacity-60"
                   title="Alterar foto de perfil"
                   data-testid="change-avatar-btn"
                 >
