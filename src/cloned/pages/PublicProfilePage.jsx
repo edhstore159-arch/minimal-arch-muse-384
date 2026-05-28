@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import MiniGoogleMap from '../components/MiniGoogleMap';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { isFriend, addFriend, removeFriend } from '../lib/friends';
+import ProfileStories from '../components/ProfileStories';
 
 const TABS = [
   { id: 'presentation', label: 'Apresentação' },
