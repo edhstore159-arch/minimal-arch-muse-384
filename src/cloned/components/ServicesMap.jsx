@@ -15,6 +15,12 @@ import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './go
  */
 export default function ServicesMap({ height = 400, showHelpRequests = true }) {
   const apiKey = getGoogleMapsBrowserKey();
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey || '',
+    channel: getGoogleMapsChannel(),
+    preventGoogleFontsLoading: true,
+  });
   const [helpers, setHelpers] = useState([]);
   const [requests, setRequests] = useState([]);
   const [userLoc, setUserLoc] = useState(null);
