@@ -23,7 +23,7 @@ const distanceKm = (a, b) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
-export default function ServicesMap({ height = 400, showHelpRequests = true, categories = [], radiusKm = 0, userLocation = null }) {
+export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = [], radiusKm = 0, userLocation = null }) {
   const apiKey = getGoogleMapsBrowserKey();
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -48,14 +48,18 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, cat
           .not('lng', 'is', null)
           .limit(200),
         showHelpRequests
-          ? supabase
-              .from('svc_posts')
-              .select('id, title, description, lat, lng, post_type, address, category_slug, status')
-              .eq('status', 'open')
-              .neq('post_type', 'volunteer')
-              .not('lat', 'is', null)
-              .not('lng', 'is', null)
-              .limit(200)
+          ? (() => {
+              let query = supabase
+                .from('svc_posts')
+                .select('id, title, description, lat, lng, post_type, address, category_slug, status')
+                .eq('status', 'open')
+                .not('lat', 'is', null)
+                .not('lng', 'is', null)
+                .limit(200);
+              if (postTypeFilter === 'needs') query = query.neq('post_type', 'volunteer');
+              if (postTypeFilter === 'offers') query = query.eq('post_type', 'volunteer');
+              return query;
+            })()
           : Promise.resolve({ data: [] }),
       ]);
       setHelpers(profs || []);
@@ -76,7 +80,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, cat
         () => {}
       );
     }
-  }, [showHelpRequests, categories, radiusKm, userLocation?.lat, userLocation?.lng]);
+  }, [showHelpRequests, postTypeFilter, categories, radiusKm, userLocation?.lat, userLocation?.lng]);
 
   const center = useMemo(() => {
     if (userLoc) return userLoc;
