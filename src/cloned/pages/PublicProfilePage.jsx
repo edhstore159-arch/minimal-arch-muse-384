@@ -238,9 +238,23 @@ export default function PublicProfilePage() {
             allPhotos.length === 0 ? (
               <Card className="p-8 text-center text-sm text-gray-500">Nenhuma foto publicada.</Card>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {allPhotos.map((url, i) => (
-                  <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-md" />
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setLightbox(url)}
+                    className="group relative w-full aspect-square overflow-hidden rounded-lg ring-1 ring-black/5 bg-gray-100"
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                      style={{ imageRendering: 'auto' }}
+                    />
+                  </button>
                 ))}
               </div>
             )
