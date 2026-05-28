@@ -136,7 +136,9 @@ const normalizeText = (value = '') => String(value).toLowerCase().normalize('NFD
 export default function JobsPage() {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const userInterestCategories = Array.isArray(user?.categories) ? user.categories.filter(Boolean) : [];
+  const profileCategories = Array.isArray(user?.categories) ? user.categories.filter(Boolean) : [];
+  const [requestedCategories, setRequestedCategories] = useState([]);
+  const userInterestCategories = Array.from(new Set([...profileCategories, ...requestedCategories])).filter(Boolean);
   const primaryUserCategory = userInterestCategories[0] || 'all';
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -201,6 +203,11 @@ export default function JobsPage() {
           categories: profileMap[p.user_id]?.categories || [],
         },
       }));
+      setRequestedCategories(Array.from(new Set(
+        posts
+          .filter((p) => p.user_id === user?.id && p.type === 'need' && p.category)
+          .map((p) => p.category)
+      )));
       setJobOffers(posts.filter((p) => p.type === 'offer'));
       setJobSeekers(posts.filter((p) => p.type === 'need'));
     } catch (error) {
