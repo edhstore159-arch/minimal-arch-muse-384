@@ -788,15 +788,8 @@ export default function FeedPage() {
                   </button>
                 </div>
                 {postCoords?.lat && postCoords?.lng && (
-                  <div className="mt-2 rounded-md overflow-hidden border border-gray-200">
-                    <iframe
-                      title="map-preview"
-                      width="100%"
-                      height="160"
-                      loading="lazy"
-                      style={{ border: 0, display: 'block' }}
-                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${postCoords.lng - 0.005}%2C${postCoords.lat - 0.003}%2C${postCoords.lng + 0.005}%2C${postCoords.lat + 0.003}&layer=mapnik&marker=${postCoords.lat}%2C${postCoords.lng}`}
-                    />
+                  <div className="mt-2 rounded-xl overflow-hidden ring-1 ring-black/5 shadow-sm">
+                    <MiniGoogleMap lat={postCoords.lat} lng={postCoords.lng} height={160} zoom={15} />
                   </div>
                 )}
               </div>
