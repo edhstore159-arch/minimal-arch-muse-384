@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Loader2 } from 'lucide-react';
 import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
@@ -15,6 +15,12 @@ import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './go
  */
 export default function ServicesMap({ height = 400, showHelpRequests = true }) {
   const apiKey = getGoogleMapsBrowserKey();
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey || '',
+    channel: getGoogleMapsChannel(),
+    preventGoogleFontsLoading: true,
+  });
   const [helpers, setHelpers] = useState([]);
   const [requests, setRequests] = useState([]);
   const [userLoc, setUserLoc] = useState(null);
@@ -61,18 +67,18 @@ export default function ServicesMap({ height = 400, showHelpRequests = true }) {
     return { lat: 48.8566, lng: 2.3522 };
   }, [userLoc, helpers, requests]);
 
-  if (!apiKey) {
+  if (!apiKey || loadError) {
     return <MapFallback height={height} />;
   }
 
   return (
     <div className="relative rounded-2xl overflow-hidden border border-border shadow-lg ring-1 ring-black/5" style={{ height }}>
-      {loading && (
+      {(loading || !isLoaded) && (
         <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center">
           <Loader2 className="animate-spin text-primary" />
         </div>
       )}
-      <LoadScript googleMapsApiKey={apiKey} channel={getGoogleMapsChannel()} preventGoogleFontsLoading>
+      {isLoaded && (
         <GoogleMap
           mapContainerStyle={{ width: '100%', height: '100%' }}
           center={center}
@@ -137,7 +143,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true }) {
             </InfoWindow>
           )}
         </GoogleMap>
-      </LoadScript>
+      )}
 
       <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md rounded-full px-4 py-2 text-xs shadow-lg ring-1 ring-black/5 flex items-center gap-4 font-medium">
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100" /> Voluntários</span>

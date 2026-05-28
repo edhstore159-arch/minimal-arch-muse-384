@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import React, { useState } from 'react';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { X } from 'lucide-react';
 import { Button } from './ui/button';
 import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
@@ -8,6 +8,13 @@ import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './go
 const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
   const [map, setMap] = useState(null);
   const apiKey = getGoogleMapsBrowserKey();
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey || '',
+    channel: getGoogleMapsChannel(),
+    preventGoogleFontsLoading: true,
+  });
+
 
   const mapContainerStyle = {
     width: '100%',
@@ -37,7 +44,7 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
     setMap(null);
   }, []);
 
-  if (!apiKey) {
+  if (!apiKey || loadError) {
     return <MapFallback height={400} />;
   }
 
@@ -54,7 +61,9 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
         </Button>
       )}
 
-      <LoadScript googleMapsApiKey={apiKey} channel={getGoogleMapsChannel()} preventGoogleFontsLoading>
+      {!isLoaded ? (
+        <div style={mapContainerStyle} className="bg-gray-100 animate-pulse" />
+      ) : (
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
@@ -76,7 +85,7 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
             />
           ))}
         </GoogleMap>
-      </LoadScript>
+      )}
     </div>
   );
 };
