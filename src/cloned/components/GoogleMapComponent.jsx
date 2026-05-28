@@ -44,7 +44,7 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
     setMap(null);
   }, []);
 
-  if (!apiKey) {
+  if (!apiKey || loadError) {
     return <MapFallback height={400} />;
   }
 
@@ -61,7 +61,9 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
         </Button>
       )}
 
-      <LoadScript googleMapsApiKey={apiKey} channel={getGoogleMapsChannel()} preventGoogleFontsLoading>
+      {!isLoaded ? (
+        <div style={mapContainerStyle} className="bg-gray-100 animate-pulse" />
+      ) : (
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
@@ -83,7 +85,7 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
             />
           ))}
         </GoogleMap>
-      </LoadScript>
+      )}
     </div>
   );
 };
