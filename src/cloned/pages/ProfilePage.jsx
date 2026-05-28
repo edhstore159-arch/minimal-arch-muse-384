@@ -107,16 +107,22 @@ export default function ProfilePage() {
 
   const fetchHelpRequests = React.useCallback(async () => {
     if (!user?.id) return;
+    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
+    if (cats.length === 0) { setHelpRequests([]); return; }
     let query = supabase
       .from('svc_posts')
       .select('id, title, description, address, lat, lng, created_at, post_type, category_slug, user_id')
+      .eq('status', 'open')
       .neq('post_type', 'volunteer')
       .order('created_at', { ascending: false })
       .limit(80);
-    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
-    if (cats.length === 0) { setHelpRequests([]); return; }
     query = query.in('category_slug', cats);
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) {
+      console.warn('svc_posts profile fetch error', error);
+      setHelpRequests([]);
+      return;
+    }
     let rows = data || [];
     // Distance filter (haversine) — only when user has location and posts have lat/lng
     const uLat = user?.lat;
@@ -133,7 +139,8 @@ export default function ProfilePage() {
         return d <= radiusKm;
       });
     }
-    setHelpRequests(rows);
+    const selected = new Set(cats);
+    setHelpRequests(rows.filter((p) => selected.has(p.category_slug)));
   }, [user?.id, user?.lat, user?.lng, selectedCategories, radiusKm]);
 
   useEffect(() => {
