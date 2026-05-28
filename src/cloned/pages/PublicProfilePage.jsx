@@ -163,6 +163,17 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
+          {/* Stories e Ao vivo (visível para o dono do perfil) */}
+          {me?.id === userId && (
+            <>
+              <div className="px-4 sm:px-8 pt-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Stories e Ao vivo</h3>
+                <span className="text-xs text-gray-500">Toque em <b>+</b> para publicar ou <b>Ao vivo</b> para transmitir</span>
+              </div>
+              <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
+            </>
+          )}
+
           {/* Tabs */}
           <div className="border-t border-gray-100">
             <div className="px-4 sm:px-8 flex gap-1 sm:gap-6 overflow-x-auto">
