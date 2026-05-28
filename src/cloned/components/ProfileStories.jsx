@@ -34,6 +34,7 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
   const [camOn, setCamOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
   const [viewers, setViewers] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => saveStories(stories), [stories]);
 
