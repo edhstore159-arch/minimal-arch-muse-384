@@ -11,6 +11,7 @@ import AuthModal from '../components/AuthModal';
 import { Briefcase, Check, Sparkles, Star, Plus, MapPin, Image as ImageIcon, X, Crown, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES } from '../lib/serviceCategories';
 
 const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80',
@@ -18,18 +19,12 @@ const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1573497491208-6b1acb260507?w=1200&q=80',
 ];
 
-const SERVICE_CATEGORIES = [
-  { value: 'reformas', label: 'Reformas', icon: '🔨', color: 'from-orange-400 to-orange-600' },
-  { value: 'pintura', label: 'Pintura', icon: '🎨', color: 'from-rose-400 to-rose-600' },
-  { value: 'eletrica', label: 'Elétrica', icon: '💡', color: 'from-yellow-400 to-yellow-600' },
-  { value: 'hidraulica', label: 'Hidráulica', icon: '🚰', color: 'from-cyan-400 to-cyan-600' },
-  { value: 'marcenaria', label: 'Marcenaria', icon: '🪚', color: 'from-amber-500 to-amber-700' },
-  { value: 'pedreiro', label: 'Pedreiro', icon: '🧱', color: 'from-stone-400 to-stone-600' },
-  { value: 'limpeza', label: 'Limpeza', icon: '🧹', color: 'from-blue-400 to-blue-600' },
-  { value: 'jardinagem', label: 'Jardinagem', icon: '🌱', color: 'from-green-400 to-green-600' },
-  { value: 'transporte', label: 'Transporte/Frete', icon: '🚛', color: 'from-red-400 to-red-600' },
-  { value: 'mecanica', label: 'Mecânica', icon: '🔧', color: 'from-slate-400 to-slate-600' },
-];
+const CATEGORY_COLORS = ['from-orange-400 to-orange-600', 'from-rose-400 to-rose-600', 'from-yellow-400 to-yellow-600', 'from-cyan-400 to-cyan-600', 'from-amber-500 to-amber-700', 'from-stone-400 to-stone-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600', 'from-red-400 to-red-600', 'from-slate-400 to-slate-600', 'from-emerald-400 to-emerald-600'];
+
+const SERVICE_CATEGORIES = WORK_SERVICE_CATEGORIES.map((cat, index) => ({
+  ...cat,
+  color: CATEGORY_COLORS[index] || 'from-gray-400 to-gray-600',
+}));
 
 const normalizeCategorySlug = (slug) => {
   if (slug === 'reforma') return 'reformas';
@@ -92,6 +87,7 @@ export default function OfferServicesPage() {
     description: '',
     price: '',
     categories: [],
+    customCategory: '',
     location: null,
     images: [],
   });
@@ -112,9 +108,7 @@ export default function OfferServicesPage() {
   const toggleOfferCategory = (category) => {
     setServiceOffer((prev) => ({
       ...prev,
-      categories: prev.categories.includes(category)
-        ? prev.categories.filter((c) => c !== category)
-        : [...prev.categories, category],
+      categories: prev.categories.includes(category) ? [] : [category],
     }));
   };
 
@@ -163,8 +157,14 @@ export default function OfferServicesPage() {
       toast.error('Preencha título e descrição');
       return;
     }
-    if (serviceOffer.categories.length === 0) {
+    const selectedCategory = serviceOffer.categories[0];
+    const customCategoryName = serviceOffer.customCategory?.trim();
+    if (!selectedCategory) {
       toast.error('Selecione pelo menos uma categoria');
+      return;
+    }
+    if (selectedCategory === CUSTOM_CATEGORY_VALUE && !customCategoryName) {
+      toast.error('Escreva sua categoria');
       return;
     }
     try {
@@ -189,13 +189,22 @@ export default function OfferServicesPage() {
         photoUrls.push(pub.publicUrl);
       }
 
+      let categorySlug = normalizeCategorySlug(selectedCategory);
+      if (selectedCategory === CUSTOM_CATEGORY_VALUE) {
+        const { data: createdSlug, error: categoryError } = await supabase.rpc('ensure_svc_category', {
+          _name: customCategoryName,
+        });
+        if (categoryError) throw categoryError;
+        categorySlug = createdSlug || 'outros';
+      }
+
       const payload = {
         user_id: user.id,
         title: serviceOffer.title,
         description: serviceOffer.description + (serviceOffer.price ? `\n\nPreço: ${serviceOffer.price}` : ''),
         post_type: 'volunteer', // offer of service
         status: 'open',
-        category_slug: normalizeCategorySlug(serviceOffer.categories[0]),
+        category_slug: categorySlug,
         photos: photoUrls,
         lat: serviceOffer.location?.lat ?? null,
         lng: serviceOffer.location?.lng ?? null,
@@ -208,7 +217,7 @@ export default function OfferServicesPage() {
 
       toast.success('Serviço publicado!');
       setShowOfferModal(false);
-      setServiceOffer({ title: '', description: '', price: '', categories: [], location: null, images: [] });
+      setServiceOffer({ title: '', description: '', price: '', categories: [], customCategory: '', location: null, images: [] });
       navigate('/home');
     } catch (e) {
       console.error('submitOffer error', e);
@@ -428,12 +437,13 @@ export default function OfferServicesPage() {
               <Label className="text-sm font-bold mb-2 block">📂 Categorias</Label>
               <div className="grid grid-cols-4 gap-2">
                 {SERVICE_CATEGORIES.map((cat) => {
-                  const sel = serviceOffer.categories.includes(cat.value);
+                  const categoryValue = cat.value === 'outros' ? CUSTOM_CATEGORY_VALUE : cat.value;
+                  const sel = serviceOffer.categories.includes(categoryValue);
                   return (
                     <button
                       key={cat.value}
                       type="button"
-                      onClick={() => toggleOfferCategory(cat.value)}
+                      onClick={() => toggleOfferCategory(categoryValue)}
                       className={`p-2 rounded-xl border text-xs ${
                         sel ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white'
                       }`}
@@ -444,6 +454,15 @@ export default function OfferServicesPage() {
                   );
                 })}
               </div>
+              {serviceOffer.categories.includes(CUSTOM_CATEGORY_VALUE) && (
+                <Input
+                  value={serviceOffer.customCategory}
+                  onChange={(e) => setServiceOffer({ ...serviceOffer, customCategory: e.target.value })}
+                  placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
+                  maxLength={40}
+                  className="mt-3 rounded-xl bg-white"
+                />
+              )}
             </div>
 
             <div className="flex gap-2">

@@ -10,19 +10,9 @@ import { ArrowLeft, Check, User, Heart, Shield, MapPin, Loader2 } from 'lucide-r
 import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, normalizeAuthUser } from '../lib/authProfile';
 import jataiWorkImage from '@/assets/jatai-work.jpg';
+import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, slugifyCategoryName } from '../lib/serviceCategories';
 
-const HELP_CATEGORIES = [
-  { value: 'food', label: 'Alimentação', icon: '🍽️', desc: 'Distribuição de alimentos, refeições' },
-  { value: 'legal', label: 'Jurídico', icon: '⚖️', desc: 'Orientação sobre documentos' },
-  { value: 'health', label: 'Saúde', icon: '🏥', desc: 'Acompanhamento médico' },
-  { value: 'housing', label: 'Moradia', icon: '🏠', desc: 'Ajuda com habitação' },
-  { value: 'work', label: 'Emprego', icon: '💼', desc: 'Orientação profissional' },
-  { value: 'education', label: 'Educação', icon: '📚', desc: 'Aulas, cursos, idiomas' },
-  { value: 'social', label: 'Apoio Social', icon: '🤝', desc: 'Integração, acolhimento' },
-  { value: 'clothes', label: 'Roupas', icon: '👕', desc: 'Doação de vestuário' },
-  { value: 'furniture', label: 'Móveis', icon: '🪑', desc: 'Doação de móveis' },
-  { value: 'transport', label: 'Transporte', icon: '🚗', desc: 'Ajuda com deslocamento' }
-];
+const HELP_CATEGORIES = WORK_SERVICE_CATEGORIES;
 
 const professionalAreas = [
   { value: 'legal', label: 'Jurídico', icon: '⚖️' },
@@ -51,6 +41,7 @@ export default function AuthPage() {
   
   // Categorias selecionadas
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [customCategory, setCustomCategory] = useState('');
   
   // Localização
   const [location, setLocation] = useState(null);
@@ -173,6 +164,15 @@ export default function AuthPage() {
       toast.error('Selecione pelo menos uma categoria de ajuda que você precisa');
       return;
     }
+
+    if (!isLogin && selectedCategories.includes(CUSTOM_CATEGORY_VALUE) && !customCategory.trim()) {
+      toast.error('Escreva sua categoria');
+      return;
+    }
+
+    const categoriesForProfile = selectedCategories.includes(CUSTOM_CATEGORY_VALUE)
+      ? [...selectedCategories.filter((category) => category !== CUSTOM_CATEGORY_VALUE), slugifyCategoryName(customCategory) || 'outros']
+      : selectedCategories;
     
     setLoading(true);
 
@@ -200,7 +200,7 @@ export default function AuthPage() {
             display_name: name,
             role,
             city: locationAddress,
-            categories: selectedCategories,
+            categories: categoriesForProfile,
           });
           await login(data.session.access_token, normalizeAuthUser(data.user, profile));
           toast.success('Conta criada com sucesso!');
@@ -461,13 +461,16 @@ export default function AuthPage() {
           {!isLogin && step === 2 && (role === 'migrant' || role === 'helper') && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                {HELP_CATEGORIES.map(cat => (
+                {HELP_CATEGORIES.map(cat => {
+                  const categoryValue = cat.value === 'outros' ? CUSTOM_CATEGORY_VALUE : cat.value;
+                  const selected = selectedCategories.includes(categoryValue);
+                  return (
                   <button
                     key={cat.value}
                     type="button"
-                    onClick={() => toggleCategory(cat.value)}
+                    onClick={() => toggleCategory(categoryValue)}
                     className={`p-3 rounded-xl border-2 transition-all text-left ${
-                      selectedCategories.includes(cat.value)
+                      selected
                         ? role === 'migrant' 
                           ? 'bg-green-600 text-white border-green-600 shadow-lg'
                           : 'bg-primary text-white border-primary shadow-lg'
@@ -477,17 +480,27 @@ export default function AuthPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{cat.icon}</span>
                       <div>
-                        <div className={`text-sm font-bold ${selectedCategories.includes(cat.value) ? 'text-white' : 'text-textPrimary'}`}>
+                        <div className={`text-sm font-bold ${selected ? 'text-white' : 'text-textPrimary'}`}>
                           {cat.label}
                         </div>
-                        <div className={`text-xs ${selectedCategories.includes(cat.value) ? 'text-white/80' : 'text-textSecondary'}`}>
+                        <div className={`text-xs ${selected ? 'text-white/80' : 'text-textSecondary'}`}>
                           {cat.desc}
                         </div>
                       </div>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
+              {selectedCategories.includes(CUSTOM_CATEGORY_VALUE) && (
+                <Input
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
+                  maxLength={40}
+                  className="rounded-xl"
+                />
+              )}
               
               {selectedCategories.length > 0 && (
                 <div className={`p-3 rounded-xl border ${

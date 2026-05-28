@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getStableDefaultAvatarUrl } from '../lib/authProfile';
 import MiniGoogleMap from '../components/MiniGoogleMap';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 
 // Local fallback store so the feed works even without auth/backend
 const LOCAL_KEY = 'cloned_feed_posts_v1';
@@ -24,20 +25,11 @@ const saveLocalPosts = (posts) => {
   try { localStorage.setItem(LOCAL_KEY, JSON.stringify(posts.slice(0, 50))); } catch {}
 };
 
-const CATEGORY_OPTIONS = [
-  { value: 'reformas', label: 'Reformas' },
-  { value: 'pintura', label: 'Pintura' },
-  { value: 'eletrica', label: 'Elétrica' },
-  { value: 'hidraulica', label: 'Hidráulica' },
-  { value: 'marcenaria', label: 'Marcenaria' },
-  { value: 'pedreiro', label: 'Pedreiro' },
-  { value: 'limpeza', label: 'Limpeza' },
-  { value: 'jardinagem', label: 'Jardinagem' },
-  { value: 'transporte', label: 'Transporte/Frete' },
-  { value: 'mecanica', label: 'Mecânica' },
-];
+const CATEGORY_OPTIONS = WORK_SERVICE_CATEGORIES
+  .filter((category) => category.value !== 'outros')
+  .map(({ value, label }) => ({ value, label }));
 
-const getCategoryLabel = (value) => CATEGORY_OPTIONS.find((c) => c.value === value)?.label || 'Serviços';
+const getCategoryLabel = (value) => CATEGORY_OPTIONS.find((c) => c.value === value)?.label || prettifyCategoryLabel(value);
 
 const PREVIEW_POSTS = [
   {
@@ -364,6 +356,7 @@ export default function FeedPage() {
   useEffect(() => { detectAddress(); }, [detectAddress]);
   const [postBudget, setPostBudget] = useState('Sob orçamento');
   const [postCategory, setPostCategory] = useState('reformas');
+  const [customPostCategory, setCustomPostCategory] = useState('');
   const [selectedPhotos, setSelectedPhotos] = useState([]); // [{id, dataUrl}]
   const [selectedVideos, setSelectedVideos] = useState([]); // [{id, dataUrl}]
 
@@ -418,7 +411,7 @@ export default function FeedPage() {
         id: p.id,
         user_id: p.user_id,
         type: p.post_type === 'volunteer' ? 'offer' : 'need',
-        category: CATEGORY_OPTIONS.some((category) => category.value === p.category_slug) ? p.category_slug : 'reformas',
+        category: p.category_slug || 'reformas',
         title: p.title,
         description: p.description,
         images: p.photos || [],
@@ -446,6 +439,7 @@ export default function FeedPage() {
     setPostDescription('');
     setPostBudget(mode === 'need' ? 'Sob orçamento' : 'A combinar');
     setPostCategory('reformas');
+    setCustomPostCategory('');
     setSelectedPhotos([]);
     setSelectedVideos([]);
     setShowCreateModal(true);
@@ -568,6 +562,11 @@ export default function FeedPage() {
       toast.error('Adicione uma descrição');
       return;
     }
+    const customCategoryName = customPostCategory.trim();
+    if (postCategory === CUSTOM_CATEGORY_VALUE && !customCategoryName) {
+      toast.error('Escreva sua categoria');
+      return;
+    }
     setLoadingPost(true);
     try {
       // Require auth so post is visible to everyone
@@ -583,6 +582,14 @@ export default function FeedPage() {
       // Upload photos and videos to public storage so other users can see them
       const uploadedUrls = await uploadPhotosToStorage(uid, selectedPhotos);
       const uploadedVideos = await uploadVideosToStorage(uid, selectedVideos);
+      let categorySlug = CATEGORY_OPTIONS.some((category) => category.value === postCategory) ? postCategory : 'reformas';
+      if (postCategory === CUSTOM_CATEGORY_VALUE) {
+        const { data: createdSlug, error: categoryError } = await supabase.rpc('ensure_svc_category', {
+          _name: customCategoryName,
+        });
+        if (categoryError) throw categoryError;
+        categorySlug = createdSlug || 'outros';
+      }
 
       const insertPayload = {
         user_id: uid,
@@ -591,7 +598,7 @@ export default function FeedPage() {
         photos: uploadedUrls,
         videos: uploadedVideos,
         budget_range: postBudget || null,
-        category_slug: CATEGORY_OPTIONS.some((category) => category.value === postCategory) ? postCategory : 'reformas',
+        category_slug: categorySlug,
         address: postAddress || null,
         lat: postCoords?.lat ?? null,
         lng: postCoords?.lng ?? null,
@@ -609,6 +616,7 @@ export default function FeedPage() {
       toast.success(modalMode === 'need' ? 'Sua demanda foi publicada!' : 'Seu serviço foi publicado!');
       setShowCreateModal(false);
       setPostDescription('');
+      setCustomPostCategory('');
       setSelectedPhotos([]);
       setSelectedVideos([]);
       await fetchPosts();
@@ -1147,7 +1155,18 @@ export default function FeedPage() {
                 {CATEGORY_OPTIONS.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
+                <option value={CUSTOM_CATEGORY_VALUE}>Outra categoria</option>
               </select>
+              {postCategory === CUSTOM_CATEGORY_VALUE && (
+                <Input
+                  value={customPostCategory}
+                  onChange={(e) => setCustomPostCategory(e.target.value)}
+                  placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
+                  maxLength={40}
+                  data-testid="modal-custom-category"
+                  className="mt-3 h-10 text-sm rounded-xl border-gray-300"
+                />
+              )}
             </div>
 
             <Button
