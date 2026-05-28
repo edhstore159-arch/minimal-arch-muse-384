@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Loader2 } from 'lucide-react';
-import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
+import { MapPin, Loader2, ExternalLink } from 'lucide-react';
+import { modernMapStyle, pinIcon, dotIcon, jobPinIcon } from './mapStyle';
 import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './googleMapsConfig';
+import { createPlatformSearchJobs, getPrimarySearchTerm, readLastJobSearch } from '../lib/jobSearchBridge';
 
 /**
  * Mapa com:
@@ -23,7 +24,36 @@ const distanceKm = (a, b) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
-export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = [], radiusKm = 0, userLocation = null }) {
+const hasCoords = (point) => Number.isFinite(Number(point?.lat)) && Number.isFinite(Number(point?.lng));
+
+const buildSearchJobMarkers = ({ userId, categories, userLocation, requests, enabled }) => {
+  if (!enabled) return [];
+  const lastSearch = readLastJobSearch(userId);
+  const category = (categories || []).find(Boolean) || lastSearch?.category || 'outros';
+  const query = lastSearch?.query || getPrimarySearchTerm(category);
+  const location = lastSearch?.location || 'Brasil';
+  const sourceJobs = lastSearch?.jobs?.length ? lastSearch.jobs : createPlatformSearchJobs(query, location, 'map');
+  const base = hasCoords(userLocation)
+    ? { lat: Number(userLocation.lat), lng: Number(userLocation.lng) }
+    : requests.find(hasCoords) || { lat: -23.5505, lng: -46.6333 };
+
+  return sourceJobs.slice(0, 8).map((job, index) => {
+    const angle = (Math.PI * 2 * index) / Math.min(sourceJobs.length, 8);
+    const ring = 0.012 + (index % 3) * 0.006;
+    return {
+      ...job,
+      id: `search-${job.id || index}`,
+      lat: base.lat + Math.sin(angle) * ring,
+      lng: base.lng + Math.cos(angle) * ring,
+      post_type: 'external_job',
+      category_slug: category,
+      address: job.location || location,
+      isSearchJob: true,
+    };
+  });
+};
+
+export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = [], radiusKm = 0, userLocation = null, userId = null, showSearchJobs = true }) {
   const apiKey = getGoogleMapsBrowserKey();
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -33,6 +63,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
   });
   const [helpers, setHelpers] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [searchJobs, setSearchJobs] = useState([]);
   const [userLoc, setUserLoc] = useState(null);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -71,6 +102,13 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
         return true;
       });
       setRequests(filteredRequests);
+      setSearchJobs(buildSearchJobMarkers({
+        userId,
+        categories: selectedCategories,
+        userLocation,
+        requests: filteredRequests,
+        enabled: showSearchJobs && postTypeFilter === 'offers',
+      }));
       setLoading(false);
     })();
 
@@ -80,14 +118,15 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
         () => {}
       );
     }
-  }, [showHelpRequests, postTypeFilter, categories, radiusKm, userLocation?.lat, userLocation?.lng]);
+  }, [showHelpRequests, postTypeFilter, categories, radiusKm, userLocation?.lat, userLocation?.lng, userId, showSearchJobs]);
 
   const center = useMemo(() => {
     if (userLoc) return userLoc;
+    if (searchJobs[0]?.lat) return { lat: searchJobs[0].lat, lng: searchJobs[0].lng };
     if (helpers[0]?.lat) return { lat: helpers[0].lat, lng: helpers[0].lng };
     if (requests[0]?.lat) return { lat: requests[0].lat, lng: requests[0].lng };
     return { lat: 48.8566, lng: 2.3522 };
-  }, [userLoc, helpers, requests]);
+  }, [userLoc, searchJobs, helpers, requests]);
 
   if (!apiKey || loadError) {
     return <MapFallback height={height} />;
