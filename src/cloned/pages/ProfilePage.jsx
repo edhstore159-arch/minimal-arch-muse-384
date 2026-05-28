@@ -104,15 +104,20 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('svc_posts')
         .select('id, title, description, address, created_at, post_type, category_slug, user_id')
-        .eq('user_id', user.id)
+        .neq('post_type', 'volunteer')
         .order('created_at', { ascending: false })
-        .limit(30);
+        .limit(50);
+      if (selectedCategories && selectedCategories.length > 0) {
+        const cats = selectedCategories.filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
+        if (cats.length > 0) query = query.in('category_slug', cats);
+      }
+      const { data } = await query;
       setHelpRequests(data || []);
     })();
-  }, [user?.id]);
+  }, [user?.id, selectedCategories]);
 
   const [helpFilter, setHelpFilter] = useState('all');
   const groupedHelp = React.useMemo(() => {
