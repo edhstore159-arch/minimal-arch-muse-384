@@ -484,7 +484,7 @@ export default function JobsPage() {
           </div>
 
           {/* Barra de Pesquisa Principal */}
-          <div className="bg-gradient-to-r from-blue-600 to-orange-600 rounded-2xl p-4 mb-4">
+          <div className="bg-gradient-to-r from-blue-600 to-orange-600 rounded-2xl p-3 sm:p-4 mb-3 sm:mb-4">
             <p className="text-white text-sm mb-3 font-medium">🔍 Busque vagas em todas as plataformas</p>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 relative">
