@@ -25,6 +25,7 @@ const distanceKm = (a, b) => {
 };
 
 const hasCoords = (point) => Number.isFinite(Number(point?.lat)) && Number.isFinite(Number(point?.lng));
+const EMPTY_CATEGORIES = [];
 
 const buildSearchJobMarkers = ({ userId, categories, userLocation, requests, enabled }) => {
   if (!enabled) return [];
@@ -53,7 +54,7 @@ const buildSearchJobMarkers = ({ userId, categories, userLocation, requests, ena
   });
 };
 
-export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = [], radiusKm = 0, userLocation = null, userId = null, showSearchJobs = true }) {
+export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = EMPTY_CATEGORIES, radiusKm = 0, userLocation = null, userId = null, showSearchJobs = true }) {
   const apiKey = getGoogleMapsBrowserKey();
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -67,6 +68,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
   const [userLoc, setUserLoc] = useState(null);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
+  const categoriesKey = (categories || []).filter(Boolean).join('|');
 
   useEffect(() => {
     (async () => {
@@ -118,7 +120,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
         () => {}
       );
     }
-  }, [showHelpRequests, postTypeFilter, categories, radiusKm, userLocation?.lat, userLocation?.lng, userId, showSearchJobs]);
+  }, [showHelpRequests, postTypeFilter, categoriesKey, radiusKm, userLocation?.lat, userLocation?.lng, userId, showSearchJobs]);
 
   const center = useMemo(() => {
     if (userLoc) return userLoc;
