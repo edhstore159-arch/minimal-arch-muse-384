@@ -753,33 +753,45 @@ export default function ProfilePage() {
                     </DialogHeader>
 
                     <div className="grid grid-cols-2 gap-3 my-4">
-                      {HELP_CATEGORIES.map(cat => (
+                      {HELP_CATEGORIES.map(cat => {
+                        const categoryValue = cat.value === 'outros' ? CUSTOM_CATEGORY_VALUE : cat.value;
+                        const selected = selectedCategories.includes(categoryValue);
+                        return (
                         <button
                           key={cat.value}
                           type="button"
-                          onClick={() => toggleCategory(cat.value)}
+                          onClick={() => toggleCategory(categoryValue)}
                           className={`p-3 rounded-xl border-2 transition-all text-left relative ${
-                            selectedCategories.includes(cat.value)
+                            selected
                               ? 'bg-primary/10 border-primary shadow-md'
                               : 'bg-white border-gray-200 hover:border-primary/50'
                           }`}
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-xl">{cat.icon}</span>
-                            <span className={`text-sm font-medium ${
-                              selectedCategories.includes(cat.value) ? 'text-primary' : 'text-textPrimary'
-                            }`}>
+                            <span className={`text-sm font-medium ${selected ? 'text-primary' : 'text-textPrimary'}`}>
                               {cat.label}
                             </span>
                           </div>
-                          {selectedCategories.includes(cat.value) && (
+                          {selected && (
                             <div className="absolute top-2 right-2">
                               <Check size={14} className="text-primary" />
                             </div>
                           )}
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
+
+                    {selectedCategories.includes(CUSTOM_CATEGORY_VALUE) && (
+                      <Input
+                        value={customHelpCategory}
+                        onChange={(e) => setCustomHelpCategory(e.target.value)}
+                        placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
+                        maxLength={40}
+                        className="rounded-xl mb-4"
+                      />
+                    )}
 
                     {selectedCategories.length > 0 && (
                       <div className="p-3 bg-green-50 rounded-xl border border-green-200 mb-4">
