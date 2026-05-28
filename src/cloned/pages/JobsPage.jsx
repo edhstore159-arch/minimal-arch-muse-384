@@ -272,8 +272,10 @@ export default function JobsPage() {
       )));
       setJobOffers(posts.filter((p) => p.type === 'offer'));
       setJobSeekers(posts.filter((p) => p.type === 'need'));
+      return posts;
     } catch (error) {
       console.error('Error fetching jobs:', error);
+      return [];
     } finally {
       setLoading(false);
     }
