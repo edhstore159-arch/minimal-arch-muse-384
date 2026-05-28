@@ -619,7 +619,7 @@ export default function JobsPage() {
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="container mx-auto max-w-4xl px-4 py-4">
+      <div className="container mx-auto max-w-4xl px-3 sm:px-4 py-3 sm:py-4">
         
         {/* Modo: Resultados de Busca de Vagas */}
         {viewMode === 'search' && (
