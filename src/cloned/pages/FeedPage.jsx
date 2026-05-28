@@ -354,6 +354,7 @@ export default function FeedPage() {
   useEffect(() => { detectAddress(); }, [detectAddress]);
   const [postBudget, setPostBudget] = useState('Sob orçamento');
   const [postCategory, setPostCategory] = useState('reformas');
+  const [customPostCategory, setCustomPostCategory] = useState('');
   const [selectedPhotos, setSelectedPhotos] = useState([]); // [{id, dataUrl}]
   const [selectedVideos, setSelectedVideos] = useState([]); // [{id, dataUrl}]
 
@@ -408,7 +409,7 @@ export default function FeedPage() {
         id: p.id,
         user_id: p.user_id,
         type: p.post_type === 'volunteer' ? 'offer' : 'need',
-        category: CATEGORY_OPTIONS.some((category) => category.value === p.category_slug) ? p.category_slug : 'reformas',
+        category: p.category_slug || 'reformas',
         title: p.title,
         description: p.description,
         images: p.photos || [],
@@ -436,6 +437,7 @@ export default function FeedPage() {
     setPostDescription('');
     setPostBudget(mode === 'need' ? 'Sob orçamento' : 'A combinar');
     setPostCategory('reformas');
+    setCustomPostCategory('');
     setSelectedPhotos([]);
     setSelectedVideos([]);
     setShowCreateModal(true);
