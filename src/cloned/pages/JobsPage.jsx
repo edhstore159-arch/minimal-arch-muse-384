@@ -491,6 +491,28 @@ export default function JobsPage() {
     setOpenedMatchedOffers(true);
   }, [openedMatchedOffers, userInterestCategories.join('|'), matchedOfferCount]);
 
+  useEffect(() => {
+    const postId = new URLSearchParams(routeLocation.search).get('postId');
+    if (!postId) return;
+    (async () => {
+      const loadedPosts = [...jobOffers, ...jobSeekers].length ? [...jobOffers, ...jobSeekers] : await fetchJobs();
+      const found = (loadedPosts || []).find((item) => String(item.id) === String(postId));
+      if (found) {
+        setSelectedJob({
+          ...found,
+          title: found.title,
+          company: found.user?.name || 'Publicado no app',
+          company_logo: found.user?.avatar,
+          location: found.location || found.address || 'Brasil',
+          source: 'Publicado no app',
+          isCommunityPost: true,
+        });
+        setShowJobDetails(true);
+        setViewMode(found.type === 'offer' ? 'offers' : 'seekers');
+      }
+    })();
+  }, [routeLocation.search]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-20" data-testid="jobs-page">
       {/* Header */}
