@@ -162,6 +162,7 @@ export function clonedRoutes(user) {
     <Route key="cloned-nearby" path="/nearby" element={<NearbyHelpersPage />} />,
     <Route key="cloned-map" path="/map" element={<MapPage />} />,
     <Route key="cloned-volunteer-register" path="/volunteer-register" element={<VolunteerRegisterPage />} />,
+    <Route key="cloned-oferecer" path="/oferecer-servicos" element={<OfferServicesPage />} />,
     <Route key="cloned-assinatura" path="/assinatura" element={<SubscriptionPage />} />,
     <Route key="cloned-servicos-assinatura" path="/servicos/assinatura" element={<SubscriptionPage />} />,
   ];
