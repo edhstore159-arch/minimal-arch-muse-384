@@ -219,8 +219,9 @@ export default function JobsPage() {
   };
 
   // Buscar vagas via API pública Remotive (CORS habilitado) — sem edge function
-  const searchExternalJobs = async (query, location, page = 1) => {
+  const searchExternalJobs = async (query, location, page = 1, nextViewMode = 'search') => {
     setSearchLoading(true);
+    setViewMode(nextViewMode);
     try {
       const q = (query || 'emprego').trim();
       const loc = (location || 'Brasil').trim();
@@ -246,7 +247,7 @@ export default function JobsPage() {
       setExternalJobs(jobs);
       setTotalJobs(jobs.length);
       setCurrentPage(page);
-      setViewMode('search');
+      setViewMode(nextViewMode);
 
       if (jobs.length > 0) {
         toast.success(`${jobs.length} vagas carregadas!`);
@@ -271,8 +272,17 @@ export default function JobsPage() {
       toast.error('Digite algo para buscar');
       return;
     }
-    searchExternalJobs(searchQuery, locationQuery, 1);
-    setViewMode('search');
+    const term = normalizeText(searchQuery.trim());
+    const requestedMatches = jobSeekers.filter((item) => {
+      const matchesCategory = selectedCategory === 'all' || itemMatchesCategories(item, [selectedCategory]);
+      return matchesCategory && itemMatchesSearch(item, term);
+    });
+    const offerMatches = jobOffers.filter((item) => {
+      const matchesCategory = selectedCategory === 'all' || itemMatchesCategories(item, [selectedCategory]);
+      return matchesCategory && itemMatchesSearch(item, term);
+    });
+    const nextViewMode = requestedMatches.length > 0 ? 'seekers' : offerMatches.length > 0 ? 'offers' : 'search';
+    searchExternalJobs(searchQuery, locationQuery, 1, nextViewMode);
   };
 
   const getTimeAgo = (dateString) => {
@@ -342,6 +352,13 @@ export default function JobsPage() {
     toast.success(`Abrindo ${platform.name}...`);
   };
 
+  const itemMatchesSearch = (item, term) => {
+    if (!term) return true;
+    const itemCategory = item.category || item.category_slug || '';
+    const haystack = normalizeText(`${item.title || ''} ${item.description || ''} ${item.location || ''} ${item.address || ''} ${item.budget_range || ''} ${item.user?.name || ''} ${itemCategory} ${prettifyCategoryLabel(itemCategory)}`);
+    return haystack.includes(term);
+  };
+
   const itemMatchesCategories = (item, categories) => {
     if (!categories.length) return true;
     const itemCategory = item.category || item.category_slug || '';
@@ -353,9 +370,11 @@ export default function JobsPage() {
   };
 
   const filterAndSortCommunityItems = (items) => {
-    const filtered = selectedCategory === 'all'
-      ? items
-      : items.filter((item) => itemMatchesCategories(item, [selectedCategory]));
+    const searchTerm = normalizeText(searchQuery.trim());
+    const filtered = items.filter((item) => {
+      const matchesCategory = selectedCategory === 'all' || itemMatchesCategories(item, [selectedCategory]);
+      return matchesCategory && itemMatchesSearch(item, searchTerm);
+    });
 
     if (!userInterestCategories.length) return filtered;
 
