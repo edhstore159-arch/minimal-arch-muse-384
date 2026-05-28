@@ -53,13 +53,26 @@ export default function ProfilePage() {
     (async () => {
       const { data } = await supabase
         .from('svc_posts')
-        .select('id, title, description, address, created_at, post_type, user_id')
+        .select('id, title, description, address, created_at, post_type, category, categories, user_id')
         .neq('post_type', 'volunteer')
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(30);
       setHelpRequests(data || []);
     })();
   }, [isVolunteer]);
+
+  const [helpFilter, setHelpFilter] = useState('all');
+  const groupedHelp = React.useMemo(() => {
+    const groups = {};
+    helpRequests.forEach((p) => {
+      const cats = p.categories?.length ? p.categories : [p.category || 'social'];
+      cats.forEach((c) => {
+        if (!groups[c]) groups[c] = [];
+        groups[c].push(p);
+      });
+    });
+    return groups;
+  }, [helpRequests]);
 
   const fetchPhotos = async () => {
     if (!user?.id) return;
