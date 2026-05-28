@@ -147,7 +147,7 @@ export default function OfferServicesPage() {
   };
 
   const submitOffer = async () => {
-    if (!token) {
+    if (!token || !user?.id) {
       setShowOfferModal(false);
       setAuthOpen(true);
       return;
@@ -161,33 +161,51 @@ export default function OfferServicesPage() {
       return;
     }
     try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ''}/api/posts`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'offer',
-            category: serviceOffer.categories[0],
-            categories: serviceOffer.categories,
-            title: serviceOffer.title,
-            description: serviceOffer.description,
-            price: serviceOffer.price,
-            images: serviceOffer.images,
-            location: serviceOffer.location,
-          }),
+      // Upload base64 images to storage bucket
+      const photoUrls = [];
+      for (let i = 0; i < serviceOffer.images.length; i++) {
+        const dataUrl = serviceOffer.images[i];
+        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+          if (typeof dataUrl === 'string') photoUrls.push(dataUrl);
+          continue;
         }
-      );
-      if (resp.ok) {
-        toast.success('Serviço publicado!');
-        setShowOfferModal(false);
-        setServiceOffer({ title: '', description: '', price: '', categories: [], location: null, images: [] });
-        navigate('/home');
-      } else {
-        toast.error('Erro ao publicar');
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];
+        const path = `${user.id}/offer-${Date.now()}-${i}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('svc-photos').upload(path, blob, {
+          contentType: blob.type,
+          upsert: false,
+        });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from('svc-photos').getPublicUrl(path);
+        photoUrls.push(pub.publicUrl);
       }
-    } catch {
-      toast.error('Erro ao publicar');
+
+      const payload = {
+        user_id: user.id,
+        title: serviceOffer.title,
+        description: serviceOffer.description + (serviceOffer.price ? `\n\nPreço: ${serviceOffer.price}` : ''),
+        post_type: 'volunteer', // offer of service
+        status: 'open',
+        category_slug: serviceOffer.categories[0],
+        photos: photoUrls,
+        lat: serviceOffer.location?.lat ?? null,
+        lng: serviceOffer.location?.lng ?? null,
+        address: serviceOffer.location?.address ?? null,
+        budget_range: serviceOffer.price || null,
+      };
+
+      const { error } = await supabase.from('svc_posts').insert(payload);
+      if (error) throw error;
+
+      toast.success('Serviço publicado!');
+      setShowOfferModal(false);
+      setServiceOffer({ title: '', description: '', price: '', categories: [], location: null, images: [] });
+      navigate('/home');
+    } catch (e) {
+      console.error('submitOffer error', e);
+      toast.error(e?.message || 'Erro ao publicar');
     }
   };
 
