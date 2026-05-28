@@ -469,8 +469,8 @@ export default function JobsPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-20" data-testid="jobs-page">
       {/* Header */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto max-w-4xl px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="container mx-auto max-w-4xl px-3 sm:px-4 py-2 sm:py-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-4">
             <h1 className="text-xl font-bold text-gray-800">💼 Buscar Emprego</h1>
             <Button
               onClick={() => navigate('/home')}
@@ -484,7 +484,7 @@ export default function JobsPage() {
           </div>
 
           {/* Barra de Pesquisa Principal */}
-          <div className="bg-gradient-to-r from-blue-600 to-orange-600 rounded-2xl p-4 mb-4">
+          <div className="bg-gradient-to-r from-blue-600 to-orange-600 rounded-2xl p-3 sm:p-4 mb-3 sm:mb-4">
             <p className="text-white text-sm mb-3 font-medium">🔍 Busque vagas em todas as plataformas</p>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 relative">
@@ -546,7 +546,7 @@ export default function JobsPage() {
           </div>
 
           {/* Toggle de Modos */}
-          <div className="flex gap-2 mb-4 overflow-x-auto">
+          <div className="flex gap-2 mb-2 sm:mb-4 overflow-x-auto">
             <button
               onClick={() => setViewMode('search')}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
@@ -619,7 +619,7 @@ export default function JobsPage() {
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="container mx-auto max-w-4xl px-4 py-4">
+      <div className="container mx-auto max-w-4xl px-3 sm:px-4 py-3 sm:py-4">
         
         {/* Modo: Resultados de Busca de Vagas */}
         {viewMode === 'search' && (
