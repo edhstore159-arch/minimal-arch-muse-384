@@ -10,6 +10,16 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 import { saveLastJobSearch } from '../lib/jobSearchBridge';
+import { requestLocationPermission } from '../utils/geolocation';
+import { Loader2, Navigation } from 'lucide-react';
+
+const extractCityFromAddress = (address = '') => {
+  if (!address) return '';
+  const parts = String(address).split(',').map((s) => s.trim()).filter(Boolean);
+  // nominatim returns long strings: pick a part that looks like a city (no digits, length > 2)
+  const city = parts.find((p) => !/^\d/.test(p) && p.length > 2 && !/brasil|brazil/i.test(p));
+  return city || parts[0] || '';
+};
 
 // Plataformas de emprego externas (Brasil)
 const JOB_PLATFORMS = [
@@ -156,16 +166,42 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
   const [openedMatchedOffers, setOpenedMatchedOffers] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  const autoLocateAndSearch = async ({ silent = false, forceBrowser = false } = {}) => {
+    setLocating(true);
+    const loc = await requestLocationPermission({ forceBrowser, showToast: !silent });
+    setLocating(false);
+    if (!loc) {
+      if (!silent) toast.error('Não foi possível obter sua localização');
+      return null;
+    }
+    const city = extractCityFromAddress(loc.address) || 'Brasil';
+    setLocationQuery(city);
+    if (!silent) toast.success(`📍 Buscando vagas em ${city}`);
+    const term = (searchQuery && searchQuery.trim())
+      || SEARCH_SUGGESTIONS[selectedCategory]?.[0]
+      || SEARCH_SUGGESTIONS[primaryUserCategory]?.[0]
+      || 'emprego';
+    searchExternalJobs(term, city);
+    return city;
+  };
 
   useEffect(() => {
     fetchJobs();
     const initialCategory = primaryUserCategory !== 'all' ? primaryUserCategory : 'all';
     const initialQuery = SEARCH_SUGGESTIONS[initialCategory]?.[0] || 'emprego';
-    const initialLocation = user?.city || 'Brasil';
     setSelectedCategory(initialCategory);
     setSearchQuery(initialQuery === 'emprego' ? '' : initialQuery);
-    setLocationQuery(initialLocation);
-    searchExternalJobs(initialQuery, initialLocation);
+    // Tenta detectar localização automaticamente (via IP, sem prompt)
+    (async () => {
+      const city = await autoLocateAndSearch({ silent: true });
+      if (!city) {
+        const initialLocation = user?.city || 'São Paulo';
+        setLocationQuery(initialLocation);
+        searchExternalJobs(initialQuery, initialLocation);
+      }
+    })();
   }, [user?.id]);
 
   useEffect(() => {
@@ -467,8 +503,17 @@ export default function JobsPage() {
                   placeholder="Cidade"
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
-                  className="pl-10 rounded-xl bg-white h-12 w-full sm:w-36"
+                  className="pl-10 pr-10 rounded-xl bg-white h-12 w-full sm:w-44"
                 />
+                <button
+                  type="button"
+                  title="Usar minha localização"
+                  onClick={() => autoLocateAndSearch({ forceBrowser: true })}
+                  disabled={locating}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-blue-50 text-blue-600 disabled:opacity-50"
+                >
+                  {locating ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
+                </button>
               </div>
               <Button 
                 onClick={handleSearch}
