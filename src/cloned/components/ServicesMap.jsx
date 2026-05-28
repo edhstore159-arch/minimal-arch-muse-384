@@ -128,15 +128,18 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
             />
           ))}
 
-          {requests.map((r) => (
+          {requests.map((r) => {
+            const isOffer = r.post_type === 'volunteer';
+            return (
             <Marker
               key={`r-${r.id}`}
               position={{ lat: r.lat, lng: r.lng }}
-              icon={{ url: pinIcon('#ef4444') }}
+              icon={{ url: pinIcon(isOffer ? '#f59e0b' : '#ef4444') }}
               title={r.title}
               onClick={() => setSelected({ type: 'request', data: r })}
             />
-          ))}
+            );
+          })}
 
           {selected && (
             <InfoWindow
@@ -154,6 +157,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
                 ) : (
                   <>
                     <p className="font-semibold text-sm">{selected.data.title}</p>
+                    <p className="text-xs text-gray-500">{selected.data.post_type === 'volunteer' ? 'Proposta de emprego' : 'Pedido de ajuda'}</p>
                     {selected.data.address && (
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <MapPin size={10} /> {selected.data.address}
