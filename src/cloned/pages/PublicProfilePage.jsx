@@ -286,6 +286,27 @@ export default function PublicProfilePage() {
           )}
         </div>
       </main>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white p-2 rounded-full bg-white/10 hover:bg-white/20"
+            onClick={() => setLightbox(null)}
+            aria-label="Fechar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={lightbox}
+            alt=""
+            className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
+            decoding="async"
+          />
+        </div>
+      )}
     </div>
   );
 }
