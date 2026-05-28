@@ -153,9 +153,6 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
 
-  // Sem tradução: busca usa termos em português (Brasil)
-  const translateSearchTerm = (term) => term;
-
   useEffect(() => {
     fetchJobs();
     const initialCategory = primaryUserCategory !== 'all' ? primaryUserCategory : 'all';
