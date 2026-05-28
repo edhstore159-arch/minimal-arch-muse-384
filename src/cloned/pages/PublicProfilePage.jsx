@@ -137,23 +137,26 @@ export default function PublicProfilePage() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:self-end">
               <Button
+                onClick={toggleFriend}
+                variant={friend ? 'outline' : 'default'}
+                className={friend ? '' : 'bg-primary hover:bg-primary/90'}
+              >
+                {friend ? (
+                  <><UserMinus className="w-4 h-4 mr-1.5" /> Desfazer amizade</>
+                ) : (
+                  <><UserPlus className="w-4 h-4 mr-1.5" /> Adicionar amigo</>
+                )}
+              </Button>
+              <Button
                 onClick={() => navigate(`/servicos/chat?userId=${userId}`)}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <MessageCircle className="w-4 h-4 mr-1.5" /> Enviar mensagem
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => ringUser('audio')}
-                title="Ligar"
-              >
+              <Button variant="outline" onClick={() => ringUser('audio')} title="Ligar">
                 <Phone className="w-4 h-4 mr-1.5" /> Ligar
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => ringUser('video')}
-                title="Chamada de vídeo"
-              >
+              <Button variant="outline" onClick={() => ringUser('video')} title="Chamada de vídeo">
                 <Video className="w-4 h-4 mr-1.5" /> Vídeo
               </Button>
             </div>
