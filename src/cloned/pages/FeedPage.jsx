@@ -25,7 +25,9 @@ const saveLocalPosts = (posts) => {
   try { localStorage.setItem(LOCAL_KEY, JSON.stringify(posts.slice(0, 50))); } catch {}
 };
 
-const CATEGORY_OPTIONS = WORK_SERVICE_CATEGORIES.map(({ value, label }) => ({ value, label }));
+const CATEGORY_OPTIONS = WORK_SERVICE_CATEGORIES
+  .filter((category) => category.value !== 'outros')
+  .map(({ value, label }) => ({ value, label }));
 
 const getCategoryLabel = (value) => CATEGORY_OPTIONS.find((c) => c.value === value)?.label || prettifyCategoryLabel(value);
 
