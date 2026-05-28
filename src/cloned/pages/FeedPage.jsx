@@ -163,9 +163,10 @@ const PostCard = ({ post, onChat }) => {
             <button
               type="button"
               onClick={() => post.user_id && navigate(`/u/${post.user_id}`)}
-              className="font-bold text-sm mb-1.5 hover:underline text-left"
+              className="font-bold text-sm mb-1.5 hover:underline text-left inline-flex items-center gap-1"
             >
               {displayName}
+              <VerifiedBadge size={14} />
             </button>
             {post.title && <p className="text-xs font-medium text-gray-900 mb-1">{post.title}</p>}
             <p className="text-xs text-gray-800 leading-relaxed">{description}</p>
