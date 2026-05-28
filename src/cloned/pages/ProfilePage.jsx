@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, updateSvcProfile } from '../lib/authProfile';
 import ServicesMap from '../components/ServicesMap';
 import VerifiedBadge from '../components/VerifiedBadge';
+import ProfileStories from '../components/ProfileStories';
 import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, getWorkCategoryInfo } from '../lib/serviceCategories';
 import { useUserLocation } from '../lib/userLocation';
 
@@ -572,6 +573,9 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Stories + Live (estilo Instagram) */}
+          <ProfileStories avatarSrc={avatarSrc} userName={user?.display_name || user?.name || 'Você'} />
 
           {/* Tabs */}
           <div className="border-t border-gray-100 px-6 sm:px-10">
