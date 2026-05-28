@@ -109,7 +109,16 @@ const MiniGoogleMap = ({ lat, lng, height = 200, zoom = 15, color = '#ef4444' })
             streetViewControl: false,
           }}
         >
-          <Marker position={position} icon={{ url: pinIcon(color) }} />
+          <Marker
+            position={position}
+            icon={{
+              url: pinIcon(color),
+              scaledSize: new window.google.maps.Size(36, 44),
+              anchor: new window.google.maps.Point(18, 42),
+            }}
+            animation={window.google.maps.Animation.DROP}
+            zIndex={999}
+          />
         </GoogleMap>
       )}
 
