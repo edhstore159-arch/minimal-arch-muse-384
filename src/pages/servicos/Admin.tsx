@@ -14,10 +14,13 @@ type Sub = {
 };
 type Profile = { user_id: string; display_name: string };
 
+const ADMIN_EMAIL = 'admin@pertodemim.app';
+
 export default function ServicosAdmin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
   const [subs, setSubs] = useState<Sub[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [stats, setStats] = useState({ posts: 0, users: 0 });
@@ -25,9 +28,23 @@ export default function ServicosAdmin() {
   const load = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { navigate('/servicos/auth', { replace: true }); return; }
+
+    // Verificar se é o email admin específico
+    if (session.user.email !== ADMIN_EMAIL) {
+      toast({ 
+        title: 'Acesso negado', 
+        description: 'Este dashboard é acessível apenas pelo email administrativo autorizado',
+        variant: 'destructive'
+      });
+      setLoading(false);
+      return;
+    }
+
     const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id);
     const admin = (roles ?? []).some((r: any) => r.role === 'admin');
     setIsAdmin(admin);
+    setIsAuthorizedAdmin(admin);
+
     if (!admin) { setLoading(false); return; }
 
     const [{ data: subData }, { count: postCount }, { count: userCount }] = await Promise.all([
@@ -62,14 +79,14 @@ export default function ServicosAdmin() {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="w-6 h-6 animate-spin text-green-600" /></div>;
   }
 
-  if (!isAdmin) {
+  if (!isAdmin || !isAuthorizedAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
         <SvcHeader />
         <main className="max-w-md mx-auto px-4 py-12 text-center">
           <Shield className="w-12 h-12 mx-auto text-gray-400 mb-3" />
           <h2 className="text-xl font-bold">Acesso restrito</h2>
-          <p className="text-gray-600 mt-2">Você não é administrador.</p>
+          <p className="text-gray-600 mt-2">Este painel é acessível apenas pelo email administrativo autorizado.</p>
         </main>
       </div>
     );
