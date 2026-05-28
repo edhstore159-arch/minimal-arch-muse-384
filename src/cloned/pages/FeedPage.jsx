@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getStableDefaultAvatarUrl } from '../lib/authProfile';
 import MiniGoogleMap from '../components/MiniGoogleMap';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 
 // Local fallback store so the feed works even without auth/backend
 const LOCAL_KEY = 'cloned_feed_posts_v1';
@@ -24,20 +25,9 @@ const saveLocalPosts = (posts) => {
   try { localStorage.setItem(LOCAL_KEY, JSON.stringify(posts.slice(0, 50))); } catch {}
 };
 
-const CATEGORY_OPTIONS = [
-  { value: 'reformas', label: 'Reformas' },
-  { value: 'pintura', label: 'Pintura' },
-  { value: 'eletrica', label: 'Elétrica' },
-  { value: 'hidraulica', label: 'Hidráulica' },
-  { value: 'marcenaria', label: 'Marcenaria' },
-  { value: 'pedreiro', label: 'Pedreiro' },
-  { value: 'limpeza', label: 'Limpeza' },
-  { value: 'jardinagem', label: 'Jardinagem' },
-  { value: 'transporte', label: 'Transporte/Frete' },
-  { value: 'mecanica', label: 'Mecânica' },
-];
+const CATEGORY_OPTIONS = WORK_SERVICE_CATEGORIES.map(({ value, label }) => ({ value, label }));
 
-const getCategoryLabel = (value) => CATEGORY_OPTIONS.find((c) => c.value === value)?.label || 'Serviços';
+const getCategoryLabel = (value) => CATEGORY_OPTIONS.find((c) => c.value === value)?.label || prettifyCategoryLabel(value);
 
 const PREVIEW_POSTS = [
   {
