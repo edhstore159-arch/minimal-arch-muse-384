@@ -238,7 +238,21 @@ export default function ProfilePage() {
     setSavingCategories(true);
     try {
       if (!user?.id) return;
-      await updateSvcProfile(user.id, { categories: selectedCategories });
+      let categoriesToSave = selectedCategories;
+      if (selectedCategories.includes(CUSTOM_CATEGORY_VALUE)) {
+        const name = customHelpCategory.trim();
+        if (!name) {
+          toast.error('Escreva sua categoria');
+          setSavingCategories(false);
+          return;
+        }
+        const { data: createdSlug, error: categoryError } = await supabase.rpc('ensure_svc_category', { _name: name });
+        if (categoryError) throw categoryError;
+        categoriesToSave = [...selectedCategories.filter((category) => category !== CUSTOM_CATEGORY_VALUE), createdSlug || 'outros'];
+      }
+      await updateSvcProfile(user.id, { categories: categoriesToSave });
+      setSelectedCategories(categoriesToSave);
+      setCustomHelpCategory('');
       await refreshUser?.();
       toast.success('Categorias atualizadas!');
       setShowCategoriesDialog(false);
@@ -250,7 +264,7 @@ export default function ProfilePage() {
   };
 
   const getCategoryInfo = (value) => {
-    return HELP_CATEGORIES.find(c => c.value === value) || { icon: '📝', label: value };
+    return getWorkCategoryInfo(value);
   };
 
   return (
