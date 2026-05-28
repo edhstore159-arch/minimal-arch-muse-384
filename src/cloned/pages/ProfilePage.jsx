@@ -538,10 +538,10 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
                   <HandHeart size={22} className="text-rose-500" />
-                  Meus pedidos de trabalho
+                  Trabalhos do seu interesse
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} · com localização
+                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} · filtrados pelas suas categorias e com localização
                 </p>
               </div>
               <Button
