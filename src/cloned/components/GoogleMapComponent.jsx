@@ -8,6 +8,13 @@ import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './go
 const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
   const [map, setMap] = useState(null);
   const apiKey = getGoogleMapsBrowserKey();
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey || '',
+    channel: getGoogleMapsChannel(),
+    preventGoogleFontsLoading: true,
+  });
+
 
   const mapContainerStyle = {
     width: '100%',
