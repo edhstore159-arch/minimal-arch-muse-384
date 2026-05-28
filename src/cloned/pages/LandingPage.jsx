@@ -149,7 +149,7 @@ export default function LandingPage() {
                 Buscar Serviços
               </Button>
               <Button
-                onClick={() => openAuth('signup')}
+                onClick={() => navigate('/oferecer-servicos')}
                 variant="outline"
                 className="border-2 border-orange-400 text-orange-600 bg-white hover:bg-orange-50 h-12 px-6 text-sm rounded-full font-semibold"
                 data-testid="cta-offer-services"
