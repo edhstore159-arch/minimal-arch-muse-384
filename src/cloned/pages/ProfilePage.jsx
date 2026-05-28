@@ -469,7 +469,7 @@ export default function ProfilePage() {
 
           {/* Linha avatar + identidade */}
           <div className="px-6 sm:px-10 pb-6 -mt-14">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-5">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-5 overflow-visible">
               {/* Avatar grande com online dot */}
               <div className="relative flex-shrink-0">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full ring-4 ring-white shadow-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
@@ -499,7 +499,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Identidade */}
-              <div className="flex-1 min-w-0 pt-2 sm:pb-1">
+              <div className="flex-1 min-w-0 pt-2 sm:pb-1 overflow-visible">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="inline-flex items-center px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-md text-xs font-medium">
                     {user?.role === 'helper' ? 'Profissional' : 'Particular'}
@@ -568,7 +568,7 @@ export default function ProfilePage() {
                   </p>
                 )}
                 {/* Bolinha única: Stories + Ao vivo (abaixo do nome/assinatura) */}
-                <div className="mt-3">
+                <div className="mt-3 relative z-[60] overflow-visible pb-2">
                   <ProfileStories avatarSrc={avatarSrc} userName={user?.display_name || user?.name || 'Você'} />
                 </div>
                 <p className="text-green-600 text-sm font-medium flex items-center gap-1.5 mt-1">
