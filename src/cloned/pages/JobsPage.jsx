@@ -147,6 +147,7 @@ const normalizeText = (value = '') => String(value).toLowerCase().normalize('NFD
 
 export default function JobsPage() {
   const { user } = useContext(AuthContext);
+  const { location: sharedLocation } = useUserLocation();
   const navigate = useNavigate();
   const profileCategories = Array.isArray(user?.categories) ? user.categories.filter(Boolean) : [];
   const [requestedCategories, setRequestedCategories] = useState([]);
