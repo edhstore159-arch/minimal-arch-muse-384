@@ -102,17 +102,17 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    if (!isVolunteer) return;
+    if (!user?.id) return;
     (async () => {
       const { data } = await supabase
         .from('svc_posts')
         .select('id, title, description, address, created_at, post_type, category_slug, user_id')
-        .neq('post_type', 'volunteer')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(30);
       setHelpRequests(data || []);
     })();
-  }, [isVolunteer]);
+  }, [user?.id]);
 
   const [helpFilter, setHelpFilter] = useState('all');
   const groupedHelp = React.useMemo(() => {
