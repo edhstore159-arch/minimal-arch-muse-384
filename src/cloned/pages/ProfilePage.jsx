@@ -574,6 +574,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Stories + Live (estilo Instagram) */}
+          <ProfileStories avatarSrc={avatarSrc} userName={user?.display_name || user?.name || 'Você'} />
+
           {/* Tabs */}
           <div className="border-t border-gray-100 px-6 sm:px-10">
             <div className="flex gap-8 -mb-px overflow-x-auto">
