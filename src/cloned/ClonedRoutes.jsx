@@ -42,11 +42,22 @@ export function ClonedAuthProvider({ children }) {
     }
 
     const profile = await getOrCreateSvcProfile(session.user);
+    const { data: roles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id);
+
+    if (rolesError) {
+      console.error('Error fetching user roles:', rolesError);
+    }
+
+    const isAdmin = (roles ?? []).some((item) => item.role === 'admin');
     const normalized = normalizeAuthUser(session.user, profile);
-    setUser(normalized);
+    const hydratedUser = { ...normalized, role: isAdmin ? 'admin' : normalized.role };
+    setUser(hydratedUser);
     setToken(session.access_token || null);
     if (session.access_token) localStorage.setItem('token', session.access_token);
-    return normalized;
+    return hydratedUser;
   };
 
   useEffect(() => {
@@ -89,6 +100,11 @@ export function ClonedAuthProvider({ children }) {
   const login = async (newToken, userData) => {
     if (newToken) localStorage.setItem('token', newToken);
     setToken(newToken || null);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await loadUser(session);
+      return;
+    }
     setUser(userData || null);
   };
 
