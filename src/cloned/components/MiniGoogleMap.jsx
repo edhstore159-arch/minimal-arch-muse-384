@@ -1,20 +1,19 @@
 import React from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { modernMapStyle, pinIcon } from './mapStyle';
+import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './googleMapsConfig';
 
 const MiniGoogleMap = ({ lat, lng, height = 200, zoom = 15, color = '#ef4444' }) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const { isLoaded } = useJsApiLoader({
+  const apiKey = getGoogleMapsBrowserKey();
+  const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
+    channel: getGoogleMapsChannel(),
+    preventGoogleFontsLoading: true,
   });
 
-  if (!apiKey) {
-    return (
-      <div style={{ height }} className="flex items-center justify-center bg-gray-50 text-xs text-gray-500">
-        Mapa indisponível
-      </div>
-    );
+  if (!apiKey || loadError || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return <MapFallback height={height} />;
   }
 
   if (!isLoaded) {
