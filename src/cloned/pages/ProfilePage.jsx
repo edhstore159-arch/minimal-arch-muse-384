@@ -570,16 +570,15 @@ export default function ProfilePage() {
                 <p className="text-green-600 text-sm font-medium flex items-center gap-1.5 mt-1">
                   <span className="w-2 h-2 bg-green-500 rounded-full" /> Em linha
                 </p>
+
+                {/* Bolinha única: Stories + Ao vivo (abaixo do nome/assinatura) */}
+                <div className="mt-3">
+                  <ProfileStories avatarSrc={avatarSrc} userName={user?.display_name || user?.name || 'Você'} />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Stories + Live (estilo Instagram) */}
-          <div className="px-6 sm:px-10 pt-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-textPrimary uppercase tracking-wide">Stories e Ao vivo</h3>
-            <span className="text-xs text-textMuted">Toque em <b>+</b> para publicar ou <b>Ao vivo</b> para transmitir</span>
-          </div>
-          <ProfileStories avatarSrc={avatarSrc} userName={user?.display_name || user?.name || 'Você'} />
 
           {/* Tabs */}
           <div className="border-t border-gray-100 px-6 sm:px-10">
