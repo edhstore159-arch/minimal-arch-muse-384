@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, Home, Users, Plus, MessageCircle, User, Loader2, Star, Image as ImageIcon, Mic, MapPin, Square, X } from 'lucide-react';
+import { ArrowLeft, Send, Home, Users, Plus, MessageCircle, User, Loader2, Star, Image as ImageIcon, Mic, MapPin, Square, X, Copy, Check } from 'lucide-react';
 import { SEOHead } from '@/components/SEOHead';
 import { toast } from '@/hooks/use-toast';
 
@@ -32,6 +32,7 @@ type Profile = {
   city: string | null;
   rating: number;
   role: string;
+  pix_key?: string | null;
 };
 
 export default function ServicosChat() {
@@ -47,6 +48,9 @@ export default function ServicosChat() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showPixModal, setShowPixModal] = useState(false);
+  const [pixKey, setPixKey] = useState('');
+  const [copiedPixKey, setCopiedPixKey] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async (myId: string) => {
@@ -61,7 +65,7 @@ export default function ServicosChat() {
     if (otherIds.length) {
       const { data: profs } = await supabase
         .from('svc_profiles')
-        .select('user_id, display_name, avatar_url, bio, city, rating, role')
+        .select('user_id, display_name, avatar_url, bio, city, rating, role, pix_key')
         .in('user_id', otherIds);
       const map: Record<string, Profile> = {};
       (profs ?? []).forEach((p: any) => (map[p.user_id] = p));
@@ -227,7 +231,25 @@ export default function ServicosChat() {
     );
   };
 
+  const copyPixKey = () => {
+    if (pixKey) {
+      navigator.clipboard.writeText(pixKey);
+      setCopiedPixKey(true);
+      setTimeout(() => setCopiedPixKey(false), 2000);
+      toast({ title: 'PIX copiado!', description: 'Chave PIX copiada para a área de transferência' });
+    }
+  };
 
+  const sendPixMessage = () => {
+    if (!pixKey.trim()) {
+      toast({ title: 'Chave PIX vazia', description: 'Adicione uma chave PIX antes de enviar', variant: 'destructive' });
+      return;
+    }
+    const pixMessage = `💳 **CHAVE PIX PARA PAGAMENTO:**\n\n${pixKey}\n\nCopie a chave acima e envie o pagamento.`;
+    setText(pixMessage);
+    setShowPixModal(false);
+    setPixKey('');
+  };
 
   const otherUserId = (c: Conversation) => (c.user_a === me ? c.user_b : c.user_a);
   const activeConv = conversations.find((c) => c.id === activeId);
@@ -437,10 +459,42 @@ export default function ServicosChat() {
                   <span>{Number(activeOther.rating ?? 0).toFixed(1)}</span>
                 </div>
               </div>
+
+              {/* Aba de PIX */}
+              <div className="p-4 border-b">
+                <button
+                  onClick={() => setShowPixModal(true)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-sm font-medium transition"
+                >
+                  💳 Adicionar Chave PIX
+                </button>
+              </div>
+
               {activeOther.bio && (
                 <div className="p-4 text-sm text-gray-700">
                   <p className="font-semibold mb-1">Sobre</p>
                   <p className="whitespace-pre-wrap">{activeOther.bio}</p>
+                </div>
+              )}
+
+              {/* Mostrar chave PIX se existir */}
+              {activeOther.pix_key && (
+                <div className="p-4 border-t bg-blue-50">
+                  <p className="text-xs font-semibold text-blue-700 mb-2">PIX Disponível</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-white border border-blue-200 rounded px-2 py-1 break-all">
+                      {activeOther.pix_key}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(activeOther.pix_key!);
+                        toast({ title: 'PIX copiado!' });
+                      }}
+                      className="text-blue-700 hover:text-blue-900 p-1"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               )}
             </>
@@ -451,6 +505,60 @@ export default function ServicosChat() {
           )}
         </aside>
       </div>
+
+      {/* Modal PIX */}
+      {showPixModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold">💳 Enviar Chave PIX</h3>
+              <button onClick={() => setShowPixModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600">
+              Digite sua chave PIX para enviar ao cliente. Pode ser CPF, email, telefone ou chave aleatória.
+            </p>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Chave PIX</label>
+              <Input
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                placeholder="Ex: 123.456.789-00 ou seu@email.com"
+                className="w-full"
+              />
+            </div>
+
+            {pixKey && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-600 mb-2">Prévia:</p>
+                <code className="text-xs bg-white border border-gray-200 rounded px-2 py-1 block break-all">
+                  {pixKey}
+                </code>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowPixModal(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={sendPixMessage}
+                disabled={!pixKey.trim()}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                Enviar PIX
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom nav mobile */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t flex items-center justify-around h-16 z-50">
