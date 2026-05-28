@@ -134,8 +134,10 @@ const SEARCH_SUGGESTIONS = {
 const normalizeText = (value = '') => String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 export default function JobsPage() {
-  const { token, user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const userInterestCategories = Array.isArray(user?.categories) ? user.categories.filter(Boolean) : [];
+  const primaryUserCategory = userInterestCategories[0] || 'all';
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('São Paulo');
@@ -144,7 +146,6 @@ export default function JobsPage() {
   const [externalJobs, setExternalJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [showCreateOffer, setShowCreateOffer] = useState(false);
   const [viewMode, setViewMode] = useState('search'); // 'search', 'platforms', 'offers' ou 'seekers'
   const [showAllPlatforms, setShowAllPlatforms] = useState(false);
   const [totalJobs, setTotalJobs] = useState(0);
@@ -157,9 +158,12 @@ export default function JobsPage() {
 
   useEffect(() => {
     fetchJobs();
-    // Buscar vagas externas na inicialização
-    searchExternalJobs('emprego', 'Brasil');
-  }, []);
+    const initialCategory = primaryUserCategory !== 'all' ? primaryUserCategory : 'all';
+    const initialQuery = SEARCH_SUGGESTIONS[initialCategory]?.[0] || 'emprego';
+    setSelectedCategory(initialCategory);
+    setSearchQuery(initialQuery === 'emprego' ? '' : initialQuery);
+    searchExternalJobs(initialQuery, user?.city || 'Brasil');
+  }, [user?.id]);
 
   useEffect(() => {
     if (selectedCategory !== 'all') {
@@ -178,10 +182,25 @@ export default function JobsPage() {
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
+      const ids = Array.from(new Set((data || []).map((p) => p.user_id).filter(Boolean)));
+      let profileMap = {};
+      if (ids.length) {
+        const { data: profiles } = await supabase
+          .from('svc_profiles')
+          .select('user_id, display_name, avatar_url, categories, city')
+          .in('user_id', ids);
+        (profiles || []).forEach((profile) => { profileMap[profile.user_id] = profile; });
+      }
       const posts = (data || []).map((p) => ({
         ...p,
         category: p.category_slug,
         type: p.post_type === 'need' ? 'need' : 'offer',
+        location: p.address || profileMap[p.user_id]?.city || 'Brasil',
+        user: {
+          name: profileMap[p.user_id]?.display_name || 'Usuário',
+          avatar: profileMap[p.user_id]?.avatar_url,
+          categories: profileMap[p.user_id]?.categories || [],
+        },
       }));
       setJobOffers(posts.filter((p) => p.type === 'offer'));
       setJobSeekers(posts.filter((p) => p.type === 'need'));
