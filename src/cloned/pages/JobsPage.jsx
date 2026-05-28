@@ -160,9 +160,11 @@ export default function JobsPage() {
     fetchJobs();
     const initialCategory = primaryUserCategory !== 'all' ? primaryUserCategory : 'all';
     const initialQuery = SEARCH_SUGGESTIONS[initialCategory]?.[0] || 'emprego';
+    const initialLocation = user?.city || 'Brasil';
     setSelectedCategory(initialCategory);
     setSearchQuery(initialQuery === 'emprego' ? '' : initialQuery);
-    searchExternalJobs(initialQuery, user?.city || 'Brasil');
+    setLocationQuery(initialLocation);
+    searchExternalJobs(initialQuery, initialLocation);
   }, [user?.id]);
 
   useEffect(() => {
@@ -194,7 +196,7 @@ export default function JobsPage() {
       const posts = (data || []).map((p) => ({
         ...p,
         category: p.category_slug,
-        type: p.post_type === 'need' ? 'need' : 'offer',
+        type: p.post_type === 'volunteer' ? 'offer' : 'need',
         location: p.address || profileMap[p.user_id]?.city || 'Brasil',
         user: {
           name: profileMap[p.user_id]?.display_name || 'Usuário',
