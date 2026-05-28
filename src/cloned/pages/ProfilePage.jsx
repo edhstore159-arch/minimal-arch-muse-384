@@ -42,11 +42,16 @@ export default function ProfilePage() {
   const coverInputRef = useRef(null);
   const photoInputRef = useRef(null);
   const [helpRequests, setHelpRequests] = useState([]);
+  const [requestedCategories, setRequestedCategories] = useState([]);
   const [radiusKm, setRadiusKm] = useState(() => {
     const v = parseInt(localStorage.getItem('svc_radius_km') || '25', 10);
     return Number.isFinite(v) ? v : 25;
   });
   const isVolunteer = user?.role === 'volunteer' || user?.role === 'helper' || user?.role === 'admin';
+  const interestCategories = React.useMemo(
+    () => Array.from(new Set([...(selectedCategories || []), ...(requestedCategories || [])])).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE),
+    [selectedCategories, requestedCategories]
+  );
 
   const avatarSrc = avatarOverride || user?.avatar_url;
   const coverSrc = coverOverride || user?.cover_url;
@@ -107,7 +112,7 @@ export default function ProfilePage() {
 
   const fetchHelpRequests = React.useCallback(async () => {
     if (!user?.id) return;
-    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
+    const cats = interestCategories;
     if (cats.length === 0) { setHelpRequests([]); return; }
     let query = supabase
       .from('svc_posts')
@@ -140,11 +145,28 @@ export default function ProfilePage() {
     }
     const selected = new Set(cats);
     setHelpRequests(rows.filter((p) => selected.has(p.category_slug)));
-  }, [user?.id, user?.lat, user?.lng, selectedCategories, radiusKm]);
+  }, [user?.id, user?.lat, user?.lng, interestCategories, radiusKm]);
 
   useEffect(() => {
     fetchHelpRequests();
   }, [fetchHelpRequests]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from('svc_posts')
+        .select('category_slug')
+        .eq('user_id', user.id)
+        .neq('post_type', 'volunteer')
+        .eq('status', 'open');
+      if (error) {
+        console.warn('user requested categories fetch error', error);
+        return;
+      }
+      setRequestedCategories(Array.from(new Set((data || []).map((p) => p.category_slug).filter(Boolean))));
+    })();
+  }, [user?.id]);
 
   // Realtime: refresh when new job posts appear
   useEffect(() => {
@@ -579,7 +601,7 @@ export default function ProfilePage() {
                   Propostas do seu interesse
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} proposta{helpRequests.length !== 1 ? 's' : ''} · filtradas pelas categorias escolhidas no perfil e com localização
+                  {helpRequests.length} emprego{helpRequests.length !== 1 ? 's' : ''} · pelas categorias do perfil e dos pedidos solicitados
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
@@ -694,12 +716,12 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-8 text-sm text-textMuted bg-white/60 rounded-2xl">
                 <HandHeart size={32} className="mx-auto mb-2 text-rose-300" />
-                Nenhuma proposta da sua categoria no momento.
+                Nenhum emprego encontrado para as categorias que você solicitou.
               </div>
             )}
 
             <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={selectedCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
+              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={interestCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
             </div>
           </div>
 
