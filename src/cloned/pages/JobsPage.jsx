@@ -225,6 +225,20 @@ export default function JobsPage() {
     try {
       const q = (query || 'emprego').trim();
       const loc = (location || 'Brasil').trim();
+      const platformResults = JOB_PLATFORMS.map((platform) => ({
+        id: `platform-${platform.id}-${q}-${loc}`,
+        title: `${q} em ${loc}`,
+        company: platform.name,
+        company_logo: null,
+        location: loc,
+        url: generateSearchUrl(platform, q, loc),
+        description: `Abrir busca de ${q} em ${loc} diretamente no ${platform.name}.`,
+        salary: null,
+        category: 'Busca direta',
+        publication_date: new Date().toISOString(),
+        source: platform.name,
+        isPlatformSearch: true,
+      }));
 
       const url = `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(q)}&limit=30`;
       const res = await fetch(url);
@@ -244,21 +258,35 @@ export default function JobsPage() {
         source: 'Remotive',
       }));
 
-      setExternalJobs(jobs);
-      setTotalJobs(jobs.length);
+      const combinedJobs = [...platformResults, ...jobs];
+      setExternalJobs(combinedJobs);
+      setTotalJobs(combinedJobs.length);
       setCurrentPage(page);
       setViewMode(nextViewMode);
 
-      if (jobs.length > 0) {
-        toast.success(`${jobs.length} vagas carregadas!`);
+      if (combinedJobs.length > 0) {
+        toast.success(`${combinedJobs.length} opções de emprego carregadas!`);
       } else {
         toast.info('Nenhuma vaga encontrada. Tente outros termos.');
       }
     } catch (err) {
       console.error('Erro ao buscar vagas:', err);
-      toast.error('Não foi possível carregar as vagas. Tente novamente.');
-      setExternalJobs([]);
-      setTotalJobs(0);
+      const q = (query || 'emprego').trim();
+      const loc = (location || 'Brasil').trim();
+      const fallbackJobs = JOB_PLATFORMS.map((platform) => ({
+        id: `fallback-${platform.id}-${q}-${loc}`,
+        title: `${q} em ${loc}`,
+        company: platform.name,
+        company_logo: null,
+        location: loc,
+        url: generateSearchUrl(platform, q, loc),
+        description: `A busca externa falhou, mas você pode abrir esta pesquisa diretamente no ${platform.name}.`,
+        source: platform.name,
+        isPlatformSearch: true,
+      }));
+      toast.info('Busca externa instável; mostrando plataformas brasileiras para pesquisar direto.');
+      setExternalJobs(fallbackJobs);
+      setTotalJobs(fallbackJobs.length);
     } finally {
       setSearchLoading(false);
     }
