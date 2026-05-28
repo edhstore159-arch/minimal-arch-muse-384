@@ -219,7 +219,7 @@ export default function JobsPage() {
   };
 
   // Buscar vagas via API pública Remotive (CORS habilitado) — sem edge function
-  const searchExternalJobs = async (query, location, page = 1) => {
+  const searchExternalJobs = async (query, location, page = 1, nextViewMode = 'search') => {
     setSearchLoading(true);
     try {
       const q = (query || 'emprego').trim();
@@ -246,7 +246,7 @@ export default function JobsPage() {
       setExternalJobs(jobs);
       setTotalJobs(jobs.length);
       setCurrentPage(page);
-      setViewMode('search');
+      setViewMode(nextViewMode);
 
       if (jobs.length > 0) {
         toast.success(`${jobs.length} vagas carregadas!`);
@@ -271,7 +271,6 @@ export default function JobsPage() {
       toast.error('Digite algo para buscar');
       return;
     }
-    searchExternalJobs(searchQuery, locationQuery, 1);
     const term = normalizeText(searchQuery.trim());
     const requestedMatches = jobSeekers.filter((item) => {
       const matchesCategory = selectedCategory === 'all' || itemMatchesCategories(item, [selectedCategory]);
@@ -281,7 +280,8 @@ export default function JobsPage() {
       const matchesCategory = selectedCategory === 'all' || itemMatchesCategories(item, [selectedCategory]);
       return matchesCategory && itemMatchesSearch(item, term);
     });
-    setViewMode(requestedMatches.length > 0 ? 'seekers' : offerMatches.length > 0 ? 'offers' : 'search');
+    const nextViewMode = requestedMatches.length > 0 ? 'seekers' : offerMatches.length > 0 ? 'offers' : 'search';
+    searchExternalJobs(searchQuery, locationQuery, 1, nextViewMode);
   };
 
   const getTimeAgo = (dateString) => {
