@@ -105,23 +105,50 @@ export default function ProfilePage() {
     }
   };
 
+  const fetchHelpRequests = React.useCallback(async () => {
+    if (!user?.id) return;
+    let query = supabase
+      .from('svc_posts')
+      .select('id, title, description, address, lat, lng, created_at, post_type, category_slug, user_id')
+      .neq('post_type', 'volunteer')
+      .order('created_at', { ascending: false })
+      .limit(80);
+    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
+    if (cats.length > 0) query = query.in('category_slug', cats);
+    const { data } = await query;
+    let rows = data || [];
+    // Distance filter (haversine) — only when user has location and posts have lat/lng
+    const uLat = user?.lat;
+    const uLng = user?.lng;
+    if (uLat != null && uLng != null && radiusKm > 0) {
+      const R = 6371;
+      const toRad = (x) => (x * Math.PI) / 180;
+      rows = rows.filter((p) => {
+        if (p.lat == null || p.lng == null) return true; // keep unknown-location posts
+        const dLat = toRad(p.lat - uLat);
+        const dLng = toRad(p.lng - uLng);
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(uLat)) * Math.cos(toRad(p.lat)) * Math.sin(dLng / 2) ** 2;
+        const d = 2 * R * Math.asin(Math.sqrt(a));
+        return d <= radiusKm;
+      });
+    }
+    setHelpRequests(rows);
+  }, [user?.id, user?.lat, user?.lng, selectedCategories, radiusKm]);
+
+  useEffect(() => {
+    fetchHelpRequests();
+  }, [fetchHelpRequests]);
+
+  // Realtime: refresh when new job posts appear
   useEffect(() => {
     if (!user?.id) return;
-    (async () => {
-      let query = supabase
-        .from('svc_posts')
-        .select('id, title, description, address, created_at, post_type, category_slug, user_id')
-        .neq('post_type', 'volunteer')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (selectedCategories && selectedCategories.length > 0) {
-        const cats = selectedCategories.filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
-        if (cats.length > 0) query = query.in('category_slug', cats);
-      }
-      const { data } = await query;
-      setHelpRequests(data || []);
-    })();
-  }, [user?.id, selectedCategories]);
+    const channel = supabase
+      .channel('profile-svc-posts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'svc_posts' }, () => fetchHelpRequests())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'svc_posts' }, () => fetchHelpRequests())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, fetchHelpRequests]);
 
   const [helpFilter, setHelpFilter] = useState('all');
   const groupedHelp = React.useMemo(() => {
