@@ -6,7 +6,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { Heart, Share2, MessageSquare, MapPin, Globe, Camera, X, Home as HomeIcon, Users, Plus, BarChart3, MessageCircle, Settings, Film, Wrench, Bell, Menu } from 'lucide-react';
+import { Heart, Share2, MessageSquare, MapPin, Globe, Camera, X, Home as HomeIcon, Plus, BarChart3, MessageCircle, Settings, Film, Wrench, Bell, Menu } from 'lucide-react';
 import VideoPlayer from '../components/VideoPlayer';
 import { Dialog, DialogContent } from '../components/ui/dialog';
 import { toast } from 'sonner';
