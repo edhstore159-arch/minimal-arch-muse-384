@@ -337,8 +337,37 @@ export default function ProfilePage() {
                     <Wand2 size={18} className="text-primary" />
                     <p className="font-semibold text-textPrimary text-sm">Criar com IA</p>
                   </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: 'Reformas', prompt: 'reformas e construção civil, ferramentas, andaimes' },
+                      { label: 'Pintura', prompt: 'pintura de paredes, rolos, latas de tinta coloridas' },
+                      { label: 'Elétrica', prompt: 'instalação elétrica, fios, painel de energia' },
+                      { label: 'Hidráulica', prompt: 'encanamento, tubulações, chave de grifa' },
+                      { label: 'Marcenaria', prompt: 'marcenaria, madeira, serra e bancada de carpinteiro' },
+                      { label: 'Pedreiro', prompt: 'pedreiro, alvenaria, tijolos e colher de pedreiro' },
+                      { label: 'Limpeza', prompt: 'limpeza profissional, produtos e ambiente brilhando' },
+                      { label: 'Jardinagem', prompt: 'jardinagem, plantas verdes, ferramentas de jardim' },
+                      { label: 'Transporte', prompt: 'transporte e frete, caminhão de mudança' },
+                      { label: 'Mecânica', prompt: 'mecânica automotiva, oficina, ferramentas' },
+                    ].map((cat) => (
+                      <button
+                        key={cat.label}
+                        type="button"
+                        onClick={() => setCoverPrompt(cat.prompt)}
+                        disabled={generatingCover}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
+                          coverPrompt === cat.prompt
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-white text-textPrimary border-gray-200 hover:border-primary/50'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-textMuted">Não encontrou? Escreva sua própria categoria:</p>
                   <Input
-                    placeholder="Ex: ferramentas de construção, sol, cores quentes"
+                    placeholder="Ex: confeitaria artesanal, bolos decorados"
                     value={coverPrompt}
                     onChange={(e) => setCoverPrompt(e.target.value)}
                     disabled={generatingCover}
@@ -350,7 +379,7 @@ export default function ProfilePage() {
                     className="w-full rounded-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
                   >
                     {generatingCover ? (
-                      <><Loader2 size={16} className="mr-2 animate-spin" /> Gerando...</>
+                      <><Loader2 size={16} className="mr-2 animate-spin" /> Gerando... (10-20s)</>
                     ) : (
                       <><Wand2 size={16} className="mr-2" /> Gerar capa</>
                     )}
