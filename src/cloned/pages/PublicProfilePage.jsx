@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video, UserPlus, UserMinus, X } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video, UserPlus, UserMinus, X, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import MiniGoogleMap from '../components/MiniGoogleMap';
 import VerifiedBadge from '../components/VerifiedBadge';
@@ -49,6 +49,27 @@ export default function PublicProfilePage() {
     } else {
       addFriend(me.id, { user_id: userId, display_name: profile?.display_name, avatar_url: profile?.avatar_url });
       toast.success('Amigo adicionado!');
+    }
+  };
+
+  const [generatingCover, setGeneratingCover] = useState(false);
+  const generateCover = async () => {
+    if (!me?.id || me.id !== userId) return;
+    setGeneratingCover(true);
+    try {
+      const prompt = `Capa de perfil cinematográfica, abstrata e elegante para ${profile.display_name || 'um profissional'}${profile.categories?.length ? `, área: ${profile.categories.join(', ')}` : ''}, cores suaves, banner horizontal 16:9`;
+      const { data, error } = await supabase.functions.invoke('generate-cover-image', { body: { prompt } });
+      if (error) throw error;
+      const url = data?.imageUrl || data?.url || data?.image_url;
+      if (!url) throw new Error('Sem imagem retornada');
+      await supabase.from('svc_profiles').update({ cover_url: url }).eq('user_id', userId);
+      setProfile((p) => ({ ...p, cover_url: url }));
+      toast.success('Capa gerada!');
+    } catch (e) {
+      console.error('[cover] failed', e);
+      toast.error('Falha ao gerar capa: ' + (e?.message || 'erro'));
+    } finally {
+      setGeneratingCover(false);
     }
   };
 
@@ -111,8 +132,29 @@ export default function PublicProfilePage() {
       </header>
 
       <main className="max-w-5xl mx-auto">
-        {/* Cover */}
-        <div className="h-32 sm:h-40 bg-gradient-to-b from-slate-200 to-slate-100" />
+        {/* Stories + Ao vivo (acima do perfil, visível em mobile) */}
+        {me?.id === userId && (
+          <div className="bg-white px-4 sm:px-8 py-3 border-b">
+            <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
+          </div>
+        )}
+
+        {/* Cover (com geração por IA quando dono) */}
+        <div className="relative h-32 sm:h-40 bg-gradient-to-b from-slate-200 to-slate-100 overflow-hidden">
+          {profile.cover_url && (
+            <img src={profile.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          {me?.id === userId && (
+            <button
+              onClick={generateCover}
+              disabled={generatingCover}
+              className="absolute top-2 right-2 z-10 px-3 py-1.5 bg-black/60 hover:bg-black/80 text-white text-xs font-medium rounded-full backdrop-blur-sm flex items-center gap-1.5 disabled:opacity-60"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {generatingCover ? 'Gerando…' : 'Gerar capa com IA'}
+            </button>
+          )}
+        </div>
 
         {/* Identity */}
         <div className="bg-white">
@@ -163,12 +205,6 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          {/* Bolinha única: Stories + Ao vivo (apenas dono do perfil) */}
-          {me?.id === userId && (
-            <div className="px-4 sm:px-8 pb-3">
-              <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
-            </div>
-          )}
 
           {/* Tabs */}
           <div className="border-t border-gray-100">
