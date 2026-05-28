@@ -6,7 +6,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { Heart, Share2, MessageSquare, MapPin, Globe, Camera, X, Home as HomeIcon, Users, Plus, BarChart3, MessageCircle, Settings, Film, Wrench, Bell, Menu } from 'lucide-react';
+import { Heart, Share2, MessageSquare, MapPin, Globe, Camera, X, Home as HomeIcon, Plus, BarChart3, MessageCircle, Settings, Film, Wrench, Bell, Menu } from 'lucide-react';
 import VideoPlayer from '../components/VideoPlayer';
 import { Dialog, DialogContent } from '../components/ui/dialog';
 import { toast } from 'sonner';
@@ -687,9 +687,9 @@ export default function FeedPage() {
                 <HomeIcon className="w-5 h-5 mb-0.5" />
                 <span className="text-[10px]">Início</span>
               </button>
-              <button onClick={() => navigate('/volunteers')} className="flex flex-col items-center text-gray-700 hover:text-gray-900 transition-colors">
-                <Users className="w-5 h-5 mb-0.5" />
-                <span className="text-[10px]">Voluntários</span>
+              <button onClick={() => navigate('/jobs')} className="flex flex-col items-center text-gray-700 hover:text-gray-900 transition-colors">
+                <Wrench className="w-5 h-5 mb-0.5" />
+                <span className="text-[10px]">Trabalho</span>
               </button>
               <button
                 onClick={() => openModal('need')}
@@ -956,12 +956,11 @@ export default function FeedPage() {
           <span className="text-[11px] text-[#8b5cf6] font-semibold">Accueil</span>
         </button>
 
-        <button onClick={() => navigate('/volunteers')} className="flex flex-col items-center gap-0.5 p-1 min-w-[56px] relative" data-testid="nav-volunteers">
+        <button onClick={() => navigate('/jobs')} className="flex flex-col items-center gap-0.5 p-1 min-w-[56px] relative" data-testid="nav-jobs">
           <div className="relative">
-            <Users className="w-6 h-6 text-gray-500" />
-            <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">999+</span>
+            <Wrench className="w-6 h-6 text-gray-500" />
           </div>
-          <span className="text-[11px] text-gray-600">Voluntários</span>
+          <span className="text-[11px] text-gray-600">Trabalho</span>
         </button>
 
         <button
