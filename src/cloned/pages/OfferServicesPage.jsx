@@ -19,7 +19,7 @@ const HERO_IMAGES = [
 ];
 
 const SERVICE_CATEGORIES = [
-  { value: 'reforma', label: 'Reformas', icon: '🔨', color: 'from-orange-400 to-orange-600' },
+  { value: 'reformas', label: 'Reformas', icon: '🔨', color: 'from-orange-400 to-orange-600' },
   { value: 'limpeza', label: 'Limpeza', icon: '🧹', color: 'from-blue-400 to-blue-600' },
   { value: 'jardinagem', label: 'Jardinagem', icon: '🌱', color: 'from-green-400 to-green-600' },
   { value: 'eletrica', label: 'Elétrica', icon: '💡', color: 'from-yellow-400 to-yellow-600' },
@@ -28,6 +28,11 @@ const SERVICE_CATEGORIES = [
   { value: 'transporte', label: 'Transporte', icon: '🚗', color: 'from-red-400 to-red-600' },
   { value: 'beleza', label: 'Beleza', icon: '💇', color: 'from-pink-400 to-pink-600' },
 ];
+
+const normalizeCategorySlug = (slug) => {
+  if (slug === 'reforma') return 'reformas';
+  return SERVICE_CATEGORIES.some((cat) => cat.value === slug) ? slug : 'outros';
+};
 
 const PLANS = [
   {
@@ -188,7 +193,7 @@ export default function OfferServicesPage() {
         description: serviceOffer.description + (serviceOffer.price ? `\n\nPreço: ${serviceOffer.price}` : ''),
         post_type: 'volunteer', // offer of service
         status: 'open',
-        category_slug: serviceOffer.categories[0],
+        category_slug: normalizeCategorySlug(serviceOffer.categories[0]),
         photos: photoUrls,
         lat: serviceOffer.location?.lat ?? null,
         lng: serviceOffer.location?.lng ?? null,
