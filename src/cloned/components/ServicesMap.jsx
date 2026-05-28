@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Loader2 } from 'lucide-react';
 import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
