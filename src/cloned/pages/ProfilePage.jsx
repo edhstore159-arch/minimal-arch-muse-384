@@ -107,16 +107,21 @@ export default function ProfilePage() {
 
   const fetchHelpRequests = React.useCallback(async () => {
     if (!user?.id) return;
+    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
+    if (cats.length === 0) { setHelpRequests([]); return; }
     let query = supabase
       .from('svc_posts')
       .select('id, title, description, address, lat, lng, created_at, post_type, category_slug, user_id')
-      .neq('post_type', 'volunteer')
+      .eq('status', 'open')
       .order('created_at', { ascending: false })
       .limit(80);
-    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
-    if (cats.length === 0) { setHelpRequests([]); return; }
     query = query.in('category_slug', cats);
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) {
+      console.warn('svc_posts profile fetch error', error);
+      setHelpRequests([]);
+      return;
+    }
     let rows = data || [];
     // Distance filter (haversine) — only when user has location and posts have lat/lng
     const uLat = user?.lat;
@@ -133,7 +138,8 @@ export default function ProfilePage() {
         return d <= radiusKm;
       });
     }
-    setHelpRequests(rows);
+    const selected = new Set(cats);
+    setHelpRequests(rows.filter((p) => selected.has(p.category_slug)));
   }, [user?.id, user?.lat, user?.lng, selectedCategories, radiusKm]);
 
   useEffect(() => {
@@ -570,10 +576,10 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
                   <HandHeart size={22} className="text-rose-500" />
-                  Trabalhos do seu interesse
+                  Propostas do seu interesse
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} · filtrados pelas suas categorias e com localização
+                  {helpRequests.length} proposta{helpRequests.length !== 1 ? 's' : ''} · filtradas pelas categorias escolhidas no perfil e com localização
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
@@ -657,6 +663,7 @@ export default function ProfilePage() {
                 {(helpFilter === 'all' ? helpRequests : groupedHelp[helpFilter] || []).map((p) => {
                   const cat = p.category_slug || 'reformas';
                   const info = getCategoryInfo(cat);
+                  const isOffer = p.post_type === 'volunteer';
                   return (
                     <div key={p.id} className="p-4 rounded-2xl bg-white border border-gray-100 hover:border-rose-300 hover:shadow-md transition group">
                       <div className="flex items-start gap-3">
@@ -667,7 +674,7 @@ export default function ProfilePage() {
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-semibold text-textPrimary text-sm truncate">{p.title}</p>
                             <span className="text-[10px] uppercase tracking-wide text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              {info.label}
+                              {isOffer ? 'Oferta' : 'Pedido'} · {info.label}
                             </span>
                           </div>
                           {p.description && (
@@ -687,12 +694,12 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-8 text-sm text-textMuted bg-white/60 rounded-2xl">
                 <HandHeart size={32} className="mx-auto mb-2 text-rose-300" />
-                Nenhum pedido de ajuda no momento.
+                Nenhuma proposta da sua categoria no momento.
               </div>
             )}
 
             <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} />
+              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={selectedCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
             </div>
           </div>
 
