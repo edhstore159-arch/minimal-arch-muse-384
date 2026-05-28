@@ -7,6 +7,7 @@ import { Card } from '../components/ui/card';
 import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import MiniGoogleMap from '../components/MiniGoogleMap';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 const TABS = [
   { id: 'presentation', label: 'Apresentação' },
@@ -97,7 +98,7 @@ export default function PublicProfilePage() {
             </div>
             <div className="flex-1 min-w-0 sm:pb-2 text-center sm:text-left">
               <div className="flex flex-col sm:flex-row sm:items-start items-center gap-1 sm:gap-2">
-                <h2 className="font-bold text-xl sm:text-2xl break-words max-w-full">{profile.display_name}</h2>
+                <h2 className="font-bold text-xl sm:text-2xl break-words max-w-full inline-flex items-center gap-1.5">{profile.display_name}<VerifiedBadge size={18} /></h2>
                 <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full sm:mt-1.5 capitalize">
                   {profile.role === 'helper' || profile.role === 'volunteer' ? 'Ofertante' : 'Particular'}
                 </span>
