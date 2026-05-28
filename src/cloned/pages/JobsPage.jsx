@@ -177,6 +177,7 @@ export default function JobsPage() {
       if (!silent) toast.error('Não foi possível obter sua localização');
       return null;
     }
+    setSharedLocation(loc); // sincroniza com todos os mapas do app
     const city = extractCityFromAddress(loc.address) || 'Brasil';
     setLocationQuery(city);
     if (!silent) toast.success(`📍 Buscando vagas em ${city}`);
