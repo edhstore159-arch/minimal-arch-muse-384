@@ -3,10 +3,11 @@ import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import { X } from 'lucide-react';
 import { Button } from './ui/button';
 import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
+import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './googleMapsConfig';
 
 const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
   const [map, setMap] = useState(null);
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  const apiKey = getGoogleMapsBrowserKey();
 
   const mapContainerStyle = {
     width: '100%',
@@ -37,11 +38,7 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
   }, []);
 
   if (!apiKey) {
-    return (
-      <div className="bg-red-50 p-4 rounded-lg">
-        <p className="text-red-600">Google Maps API key não configurada.</p>
-      </div>
-    );
+    return <MapFallback height={400} />;
   }
 
   return (
@@ -57,7 +54,7 @@ const GoogleMapComponent = ({ locations, userLocation, onClose }) => {
         </Button>
       )}
 
-      <LoadScript googleMapsApiKey={apiKey}>
+      <LoadScript googleMapsApiKey={apiKey} channel={getGoogleMapsChannel()} preventGoogleFontsLoading>
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
