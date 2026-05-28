@@ -625,7 +625,6 @@ export default function ProfilePage() {
               <ServicesMap height={320} showHelpRequests={true} />
             </div>
           </div>
-        )}
 
         {/* Mural de fotos (grande, sempre visível) */}
         <div className="bg-white rounded-3xl shadow-card p-6 mb-6" data-testid="photo-mural">
