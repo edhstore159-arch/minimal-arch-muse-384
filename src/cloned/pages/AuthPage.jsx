@@ -461,13 +461,16 @@ export default function AuthPage() {
           {!isLogin && step === 2 && (role === 'migrant' || role === 'helper') && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                {HELP_CATEGORIES.map(cat => (
+                {HELP_CATEGORIES.map(cat => {
+                  const categoryValue = cat.value === 'outros' ? CUSTOM_CATEGORY_VALUE : cat.value;
+                  const selected = selectedCategories.includes(categoryValue);
+                  return (
                   <button
                     key={cat.value}
                     type="button"
-                    onClick={() => toggleCategory(cat.value)}
+                    onClick={() => toggleCategory(categoryValue)}
                     className={`p-3 rounded-xl border-2 transition-all text-left ${
-                      selectedCategories.includes(cat.value)
+                      selected
                         ? role === 'migrant' 
                           ? 'bg-green-600 text-white border-green-600 shadow-lg'
                           : 'bg-primary text-white border-primary shadow-lg'
@@ -477,17 +480,27 @@ export default function AuthPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{cat.icon}</span>
                       <div>
-                        <div className={`text-sm font-bold ${selectedCategories.includes(cat.value) ? 'text-white' : 'text-textPrimary'}`}>
+                        <div className={`text-sm font-bold ${selected ? 'text-white' : 'text-textPrimary'}`}>
                           {cat.label}
                         </div>
-                        <div className={`text-xs ${selectedCategories.includes(cat.value) ? 'text-white/80' : 'text-textSecondary'}`}>
+                        <div className={`text-xs ${selected ? 'text-white/80' : 'text-textSecondary'}`}>
                           {cat.desc}
                         </div>
                       </div>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
+              {selectedCategories.includes(CUSTOM_CATEGORY_VALUE) && (
+                <Input
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
+                  maxLength={40}
+                  className="rounded-xl"
+                />
+              )}
               
               {selectedCategories.length > 0 && (
                 <div className={`p-3 rounded-xl border ${
