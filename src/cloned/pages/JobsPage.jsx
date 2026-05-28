@@ -272,7 +272,16 @@ export default function JobsPage() {
       return;
     }
     searchExternalJobs(searchQuery, locationQuery, 1);
-    setViewMode('search');
+    const term = normalizeText(searchQuery.trim());
+    const requestedMatches = jobSeekers.filter((item) => {
+      const matchesCategory = selectedCategory === 'all' || itemMatchesCategories(item, [selectedCategory]);
+      return matchesCategory && itemMatchesSearch(item, term);
+    });
+    const offerMatches = jobOffers.filter((item) => {
+      const matchesCategory = selectedCategory === 'all' || itemMatchesCategories(item, [selectedCategory]);
+      return matchesCategory && itemMatchesSearch(item, term);
+    });
+    setViewMode(requestedMatches.length > 0 ? 'seekers' : offerMatches.length > 0 ? 'offers' : 'search');
   };
 
   const getTimeAgo = (dateString) => {
