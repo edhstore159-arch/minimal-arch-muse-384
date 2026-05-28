@@ -170,7 +170,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
       <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md rounded-full px-4 py-2 text-xs shadow-lg ring-1 ring-black/5 flex items-center gap-4 font-medium">
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100" /> Voluntários</span>
         {showHelpRequests && (
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" /> Pedidos</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" /> Empregos filtrados</span>
         )}
         {userLoc && (
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-blue-100" /> Você</span>
