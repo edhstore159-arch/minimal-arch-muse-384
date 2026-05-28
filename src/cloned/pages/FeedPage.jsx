@@ -280,7 +280,29 @@ const PostCard = ({ post, onChat }) => {
                 </div>
               </div>
             ))}
-            <form onSubmit={handleAddComment} className="flex items-center gap-2 pt-1">
+            <form onSubmit={handleAddComment} className="flex items-center gap-2 pt-1 relative">
+              <button
+                type="button"
+                onClick={() => setShowEmoji((v) => !v)}
+                className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-base"
+                aria-label="Adicionar emoji"
+              >
+                😊
+              </button>
+              {showEmoji && (
+                <div className="absolute bottom-10 left-0 z-10 bg-white border border-gray-200 rounded-xl shadow-lg p-2 grid grid-cols-6 gap-1">
+                  {EMOJIS.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => addEmoji(e)}
+                      className="w-8 h-8 text-lg hover:bg-gray-100 rounded"
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              )}
               <Input
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
