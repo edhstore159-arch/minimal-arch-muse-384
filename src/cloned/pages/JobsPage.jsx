@@ -918,15 +918,20 @@ export default function JobsPage() {
                 variant={viewMode === 'offers' ? 'default' : 'outline'}
                 className={`flex-1 rounded-full ${viewMode === 'offers' ? 'bg-primary' : ''}`}
               >
-                🛠️ Ofertas de Serviço ({jobOffers.length})
+                🛠️ Ofertas de Trabalho ({visibleJobOffers.length})
               </Button>
               <Button
                 onClick={() => setViewMode('seekers')}
                 variant={viewMode === 'seekers' ? 'default' : 'outline'}
                 className={`flex-1 rounded-full ${viewMode === 'seekers' ? 'bg-green-600' : ''}`}
               >
-                🔍 Procuram Trabalho ({jobSeekers.length})
+                🔍 Pedidos de Trabalho ({visibleJobSeekers.length})
               </Button>
+            </div>
+
+            <div className="mb-4 rounded-2xl bg-white border border-gray-100 p-3 text-sm text-gray-700">
+              Mostrando {viewMode === 'offers' ? 'profissionais disponíveis' : 'usuários procurando profissional'} em <strong>{selectedCategoryLabel}</strong>.
+              {userInterestCategories.length > 0 && selectedCategory === 'all' && ' As categorias do seu perfil aparecem primeiro.'}
             </div>
 
             {/* Seção de Cards */}
@@ -960,7 +965,10 @@ export default function JobsPage() {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {displayData.map((item) => (
+                  {displayData.map((item) => {
+                    const matchesProfile = itemMatchesCategories(item, userInterestCategories);
+                    const itemCategoryLabel = prettifyCategoryLabel(item.category || item.category_slug);
+                    return (
                     <div 
                       key={item.id}
                       className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer"
@@ -982,13 +990,16 @@ export default function JobsPage() {
                         <div>
                           <h3 className="font-bold text-gray-800">{item.user?.name || 'Usuário'}</h3>
                           <p className="text-sm text-primary font-medium">{item.title}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Categoria: {itemCategoryLabel}</p>
                         </div>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          viewMode === 'offers' 
-                            ? 'bg-blue-100 text-blue-700' 
+                          matchesProfile && userInterestCategories.length
+                            ? 'bg-primary/10 text-primary'
+                            : viewMode === 'offers' 
+                            ? 'bg-blue-100 text-blue-700'
                             : 'bg-green-100 text-green-700'
                         }`}>
-                          {viewMode === 'offers' ? 'Oferece' : 'Procura'}
+                          {matchesProfile && userInterestCategories.length ? 'Para você' : viewMode === 'offers' ? 'Oferece' : 'Procura'}
                         </span>
                       </div>
 
@@ -1044,7 +1055,8 @@ export default function JobsPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                  );
+                })}
             </div>
           )}
         </div>
