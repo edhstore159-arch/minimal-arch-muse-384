@@ -232,7 +232,7 @@ const PostCard = ({ post, onChat }) => {
 
         <div className="flex items-center justify-start gap-3 pt-2 border-t border-gray-100">
           <button
-            onClick={() => { setLiked(!liked); setLikeCount(p => liked ? p - 1 : p + 1); }}
+            onClick={toggleLike}
             className={`flex items-center gap-1.5 text-xs transition-colors ${liked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}
             data-testid="post-like-btn"
           >
