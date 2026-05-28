@@ -120,7 +120,7 @@ export default function LandingPage() {
               <MapPin className="w-5 h-5 text-primary" />
               <span>Goiânia, Anápolis, Aparecida, Rio Verde, Jataí, Catalão e mais</span>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 mb-12 items-center justify-center lg:justify-start">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center justify-center lg:justify-start">
               <Button
                 onClick={() => openAuth('signup')}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground h-14 px-8 text-base rounded-full"
@@ -137,6 +137,25 @@ export default function LandingPage() {
               >
                 <Briefcase className="w-5 h-5 mr-2" />
                 Publicar Vaga
+              </Button>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 mb-12 items-center justify-center lg:justify-start">
+              <Button
+                onClick={() => openAuth('signup')}
+                className="bg-green-500 hover:bg-green-600 text-white h-12 px-6 text-sm rounded-full"
+                data-testid="cta-search-services"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Buscar Serviços
+              </Button>
+              <Button
+                onClick={() => openAuth('signup')}
+                variant="outline"
+                className="border-2 border-orange-400 text-orange-600 bg-white hover:bg-orange-50 h-12 px-6 text-sm rounded-full font-semibold"
+                data-testid="cta-offer-services"
+              >
+                <Briefcase className="w-4 h-4 mr-2" />
+                Oferecer Serviços
               </Button>
             </div>
 
