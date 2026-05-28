@@ -39,7 +39,7 @@ function App() {
       const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', authUser.id);
       const isAdmin = (roles ?? []).some((r) => r.role === 'admin');
       const normalized = normalizeAuthUser(authUser, profile);
-      setUser({ ...normalized, role: isAdmin ? 'admin' : normalized.role });
+      setUser({ ...normalized, role: isAdmin ? 'admin' : normalized.role, service_role: normalized.role, is_admin: isAdmin });
     } catch (e) { console.error('hydrate error', e); }
   };
 
