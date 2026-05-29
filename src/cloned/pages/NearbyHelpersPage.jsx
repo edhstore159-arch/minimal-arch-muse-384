@@ -6,12 +6,20 @@ import { MapPin, Navigation, User, Phone, MessageCircle, Loader2, Filter, X, Ref
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { WORK_SERVICE_CATEGORIES, getWorkCategoryInfo } from '../lib/serviceCategories';
 
 const HELP_CATEGORIES = [
   { value: 'all', label: 'Todas as categorias', icon: '🌐' },
   { value: 'jobs', label: '💼 Vagas de Emprego', icon: '💼' },
-  ...WORK_SERVICE_CATEGORIES,
+  { value: 'food', label: 'Alimentação', icon: '🍽️' },
+  { value: 'legal', label: 'Jurídico', icon: '⚖️' },
+  { value: 'health', label: 'Saúde', icon: '🏥' },
+  { value: 'housing', label: 'Moradia', icon: '🏠' },
+  { value: 'work', label: 'Emprego', icon: '💼' },
+  { value: 'education', label: 'Educação', icon: '📚' },
+  { value: 'social', label: 'Apoio Social', icon: '🤝' },
+  { value: 'clothes', label: 'Roupas', icon: '👕' },
+  { value: 'furniture', label: 'Móveis', icon: '🪑' },
+  { value: 'transport', label: 'Transporte', icon: '🚗' }
 ];
 
 const CATEGORY_COLORS = {
@@ -438,7 +446,7 @@ export default function NearbyHelpersPage() {
   };
 
   const getCategoryInfo = (value) => {
-    return HELP_CATEGORIES.find(c => c.value === value) || getWorkCategoryInfo(value);
+    return HELP_CATEGORIES.find(c => c.value === value) || { icon: '📝', label: value };
   };
 
   const openGoogleMaps = (location) => {

@@ -12,10 +12,19 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, updateSvcProfile } from '../lib/authProfile';
 import ServicesMap from '../components/ServicesMap';
-import VerifiedBadge from '../components/VerifiedBadge';
-import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, getWorkCategoryInfo } from '../lib/serviceCategories';
 
-const HELP_CATEGORIES = WORK_SERVICE_CATEGORIES;
+const HELP_CATEGORIES = [
+  { value: 'food', label: 'Alimentação', icon: '🍽️' },
+  { value: 'legal', label: 'Jurídico', icon: '⚖️' },
+  { value: 'health', label: 'Saúde', icon: '🏥' },
+  { value: 'housing', label: 'Moradia', icon: '🏠' },
+  { value: 'work', label: 'Trabalho', icon: '💼' },
+  { value: 'education', label: 'Educação', icon: '📚' },
+  { value: 'social', label: 'Social', icon: '🤝' },
+  { value: 'clothes', label: 'Roupas', icon: '👕' },
+  { value: 'furniture', label: 'Móveis', icon: '🪑' },
+  { value: 'transport', label: 'Transporte', icon: '🚗' }
+];
 
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useContext(AuthContext);
@@ -26,7 +35,6 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [useDisplayName, setUseDisplayName] = useState(user?.use_display_name || false);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [customHelpCategory, setCustomHelpCategory] = useState('');
   const [savingCategories, setSavingCategories] = useState(false);
   const [activeTab, setActiveTab] = useState('presentation');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -42,10 +50,6 @@ export default function ProfilePage() {
   const coverInputRef = useRef(null);
   const photoInputRef = useRef(null);
   const [helpRequests, setHelpRequests] = useState([]);
-  const [radiusKm, setRadiusKm] = useState(() => {
-    const v = parseInt(localStorage.getItem('svc_radius_km') || '25', 10);
-    return Number.isFinite(v) ? v : 25;
-  });
   const isVolunteer = user?.role === 'volunteer' || user?.role === 'helper' || user?.role === 'admin';
 
   const avatarSrc = avatarOverride || user?.avatar_url;
@@ -105,63 +109,24 @@ export default function ProfilePage() {
     }
   };
 
-  const fetchHelpRequests = React.useCallback(async () => {
-    if (!user?.id) return;
-    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
-    if (cats.length === 0) { setHelpRequests([]); return; }
-    let query = supabase
-      .from('svc_posts')
-      .select('id, title, description, address, lat, lng, created_at, post_type, category_slug, user_id')
-      .eq('status', 'open')
-      .order('created_at', { ascending: false })
-      .limit(80);
-    query = query.in('category_slug', cats);
-    const { data, error } = await query;
-    if (error) {
-      console.warn('svc_posts profile fetch error', error);
-      setHelpRequests([]);
-      return;
-    }
-    let rows = data || [];
-    // Distance filter (haversine) — only when user has location and posts have lat/lng
-    const uLat = user?.lat;
-    const uLng = user?.lng;
-    if (uLat != null && uLng != null && radiusKm > 0) {
-      const R = 6371;
-      const toRad = (x) => (x * Math.PI) / 180;
-      rows = rows.filter((p) => {
-        if (p.lat == null || p.lng == null) return true; // keep unknown-location posts
-        const dLat = toRad(p.lat - uLat);
-        const dLng = toRad(p.lng - uLng);
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(uLat)) * Math.cos(toRad(p.lat)) * Math.sin(dLng / 2) ** 2;
-        const d = 2 * R * Math.asin(Math.sqrt(a));
-        return d <= radiusKm;
-      });
-    }
-    const selected = new Set(cats);
-    setHelpRequests(rows.filter((p) => selected.has(p.category_slug)));
-  }, [user?.id, user?.lat, user?.lng, selectedCategories, radiusKm]);
-
   useEffect(() => {
-    fetchHelpRequests();
-  }, [fetchHelpRequests]);
-
-  // Realtime: refresh when new job posts appear
-  useEffect(() => {
-    if (!user?.id) return;
-    const channel = supabase
-      .channel('profile-svc-posts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'svc_posts' }, () => fetchHelpRequests())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'svc_posts' }, () => fetchHelpRequests())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user?.id, fetchHelpRequests]);
+    if (!isVolunteer) return;
+    (async () => {
+      const { data } = await supabase
+        .from('svc_posts')
+        .select('id, title, description, address, created_at, post_type, category, categories, user_id')
+        .neq('post_type', 'volunteer')
+        .order('created_at', { ascending: false })
+        .limit(30);
+      setHelpRequests(data || []);
+    })();
+  }, [isVolunteer]);
 
   const [helpFilter, setHelpFilter] = useState('all');
   const groupedHelp = React.useMemo(() => {
     const groups = {};
     helpRequests.forEach((p) => {
-      const cats = [p.category_slug || 'reformas'];
+      const cats = p.categories?.length ? p.categories : [p.category || 'social'];
       cats.forEach((c) => {
         if (!groups[c]) groups[c] = [];
         groups[c].push(p);
@@ -281,21 +246,7 @@ export default function ProfilePage() {
     setSavingCategories(true);
     try {
       if (!user?.id) return;
-      let categoriesToSave = selectedCategories;
-      if (selectedCategories.includes(CUSTOM_CATEGORY_VALUE)) {
-        const name = customHelpCategory.trim();
-        if (!name) {
-          toast.error('Escreva sua categoria');
-          setSavingCategories(false);
-          return;
-        }
-        const { data: createdSlug, error: categoryError } = await supabase.rpc('ensure_svc_category', { _name: name });
-        if (categoryError) throw categoryError;
-        categoriesToSave = [...selectedCategories.filter((category) => category !== CUSTOM_CATEGORY_VALUE), createdSlug || 'outros'];
-      }
-      await updateSvcProfile(user.id, { categories: categoriesToSave });
-      setSelectedCategories(categoriesToSave);
-      setCustomHelpCategory('');
+      await updateSvcProfile(user.id, { categories: selectedCategories });
       await refreshUser?.();
       toast.success('Categorias atualizadas!');
       setShowCategoriesDialog(false);
@@ -307,7 +258,7 @@ export default function ProfilePage() {
   };
 
   const getCategoryInfo = (value) => {
-    return getWorkCategoryInfo(value);
+    return HELP_CATEGORIES.find(c => c.value === value) || { icon: '📝', label: value };
   };
 
   return (
@@ -385,37 +336,8 @@ export default function ProfilePage() {
                     <Wand2 size={18} className="text-primary" />
                     <p className="font-semibold text-textPrimary text-sm">Criar com IA</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { label: 'Reformas', prompt: 'reformas e construção civil, ferramentas, andaimes' },
-                      { label: 'Pintura', prompt: 'pintura de paredes, rolos, latas de tinta coloridas' },
-                      { label: 'Elétrica', prompt: 'instalação elétrica, fios, painel de energia' },
-                      { label: 'Hidráulica', prompt: 'encanamento, tubulações, chave de grifa' },
-                      { label: 'Marcenaria', prompt: 'marcenaria, madeira, serra e bancada de carpinteiro' },
-                      { label: 'Pedreiro', prompt: 'pedreiro, alvenaria, tijolos e colher de pedreiro' },
-                      { label: 'Limpeza', prompt: 'limpeza profissional, produtos e ambiente brilhando' },
-                      { label: 'Jardinagem', prompt: 'jardinagem, plantas verdes, ferramentas de jardim' },
-                      { label: 'Transporte', prompt: 'transporte e frete, caminhão de mudança' },
-                      { label: 'Mecânica', prompt: 'mecânica automotiva, oficina, ferramentas' },
-                    ].map((cat) => (
-                      <button
-                        key={cat.label}
-                        type="button"
-                        onClick={() => setCoverPrompt(cat.prompt)}
-                        disabled={generatingCover}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
-                          coverPrompt === cat.prompt
-                            ? 'bg-primary text-white border-primary'
-                            : 'bg-white text-textPrimary border-gray-200 hover:border-primary/50'
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-textMuted">Não encontrou? Escreva sua própria categoria:</p>
                   <Input
-                    placeholder="Ex: confeitaria artesanal, bolos decorados"
+                    placeholder="Ex: ferramentas de construção, sol, cores quentes"
                     value={coverPrompt}
                     onChange={(e) => setCoverPrompt(e.target.value)}
                     disabled={generatingCover}
@@ -427,7 +349,7 @@ export default function ProfilePage() {
                     className="w-full rounded-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
                   >
                     {generatingCover ? (
-                      <><Loader2 size={16} className="mr-2 animate-spin" /> Gerando... (10-20s)</>
+                      <><Loader2 size={16} className="mr-2 animate-spin" /> Gerando...</>
                     ) : (
                       <><Wand2 size={16} className="mr-2" /> Gerar capa</>
                     )}
@@ -480,9 +402,8 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-3xl font-heading font-bold text-textPrimary leading-tight flex items-center gap-1.5" data-testid="user-name">
+                  <h2 className="text-3xl font-heading font-bold text-textPrimary leading-tight" data-testid="user-name">
                     {user?.use_display_name && user?.display_name ? user.display_name : user?.name}
-                    <VerifiedBadge size={22} />
                   </h2>
                   <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
                     <DialogTrigger asChild>
@@ -570,59 +491,27 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Meus pedidos de trabalho */}
-        <div className="bg-gradient-to-br from-rose-50 via-white to-orange-50 rounded-3xl shadow-card p-6 mb-6 border border-rose-100" data-testid="my-requests-panel">
+        {/* Painel de voluntário: casos e pessoas que precisam de ajuda */}
+        {isVolunteer && (
+          <div className="bg-gradient-to-br from-rose-50 via-white to-orange-50 rounded-3xl shadow-card p-6 mb-6 border border-rose-100" data-testid="volunteer-panel">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
                   <HandHeart size={22} className="text-rose-500" />
-                  Propostas do seu interesse
+                  Casos e pessoas que precisam de ajuda
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} proposta{helpRequests.length !== 1 ? 's' : ''} · filtradas pelas categorias escolhidas no perfil e com localização
+                  {helpRequests.length} pedido{helpRequests.length !== 1 ? 's' : ''} ativo{helpRequests.length !== 1 ? 's' : ''} · organizados por categoria
                 </p>
               </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <Button
-                  onClick={() => setShowCategoriesDialog(true)}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  data-testid="change-interests-btn"
-                >
-                  Mudar categorias
-                </Button>
-                <Button
-                  onClick={() => navigate('/offer-services')}
-                  className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shadow-md"
-                  size="sm"
-                  data-testid="new-request-btn"
-                >
-                  Novo pedido <ArrowRight size={14} className="ml-1" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Radius selector */}
-            <div className="mb-4 p-3 rounded-2xl bg-white border border-rose-100 flex items-center gap-3">
-              <MapPin size={16} className="text-rose-500 shrink-0" />
-              <label className="text-xs font-semibold text-textSecondary whitespace-nowrap">
-                Raio: <span className="text-rose-600">{radiusKm} km</span>
-              </label>
-              <input
-                type="range"
-                min={1}
-                max={100}
-                step={1}
-                value={radiusKm}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  setRadiusKm(v);
-                  localStorage.setItem('svc_radius_km', String(v));
-                }}
-                className="flex-1 accent-rose-500"
-                data-testid="radius-slider"
-              />
+              <Button
+                onClick={() => navigate('/volunteers')}
+                className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shrink-0 shadow-md"
+                size="sm"
+                data-testid="want-to-help-btn"
+              >
+                Quero ajudar <ArrowRight size={14} className="ml-1" />
+              </Button>
             </div>
 
             {/* Filtro por categoria */}
@@ -661,9 +550,8 @@ export default function ProfilePage() {
             {helpRequests.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {(helpFilter === 'all' ? helpRequests : groupedHelp[helpFilter] || []).map((p) => {
-                  const cat = p.category_slug || 'reformas';
+                  const cat = (p.categories?.[0]) || p.category || 'social';
                   const info = getCategoryInfo(cat);
-                  const isOffer = p.post_type === 'volunteer';
                   return (
                     <div key={p.id} className="p-4 rounded-2xl bg-white border border-gray-100 hover:border-rose-300 hover:shadow-md transition group">
                       <div className="flex items-start gap-3">
@@ -674,7 +562,7 @@ export default function ProfilePage() {
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-semibold text-textPrimary text-sm truncate">{p.title}</p>
                             <span className="text-[10px] uppercase tracking-wide text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              {isOffer ? 'Oferta' : 'Pedido'} · {info.label}
+                              {info.label}
                             </span>
                           </div>
                           {p.description && (
@@ -694,14 +582,15 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-8 text-sm text-textMuted bg-white/60 rounded-2xl">
                 <HandHeart size={32} className="mx-auto mb-2 text-rose-300" />
-                Nenhuma proposta da sua categoria no momento.
+                Nenhum pedido de ajuda no momento.
               </div>
             )}
 
             <div className="mt-5">
-              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={selectedCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
+              <ServicesMap height={320} showHelpRequests={true} />
             </div>
           </div>
+        )}
 
         {/* Mural de fotos (grande, sempre visível) */}
         <div className="bg-white rounded-3xl shadow-card p-6 mb-6" data-testid="photo-mural">
@@ -828,45 +717,33 @@ export default function ProfilePage() {
                     </DialogHeader>
 
                     <div className="grid grid-cols-2 gap-3 my-4">
-                      {HELP_CATEGORIES.map(cat => {
-                        const categoryValue = cat.value === 'outros' ? CUSTOM_CATEGORY_VALUE : cat.value;
-                        const selected = selectedCategories.includes(categoryValue);
-                        return (
+                      {HELP_CATEGORIES.map(cat => (
                         <button
                           key={cat.value}
                           type="button"
-                          onClick={() => toggleCategory(categoryValue)}
+                          onClick={() => toggleCategory(cat.value)}
                           className={`p-3 rounded-xl border-2 transition-all text-left relative ${
-                            selected
+                            selectedCategories.includes(cat.value)
                               ? 'bg-primary/10 border-primary shadow-md'
                               : 'bg-white border-gray-200 hover:border-primary/50'
                           }`}
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-xl">{cat.icon}</span>
-                            <span className={`text-sm font-medium ${selected ? 'text-primary' : 'text-textPrimary'}`}>
+                            <span className={`text-sm font-medium ${
+                              selectedCategories.includes(cat.value) ? 'text-primary' : 'text-textPrimary'
+                            }`}>
                               {cat.label}
                             </span>
                           </div>
-                          {selected && (
+                          {selectedCategories.includes(cat.value) && (
                             <div className="absolute top-2 right-2">
                               <Check size={14} className="text-primary" />
                             </div>
                           )}
                         </button>
-                        );
-                      })}
+                      ))}
                     </div>
-
-                    {selectedCategories.includes(CUSTOM_CATEGORY_VALUE) && (
-                      <Input
-                        value={customHelpCategory}
-                        onChange={(e) => setCustomHelpCategory(e.target.value)}
-                        placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
-                        maxLength={40}
-                        className="rounded-xl mb-4"
-                      />
-                    )}
 
                     {selectedCategories.length > 0 && (
                       <div className="p-3 bg-green-50 rounded-xl border border-green-200 mb-4">

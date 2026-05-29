@@ -6,16 +6,13 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { Heart, Share2, MessageSquare, MapPin, Globe, Camera, X, Home as HomeIcon, Plus, BarChart3, MessageCircle, Settings, Film, Wrench, Bell, Menu } from 'lucide-react';
+import { Heart, Share2, MessageSquare, MapPin, Globe, Camera, X, Home as HomeIcon, Users, Plus, BarChart3, MessageCircle, Settings, Film, Wrench, Bell, Menu } from 'lucide-react';
 import VideoPlayer from '../components/VideoPlayer';
 import { Dialog, DialogContent } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getStableDefaultAvatarUrl } from '../lib/authProfile';
 import MiniGoogleMap from '../components/MiniGoogleMap';
-import VerifiedBadge from '../components/VerifiedBadge';
-import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
-import SupportChatWidget from '../components/SupportChatWidget';
 
 // Local fallback store so the feed works even without auth/backend
 const LOCAL_KEY = 'cloned_feed_posts_v1';
@@ -26,18 +23,26 @@ const saveLocalPosts = (posts) => {
   try { localStorage.setItem(LOCAL_KEY, JSON.stringify(posts.slice(0, 50))); } catch {}
 };
 
-const CATEGORY_OPTIONS = WORK_SERVICE_CATEGORIES
-  .filter((category) => category.value !== 'outros')
-  .map(({ value, label }) => ({ value, label }));
-
-const getCategoryLabel = (value) => CATEGORY_OPTIONS.find((c) => c.value === value)?.label || prettifyCategoryLabel(value);
+const CATEGORY_OPTIONS = [
+  { value: 'food', label: 'Alimentação' },
+  { value: 'legal', label: 'Jurídico' },
+  { value: 'health', label: 'Saúde' },
+  { value: 'housing', label: 'Moradia' },
+  { value: 'work', label: 'Trabalho' },
+  { value: 'education', label: 'Educação' },
+  { value: 'social', label: 'Social' },
+  { value: 'clothes', label: 'Roupas' },
+  { value: 'furniture', label: 'Móveis' },
+  { value: 'transport', label: 'Transporte' },
+  { value: 'repairs', label: 'Reparos' },
+];
 
 const PREVIEW_POSTS = [
   {
     id: 'preview-need-1',
     user_id: 'preview-migrant-1',
     type: 'need',
-    category: 'reformas',
+    category: 'housing',
     title: 'Procuro hospedagem temporária em Paris',
     description: 'Cheguei recentemente com minha família e precisamos de uma indicação segura de quarto ou acolhimento por alguns dias.',
     images: ['https://images.unsplash.com/photo-1518005020951-eccb494ad742?w=900&q=85'],
@@ -53,7 +58,7 @@ const PREVIEW_POSTS = [
     id: 'preview-offer-1',
     user_id: 'preview-helper-1',
     type: 'offer',
-    category: 'eletrica',
+    category: 'legal',
     title: 'Orientação gratuita para documentação',
     description: 'Sou voluntário e posso ajudar com leitura de cartas administrativas, agendamento e dúvidas sobre regularização.',
     images: ['https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=900&q=85'],
@@ -157,10 +162,9 @@ const PostCard = ({ post, onChat }) => {
             <button
               type="button"
               onClick={() => post.user_id && navigate(`/u/${post.user_id}`)}
-              className="font-bold text-sm mb-1.5 hover:underline text-left inline-flex items-center gap-1"
+              className="font-bold text-sm mb-1.5 hover:underline text-left"
             >
               {displayName}
-              <VerifiedBadge size={14} />
             </button>
             {post.title && <p className="text-xs font-medium text-gray-900 mb-1">{post.title}</p>}
             <p className="text-xs text-gray-800 leading-relaxed">{description}</p>
@@ -218,7 +222,7 @@ const PostCard = ({ post, onChat }) => {
               </p>
             )}
             <p className="text-[10px] text-gray-600 mt-0.5">
-              Categoria: <span className="font-medium">{getCategoryLabel(post.category)}</span>
+              Categoria: <span className="font-medium capitalize">{post.category || 'geral'}</span>
             </p>
           </div>
         </div>
@@ -356,8 +360,7 @@ export default function FeedPage() {
 
   useEffect(() => { detectAddress(); }, [detectAddress]);
   const [postBudget, setPostBudget] = useState('Sob orçamento');
-  const [postCategory, setPostCategory] = useState('reformas');
-  const [customPostCategory, setCustomPostCategory] = useState('');
+  const [postCategory, setPostCategory] = useState('social');
   const [selectedPhotos, setSelectedPhotos] = useState([]); // [{id, dataUrl}]
   const [selectedVideos, setSelectedVideos] = useState([]); // [{id, dataUrl}]
 
@@ -412,7 +415,7 @@ export default function FeedPage() {
         id: p.id,
         user_id: p.user_id,
         type: p.post_type === 'volunteer' ? 'offer' : 'need',
-        category: p.category_slug || 'reformas',
+        category: p.category_slug || 'social',
         title: p.title,
         description: p.description,
         images: p.photos || [],
@@ -439,8 +442,7 @@ export default function FeedPage() {
     setModalMode(mode);
     setPostDescription('');
     setPostBudget(mode === 'need' ? 'Sob orçamento' : 'A combinar');
-    setPostCategory('reformas');
-    setCustomPostCategory('');
+    setPostCategory('social');
     setSelectedPhotos([]);
     setSelectedVideos([]);
     setShowCreateModal(true);
@@ -563,11 +565,6 @@ export default function FeedPage() {
       toast.error('Adicione uma descrição');
       return;
     }
-    const customCategoryName = customPostCategory.trim();
-    if (postCategory === CUSTOM_CATEGORY_VALUE && !customCategoryName) {
-      toast.error('Escreva sua categoria');
-      return;
-    }
     setLoadingPost(true);
     try {
       // Require auth so post is visible to everyone
@@ -583,14 +580,6 @@ export default function FeedPage() {
       // Upload photos and videos to public storage so other users can see them
       const uploadedUrls = await uploadPhotosToStorage(uid, selectedPhotos);
       const uploadedVideos = await uploadVideosToStorage(uid, selectedVideos);
-      let categorySlug = CATEGORY_OPTIONS.some((category) => category.value === postCategory) ? postCategory : 'reformas';
-      if (postCategory === CUSTOM_CATEGORY_VALUE) {
-        const { data: createdSlug, error: categoryError } = await supabase.rpc('ensure_svc_category', {
-          _name: customCategoryName,
-        });
-        if (categoryError) throw categoryError;
-        categorySlug = createdSlug || 'outros';
-      }
 
       const insertPayload = {
         user_id: uid,
@@ -599,7 +588,7 @@ export default function FeedPage() {
         photos: uploadedUrls,
         videos: uploadedVideos,
         budget_range: postBudget || null,
-        category_slug: categorySlug,
+        category_slug: ['limpeza','reformas','jardinagem','mudancas','aulas','cuidados','tecnologia','beleza','transporte','outros'].includes(postCategory) ? postCategory : 'outros',
         address: postAddress || null,
         lat: postCoords?.lat ?? null,
         lng: postCoords?.lng ?? null,
@@ -617,7 +606,6 @@ export default function FeedPage() {
       toast.success(modalMode === 'need' ? 'Sua demanda foi publicada!' : 'Seu serviço foi publicado!');
       setShowCreateModal(false);
       setPostDescription('');
-      setCustomPostCategory('');
       setSelectedPhotos([]);
       setSelectedVideos([]);
       await fetchPosts();
@@ -687,9 +675,9 @@ export default function FeedPage() {
                 <HomeIcon className="w-5 h-5 mb-0.5" />
                 <span className="text-[10px]">Início</span>
               </button>
-              <button onClick={() => navigate('/jobs')} className="flex flex-col items-center text-gray-700 hover:text-gray-900 transition-colors">
-                <Wrench className="w-5 h-5 mb-0.5" />
-                <span className="text-[10px]">Trabalho</span>
+              <button onClick={() => navigate('/volunteers')} className="flex flex-col items-center text-gray-700 hover:text-gray-900 transition-colors">
+                <Users className="w-5 h-5 mb-0.5" />
+                <span className="text-[10px]">Voluntários</span>
               </button>
               <button
                 onClick={() => openModal('need')}
@@ -956,11 +944,12 @@ export default function FeedPage() {
           <span className="text-[11px] text-[#8b5cf6] font-semibold">Accueil</span>
         </button>
 
-        <button onClick={() => navigate('/jobs')} className="flex flex-col items-center gap-0.5 p-1 min-w-[56px] relative" data-testid="nav-jobs">
+        <button onClick={() => navigate('/volunteers')} className="flex flex-col items-center gap-0.5 p-1 min-w-[56px] relative" data-testid="nav-volunteers">
           <div className="relative">
-            <Wrench className="w-6 h-6 text-gray-500" />
+            <Users className="w-6 h-6 text-gray-500" />
+            <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">999+</span>
           </div>
-          <span className="text-[11px] text-gray-600">Trabalho</span>
+          <span className="text-[11px] text-gray-600">Voluntários</span>
         </button>
 
         <button
@@ -1155,18 +1144,7 @@ export default function FeedPage() {
                 {CATEGORY_OPTIONS.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
-                <option value={CUSTOM_CATEGORY_VALUE}>Outra categoria</option>
               </select>
-              {postCategory === CUSTOM_CATEGORY_VALUE && (
-                <Input
-                  value={customPostCategory}
-                  onChange={(e) => setCustomPostCategory(e.target.value)}
-                  placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
-                  maxLength={40}
-                  data-testid="modal-custom-category"
-                  className="mt-3 h-10 text-sm rounded-xl border-gray-300"
-                />
-              )}
             </div>
 
             <Button
@@ -1180,7 +1158,6 @@ export default function FeedPage() {
           </div>
         </DialogContent>
       </Dialog>
-      <SupportChatWidget />
     </div>
   );
 }

@@ -6,8 +6,6 @@ import BottomNav from '../components/BottomNav';
 import { Search, MapPin, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const normalizeText = (value = '') => String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
 export default function ServicesPage() {
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
@@ -21,7 +19,7 @@ export default function ServicesPage() {
       setLoading(true);
       const [{ data: cats }, { data: svc, error }] = await Promise.all([
         supabase.from('svc_categories').select('slug, name').order('sort_order'),
-        supabase.from('svc_posts').select('*').eq('status', 'open').eq('post_type', 'volunteer').order('created_at', { ascending: false }).limit(500),
+        supabase.from('svc_posts').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(100),
       ]);
       if (error) console.warn('svc_posts fetch error', error);
       setCategories([
@@ -34,17 +32,17 @@ export default function ServicesPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    const term = normalizeText(searchTerm.trim());
+    const term = searchTerm.trim().toLowerCase();
     return posts.filter((p) => {
       if (category !== 'all' && (p.category_slug || 'outros') !== category) return false;
       if (!term) return true;
-      const label = categoryLabel(p.category_slug || 'outros');
-      const searchable = normalizeText(`${p.title || ''} ${p.description || ''} ${p.address || ''} ${p.budget_range || ''} ${p.category_slug || ''} ${label}`);
       return (
-        searchable.includes(term)
+        (p.title || '').toLowerCase().includes(term) ||
+        (p.description || '').toLowerCase().includes(term) ||
+        (p.address || '').toLowerCase().includes(term)
       );
     });
-  }, [posts, searchTerm, category, categories]);
+  }, [posts, searchTerm, category]);
 
   const categoryLabel = (slug) => categories.find((c) => c.value === slug)?.label || slug;
 

@@ -10,8 +10,6 @@ import BottomNav from '../components/BottomNav';
 import AuthModal from '../components/AuthModal';
 import { Briefcase, Check, Sparkles, Star, Plus, MapPin, Image as ImageIcon, X, Crown, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES } from '../lib/serviceCategories';
 
 const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80',
@@ -19,17 +17,16 @@ const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1573497491208-6b1acb260507?w=1200&q=80',
 ];
 
-const CATEGORY_COLORS = ['from-orange-400 to-orange-600', 'from-rose-400 to-rose-600', 'from-yellow-400 to-yellow-600', 'from-cyan-400 to-cyan-600', 'from-amber-500 to-amber-700', 'from-stone-400 to-stone-600', 'from-blue-400 to-blue-600', 'from-green-400 to-green-600', 'from-red-400 to-red-600', 'from-slate-400 to-slate-600', 'from-emerald-400 to-emerald-600'];
-
-const SERVICE_CATEGORIES = WORK_SERVICE_CATEGORIES.map((cat, index) => ({
-  ...cat,
-  color: CATEGORY_COLORS[index] || 'from-gray-400 to-gray-600',
-}));
-
-const normalizeCategorySlug = (slug) => {
-  if (slug === 'reforma') return 'reformas';
-  return SERVICE_CATEGORIES.some((cat) => cat.value === slug) ? slug : 'outros';
-};
+const SERVICE_CATEGORIES = [
+  { value: 'reforma', label: 'Reformas', icon: '🔨', color: 'from-orange-400 to-orange-600' },
+  { value: 'limpeza', label: 'Limpeza', icon: '🧹', color: 'from-blue-400 to-blue-600' },
+  { value: 'jardinagem', label: 'Jardinagem', icon: '🌱', color: 'from-green-400 to-green-600' },
+  { value: 'eletrica', label: 'Elétrica', icon: '💡', color: 'from-yellow-400 to-yellow-600' },
+  { value: 'hidraulica', label: 'Hidráulica', icon: '🚰', color: 'from-cyan-400 to-cyan-600' },
+  { value: 'aulas', label: 'Aulas', icon: '📚', color: 'from-purple-400 to-purple-600' },
+  { value: 'transporte', label: 'Transporte', icon: '🚗', color: 'from-red-400 to-red-600' },
+  { value: 'beleza', label: 'Beleza', icon: '💇', color: 'from-pink-400 to-pink-600' },
+];
 
 const PLANS = [
   {
@@ -53,15 +50,13 @@ const PLANS = [
     id: 'premier',
     name: 'Premier',
     price: 'R$ 29,90',
-    sub: '/mês • 3 dias grátis • sem compromisso',
+    sub: '/mês • sem compromisso',
     color: 'from-orange-400 to-red-500',
     badge: 'Mais popular',
-    cta: 'Começar 3 dias grátis',
-    highlight: '🎁 3 dias grátis + 1 mês sem compromisso',
+    cta: 'Assinar Premier',
     features: [
       'Tudo do Standard',
-      '✨ Receba ofertas de emprego ilimitadas',
-      '✨ Publique pedidos de serviço ilimitados',
+      'Prestação de serviço ilimitada',
       'Telefone visível no perfil',
       '50 fotos das suas realizações',
       'Remover perfis similares',
@@ -87,7 +82,6 @@ export default function OfferServicesPage() {
     description: '',
     price: '',
     categories: [],
-    customCategory: '',
     location: null,
     images: [],
   });
@@ -108,7 +102,9 @@ export default function OfferServicesPage() {
   const toggleOfferCategory = (category) => {
     setServiceOffer((prev) => ({
       ...prev,
-      categories: prev.categories.includes(category) ? [] : [category],
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter((c) => c !== category)
+        : [...prev.categories, category],
     }));
   };
 
@@ -148,7 +144,7 @@ export default function OfferServicesPage() {
   };
 
   const submitOffer = async () => {
-    if (!token || !user?.id) {
+    if (!token) {
       setShowOfferModal(false);
       setAuthOpen(true);
       return;
@@ -157,71 +153,38 @@ export default function OfferServicesPage() {
       toast.error('Preencha título e descrição');
       return;
     }
-    const selectedCategory = serviceOffer.categories[0];
-    const customCategoryName = serviceOffer.customCategory?.trim();
-    if (!selectedCategory) {
+    if (serviceOffer.categories.length === 0) {
       toast.error('Selecione pelo menos uma categoria');
       return;
     }
-    if (selectedCategory === CUSTOM_CATEGORY_VALUE && !customCategoryName) {
-      toast.error('Escreva sua categoria');
-      return;
-    }
     try {
-      // Upload base64 images to storage bucket
-      const photoUrls = [];
-      for (let i = 0; i < serviceOffer.images.length; i++) {
-        const dataUrl = serviceOffer.images[i];
-        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
-          if (typeof dataUrl === 'string') photoUrls.push(dataUrl);
-          continue;
+      const resp = await fetch(
+        `${import.meta.env.VITE_REACT_APP_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || ''}/api/posts`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'offer',
+            category: serviceOffer.categories[0],
+            categories: serviceOffer.categories,
+            title: serviceOffer.title,
+            description: serviceOffer.description,
+            price: serviceOffer.price,
+            images: serviceOffer.images,
+            location: serviceOffer.location,
+          }),
         }
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];
-        const path = `${user.id}/offer-${Date.now()}-${i}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('svc-photos').upload(path, blob, {
-          contentType: blob.type,
-          upsert: false,
-        });
-        if (upErr) throw upErr;
-        const { data: pub } = supabase.storage.from('svc-photos').getPublicUrl(path);
-        photoUrls.push(pub.publicUrl);
+      );
+      if (resp.ok) {
+        toast.success('Serviço publicado!');
+        setShowOfferModal(false);
+        setServiceOffer({ title: '', description: '', price: '', categories: [], location: null, images: [] });
+        navigate('/home');
+      } else {
+        toast.error('Erro ao publicar');
       }
-
-      let categorySlug = normalizeCategorySlug(selectedCategory);
-      if (selectedCategory === CUSTOM_CATEGORY_VALUE) {
-        const { data: createdSlug, error: categoryError } = await supabase.rpc('ensure_svc_category', {
-          _name: customCategoryName,
-        });
-        if (categoryError) throw categoryError;
-        categorySlug = createdSlug || 'outros';
-      }
-
-      const payload = {
-        user_id: user.id,
-        title: serviceOffer.title,
-        description: serviceOffer.description + (serviceOffer.price ? `\n\nPreço: ${serviceOffer.price}` : ''),
-        post_type: 'volunteer', // offer of service
-        status: 'open',
-        category_slug: categorySlug,
-        photos: photoUrls,
-        lat: serviceOffer.location?.lat ?? null,
-        lng: serviceOffer.location?.lng ?? null,
-        address: serviceOffer.location?.address ?? null,
-        budget_range: serviceOffer.price || null,
-      };
-
-      const { error } = await supabase.from('svc_posts').insert(payload);
-      if (error) throw error;
-
-      toast.success('Serviço publicado!');
-      setShowOfferModal(false);
-      setServiceOffer({ title: '', description: '', price: '', categories: [], customCategory: '', location: null, images: [] });
-      navigate('/home');
-    } catch (e) {
-      console.error('submitOffer error', e);
-      toast.error(e?.message || 'Erro ao publicar');
+    } catch {
+      toast.error('Erro ao publicar');
     }
   };
 
@@ -326,9 +289,6 @@ export default function OfferServicesPage() {
           <div className="text-center mb-6">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Escolha seu plano</h2>
             <p className="text-gray-500">Comece grátis ou destaque-se com o Premier</p>
-            <div className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 text-xs font-semibold border border-orange-200">
-              🎁 3 dias grátis no Premier — depois 1 mês sem compromisso, cancele quando quiser
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -338,11 +298,11 @@ export default function OfferServicesPage() {
                 <div
                   key={plan.id}
                   className={`relative rounded-2xl p-6 border-2 transition-all hover:shadow-xl ${
-                    isPremier ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-red-50 shadow-lg scale-[1.02]' : 'border-gray-200 bg-white'
+                    isPremier ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-red-50' : 'border-gray-200 bg-white'
                   }`}
                 >
                   {plan.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
                       <Crown size={12} /> {plan.badge}
                     </div>
                   )}
@@ -354,15 +314,10 @@ export default function OfferServicesPage() {
                     )}
                     <h3 className={`text-2xl font-bold ${isPremier ? 'text-orange-600' : 'text-gray-900'}`}>{plan.name}</h3>
                   </div>
-                  <div className="mb-3">
+                  <div className="mb-4">
                     <span className={`text-3xl font-bold ${isPremier ? 'text-orange-600' : 'text-gray-900'}`}>{plan.price}</span>
                     <span className="text-sm text-gray-500 ml-1">{plan.sub}</span>
                   </div>
-                  {plan.highlight && (
-                    <div className="mb-4 px-3 py-2 rounded-lg bg-white/70 border border-orange-200 text-xs font-semibold text-orange-700 text-center">
-                      {plan.highlight}
-                    </div>
-                  )}
                   <ul className="space-y-2 mb-6">
                     {plan.features.map((f, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
@@ -375,15 +330,12 @@ export default function OfferServicesPage() {
                     onClick={() => handlePlanClick(plan.id)}
                     className={`w-full rounded-full h-11 ${
                       isPremier
-                        ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-md'
+                        ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'
                         : 'bg-gray-900 hover:bg-gray-800 text-white'
                     }`}
                   >
                     {plan.cta}
                   </Button>
-                  {isPremier && (
-                    <p className="text-[11px] text-orange-700/80 mt-2 text-center">Sem cobrança nos primeiros 3 dias</p>
-                  )}
                 </div>
               );
             })}
@@ -437,13 +389,12 @@ export default function OfferServicesPage() {
               <Label className="text-sm font-bold mb-2 block">📂 Categorias</Label>
               <div className="grid grid-cols-4 gap-2">
                 {SERVICE_CATEGORIES.map((cat) => {
-                  const categoryValue = cat.value === 'outros' ? CUSTOM_CATEGORY_VALUE : cat.value;
-                  const sel = serviceOffer.categories.includes(categoryValue);
+                  const sel = serviceOffer.categories.includes(cat.value);
                   return (
                     <button
                       key={cat.value}
                       type="button"
-                      onClick={() => toggleOfferCategory(categoryValue)}
+                      onClick={() => toggleOfferCategory(cat.value)}
                       className={`p-2 rounded-xl border text-xs ${
                         sel ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white'
                       }`}
@@ -454,15 +405,6 @@ export default function OfferServicesPage() {
                   );
                 })}
               </div>
-              {serviceOffer.categories.includes(CUSTOM_CATEGORY_VALUE) && (
-                <Input
-                  value={serviceOffer.customCategory}
-                  onChange={(e) => setServiceOffer({ ...serviceOffer, customCategory: e.target.value })}
-                  placeholder="Escreva sua categoria. Ex: soldador, confeiteiro"
-                  maxLength={40}
-                  className="mt-3 rounded-xl bg-white"
-                />
-              )}
             </div>
 
             <div className="flex gap-2">

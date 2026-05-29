@@ -13,17 +13,7 @@ import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './go
  * Os pedidos de ajuda só serão retornados pelo Supabase para usuários com
  * permissão (voluntários/admin) por causa das RLS policies já existentes.
  */
-const distanceKm = (a, b) => {
-  if (a?.lat == null || a?.lng == null || b?.lat == null || b?.lng == null) return null;
-  const R = 6371;
-  const toRad = (x) => (x * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-};
-
-export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = [], radiusKm = 0, userLocation = null }) {
+export default function ServicesMap({ height = 400, showHelpRequests = true }) {
   const apiKey = getGoogleMapsBrowserKey();
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -48,29 +38,17 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
           .not('lng', 'is', null)
           .limit(200),
         showHelpRequests
-          ? (() => {
-              let query = supabase
-                .from('svc_posts')
-                .select('id, title, description, lat, lng, post_type, address, category_slug, status')
-                .eq('status', 'open')
-                .not('lat', 'is', null)
-                .not('lng', 'is', null)
-                .limit(200);
-              if (postTypeFilter === 'needs') query = query.neq('post_type', 'volunteer');
-              if (postTypeFilter === 'offers') query = query.eq('post_type', 'volunteer');
-              return query;
-            })()
+          ? supabase
+              .from('svc_posts')
+              .select('id, title, description, lat, lng, post_type, address')
+              .neq('post_type', 'volunteer')
+              .not('lat', 'is', null)
+              .not('lng', 'is', null)
+              .limit(200)
           : Promise.resolve({ data: [] }),
       ]);
       setHelpers(profs || []);
-      const selectedCategories = (categories || []).filter(Boolean);
-      const filteredRequests = (reqRes.data || []).filter((request) => {
-        if (selectedCategories.length && !selectedCategories.includes(request.category_slug)) return false;
-        const distance = distanceKm(userLocation, request);
-        if (distance != null && radiusKm > 0) return distance <= radiusKm;
-        return true;
-      });
-      setRequests(filteredRequests);
+      setRequests(reqRes.data || []);
       setLoading(false);
     })();
 
@@ -80,7 +58,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
         () => {}
       );
     }
-  }, [showHelpRequests, postTypeFilter, categories, radiusKm, userLocation?.lat, userLocation?.lng]);
+  }, [showHelpRequests]);
 
   const center = useMemo(() => {
     if (userLoc) return userLoc;
