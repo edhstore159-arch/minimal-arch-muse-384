@@ -4,12 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video, UserPlus, UserMinus, X } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import MiniGoogleMap from '../components/MiniGoogleMap';
 import VerifiedBadge from '../components/VerifiedBadge';
-import { isFriend, addFriend, removeFriend } from '../lib/friends';
-import ProfileStories from '../components/ProfileStories';
 
 const TABS = [
   { id: 'presentation', label: 'Apresentação' },
@@ -25,32 +23,6 @@ export default function PublicProfilePage() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('presentation');
-  const [me, setMe] = useState(null);
-  const [friend, setFriend] = useState(false);
-  const [lightbox, setLightbox] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setMe(data?.user || null));
-  }, []);
-
-  useEffect(() => {
-    setFriend(isFriend(me?.id, userId));
-    const onChange = () => setFriend(isFriend(me?.id, userId));
-    window.addEventListener('svc:friends-change', onChange);
-    return () => window.removeEventListener('svc:friends-change', onChange);
-  }, [me?.id, userId]);
-
-  const toggleFriend = () => {
-    if (!me?.id) { toast.error('Faça login para adicionar amigos.'); return; }
-    if (me.id === userId) { toast.error('Você não pode adicionar a si mesmo.'); return; }
-    if (friend) {
-      removeFriend(me.id, userId);
-      toast.success('Amizade desfeita.');
-    } else {
-      addFriend(me.id, { user_id: userId, display_name: profile?.display_name, avatar_url: profile?.avatar_url });
-      toast.success('Amigo adicionado!');
-    }
-  };
 
   useEffect(() => {
     (async () => {
@@ -138,41 +110,27 @@ export default function PublicProfilePage() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:self-end">
               <Button
-                onClick={toggleFriend}
-                variant={friend ? 'outline' : 'default'}
-                className={friend ? '' : 'bg-primary hover:bg-primary/90'}
-              >
-                {friend ? (
-                  <><UserMinus className="w-4 h-4 mr-1.5" /> Desfazer amizade</>
-                ) : (
-                  <><UserPlus className="w-4 h-4 mr-1.5" /> Adicionar amigo</>
-                )}
-              </Button>
-              <Button
                 onClick={() => navigate(`/servicos/chat?userId=${userId}`)}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <MessageCircle className="w-4 h-4 mr-1.5" /> Enviar mensagem
               </Button>
-              <Button variant="outline" onClick={() => ringUser('audio')} title="Ligar">
+              <Button
+                variant="outline"
+                onClick={() => ringUser('audio')}
+                title="Ligar"
+              >
                 <Phone className="w-4 h-4 mr-1.5" /> Ligar
               </Button>
-              <Button variant="outline" onClick={() => ringUser('video')} title="Chamada de vídeo">
+              <Button
+                variant="outline"
+                onClick={() => ringUser('video')}
+                title="Chamada de vídeo"
+              >
                 <Video className="w-4 h-4 mr-1.5" /> Vídeo
               </Button>
             </div>
           </div>
-
-          {/* Stories e Ao vivo (visível para o dono do perfil) */}
-          {me?.id === userId && (
-            <>
-              <div className="px-4 sm:px-8 pt-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Stories e Ao vivo</h3>
-                <span className="text-xs text-gray-500">Toque em <b>+</b> para publicar ou <b>Ao vivo</b> para transmitir</span>
-              </div>
-              <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
-            </>
-          )}
 
           {/* Tabs */}
           <div className="border-t border-gray-100">
@@ -250,23 +208,9 @@ export default function PublicProfilePage() {
             allPhotos.length === 0 ? (
               <Card className="p-8 text-center text-sm text-gray-500">Nenhuma foto publicada.</Card>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {allPhotos.map((url, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setLightbox(url)}
-                    className="group relative w-full aspect-square overflow-hidden rounded-lg ring-1 ring-black/5 bg-gray-100"
-                  >
-                    <img
-                      src={url}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-                      style={{ imageRendering: 'auto' }}
-                    />
-                  </button>
+                  <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-md" />
                 ))}
               </div>
             )
@@ -298,27 +242,6 @@ export default function PublicProfilePage() {
           )}
         </div>
       </main>
-
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
-        >
-          <button
-            className="absolute top-4 right-4 text-white p-2 rounded-full bg-white/10 hover:bg-white/20"
-            onClick={() => setLightbox(null)}
-            aria-label="Fechar"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <img
-            src={lightbox}
-            alt=""
-            className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
-            decoding="async"
-          />
-        </div>
-      )}
     </div>
   );
 }

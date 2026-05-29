@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Loader2, ExternalLink } from 'lucide-react';
-import { modernMapStyle, pinIcon, dotIcon, jobPinIcon } from './mapStyle';
+import { MapPin, Loader2 } from 'lucide-react';
+import { modernMapStyle, pinIcon, dotIcon } from './mapStyle';
 import { getGoogleMapsBrowserKey, getGoogleMapsChannel, MapFallback } from './googleMapsConfig';
-import { createPlatformSearchJobs, getPrimarySearchTerm, readLastJobSearch } from '../lib/jobSearchBridge';
 
 /**
  * Mapa com:
@@ -24,37 +23,7 @@ const distanceKm = (a, b) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
-const hasCoords = (point) => Number.isFinite(Number(point?.lat)) && Number.isFinite(Number(point?.lng));
-const EMPTY_CATEGORIES = [];
-
-const buildSearchJobMarkers = ({ userId, categories, userLocation, requests, enabled }) => {
-  if (!enabled) return [];
-  const lastSearch = readLastJobSearch(userId);
-  const category = (categories || []).find(Boolean) || lastSearch?.category || 'outros';
-  const query = lastSearch?.query || getPrimarySearchTerm(category);
-  const location = lastSearch?.location || 'Brasil';
-  const sourceJobs = lastSearch?.jobs?.length ? lastSearch.jobs : createPlatformSearchJobs(query, location, 'map');
-  const base = hasCoords(userLocation)
-    ? { lat: Number(userLocation.lat), lng: Number(userLocation.lng) }
-    : requests.find(hasCoords) || { lat: -23.5505, lng: -46.6333 };
-
-  return sourceJobs.slice(0, 8).map((job, index) => {
-    const angle = (Math.PI * 2 * index) / Math.min(sourceJobs.length, 8);
-    const ring = 0.012 + (index % 3) * 0.006;
-    return {
-      ...job,
-      id: `search-${job.id || index}`,
-      lat: base.lat + Math.sin(angle) * ring,
-      lng: base.lng + Math.cos(angle) * ring,
-      post_type: 'external_job',
-      category_slug: category,
-      address: job.location || location,
-      isSearchJob: true,
-    };
-  });
-};
-
-export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = EMPTY_CATEGORIES, radiusKm = 0, userLocation = null, userId = null, showSearchJobs = true }) {
+export default function ServicesMap({ height = 400, showHelpRequests = true, postTypeFilter = 'needs', categories = [], radiusKm = 0, userLocation = null }) {
   const apiKey = getGoogleMapsBrowserKey();
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -64,11 +33,9 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
   });
   const [helpers, setHelpers] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [searchJobs, setSearchJobs] = useState([]);
   const [userLoc, setUserLoc] = useState(null);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
-  const categoriesKey = (categories || []).filter(Boolean).join('|');
 
   useEffect(() => {
     (async () => {
@@ -104,13 +71,6 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
         return true;
       });
       setRequests(filteredRequests);
-      setSearchJobs(buildSearchJobMarkers({
-        userId,
-        categories: selectedCategories,
-        userLocation,
-        requests: filteredRequests,
-        enabled: showSearchJobs && postTypeFilter === 'offers',
-      }));
       setLoading(false);
     })();
 
@@ -120,15 +80,14 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
         () => {}
       );
     }
-  }, [showHelpRequests, postTypeFilter, categoriesKey, radiusKm, userLocation?.lat, userLocation?.lng, userId, showSearchJobs]);
+  }, [showHelpRequests, postTypeFilter, categories, radiusKm, userLocation?.lat, userLocation?.lng]);
 
   const center = useMemo(() => {
     if (userLoc) return userLoc;
-    if (searchJobs[0]?.lat) return { lat: searchJobs[0].lat, lng: searchJobs[0].lng };
     if (helpers[0]?.lat) return { lat: helpers[0].lat, lng: helpers[0].lng };
     if (requests[0]?.lat) return { lat: requests[0].lat, lng: requests[0].lng };
     return { lat: 48.8566, lng: 2.3522 };
-  }, [userLoc, searchJobs, helpers, requests]);
+  }, [userLoc, helpers, requests]);
 
   if (!apiKey || loadError) {
     return <MapFallback height={height} />;
@@ -169,27 +128,13 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
             />
           ))}
 
-          {requests.map((r) => {
-            const isOffer = r.post_type === 'volunteer';
-            return (
+          {requests.map((r) => (
             <Marker
               key={`r-${r.id}`}
               position={{ lat: r.lat, lng: r.lng }}
-              icon={{ url: isOffer ? jobPinIcon('#f59e0b', '🛠️') : pinIcon('#ef4444') }}
+              icon={{ url: pinIcon('#ef4444') }}
               title={r.title}
               onClick={() => setSelected({ type: 'request', data: r })}
-            />
-            );
-          })}
-
-          {searchJobs.map((job) => (
-            <Marker
-              key={`job-${job.id}`}
-              position={{ lat: job.lat, lng: job.lng }}
-              icon={{ url: jobPinIcon('#2563eb', '💼') }}
-              title={job.title}
-              animation={window.google?.maps?.Animation?.DROP}
-              onClick={() => setSelected({ type: 'searchJob', data: job })}
             />
           ))}
 
@@ -206,29 +151,9 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
                       {selected.data.role === 'volunteer' ? 'Voluntário' : 'Prestador'}
                     </p>
                   </>
-                ) : selected.type === 'searchJob' ? (
-                  <>
-                    <p className="font-semibold text-sm flex items-center gap-1">💼 {selected.data.title}</p>
-                    <p className="text-xs text-gray-500">Busca do emprego · {selected.data.company}</p>
-                    {selected.data.address && (
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                        <MapPin size={10} /> {selected.data.address}
-                      </p>
-                    )}
-                    {selected.data.url && (
-                      <button
-                        type="button"
-                        onClick={() => window.open(selected.data.url, '_blank')}
-                        className="mt-2 inline-flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white"
-                      >
-                        <ExternalLink size={10} /> Abrir vaga
-                      </button>
-                    )}
-                  </>
                 ) : (
                   <>
                     <p className="font-semibold text-sm">{selected.data.title}</p>
-                    <p className="text-xs text-gray-500">{selected.data.post_type === 'volunteer' ? 'Proposta de emprego' : 'Pedido de ajuda'}</p>
                     {selected.data.address && (
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <MapPin size={10} /> {selected.data.address}
@@ -245,10 +170,7 @@ export default function ServicesMap({ height = 400, showHelpRequests = true, pos
       <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md rounded-full px-4 py-2 text-xs shadow-lg ring-1 ring-black/5 flex items-center gap-4 font-medium">
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100" /> Voluntários</span>
         {showHelpRequests && (
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" /> {postTypeFilter === 'offers' ? 'Propostas' : 'Pedidos'}</span>
-        )}
-        {searchJobs.length > 0 && (
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-blue-100 animate-pulse" /> Vagas buscadas</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-100" /> Pedidos</span>
         )}
         {userLoc && (
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-blue-100" /> Você</span>

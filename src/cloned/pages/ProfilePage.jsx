@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import BottomNav from '../components/BottomNav';
-import { User, Mail, Globe, LogOut, Edit, Check, Heart, MapPin, Shield, Sparkles, Camera, HandHeart, ArrowRight, Image as ImageIcon, Wand2, Loader2, Briefcase } from 'lucide-react';
+import { User, Mail, Globe, LogOut, Edit, Check, Heart, MapPin, Shield, Sparkles, Camera, HandHeart, ArrowRight, Image as ImageIcon, Wand2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -13,17 +13,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { getOrCreateSvcProfile, updateSvcProfile } from '../lib/authProfile';
 import ServicesMap from '../components/ServicesMap';
 import VerifiedBadge from '../components/VerifiedBadge';
-import ProfileStories from '../components/ProfileStories';
 import { CUSTOM_CATEGORY_VALUE, WORK_SERVICE_CATEGORIES, getWorkCategoryInfo } from '../lib/serviceCategories';
-import { useUserLocation } from '../lib/userLocation';
 
 const HELP_CATEGORIES = WORK_SERVICE_CATEGORIES;
 
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useContext(AuthContext);
-  const { location: sharedLocation, setManualLocation, refreshAuto } = useUserLocation();
-  const [locInput, setLocInput] = useState('');
-  const [locatingShared, setLocatingShared] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -47,18 +42,11 @@ export default function ProfilePage() {
   const coverInputRef = useRef(null);
   const photoInputRef = useRef(null);
   const [helpRequests, setHelpRequests] = useState([]);
-  const [requestedCategories, setRequestedCategories] = useState([]);
   const [radiusKm, setRadiusKm] = useState(() => {
     const v = parseInt(localStorage.getItem('svc_radius_km') || '25', 10);
     return Number.isFinite(v) ? v : 25;
   });
-  const serviceRole = user?.service_role || user?.role;
-  const isVolunteer = serviceRole === 'volunteer' || serviceRole === 'helper';
-  const profilePostTypeFilter = isVolunteer ? 'needs' : 'offers';
-  const interestCategories = React.useMemo(
-    () => Array.from(new Set([...(selectedCategories || []), ...(requestedCategories || [])])).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE),
-    [selectedCategories, requestedCategories]
-  );
+  const isVolunteer = user?.role === 'volunteer' || user?.role === 'helper' || user?.role === 'admin';
 
   const avatarSrc = avatarOverride || user?.avatar_url;
   const coverSrc = coverOverride || user?.cover_url;
@@ -119,7 +107,7 @@ export default function ProfilePage() {
 
   const fetchHelpRequests = React.useCallback(async () => {
     if (!user?.id) return;
-    const cats = interestCategories;
+    const cats = (selectedCategories || []).filter((c) => c && c !== CUSTOM_CATEGORY_VALUE);
     if (cats.length === 0) { setHelpRequests([]); return; }
     let query = supabase
       .from('svc_posts')
@@ -127,7 +115,6 @@ export default function ProfilePage() {
       .eq('status', 'open')
       .order('created_at', { ascending: false })
       .limit(80);
-    query = isVolunteer ? query.neq('post_type', 'volunteer') : query.eq('post_type', 'volunteer');
     query = query.in('category_slug', cats);
     const { data, error } = await query;
     if (error) {
@@ -153,28 +140,11 @@ export default function ProfilePage() {
     }
     const selected = new Set(cats);
     setHelpRequests(rows.filter((p) => selected.has(p.category_slug)));
-  }, [user?.id, user?.lat, user?.lng, interestCategories, radiusKm, isVolunteer]);
+  }, [user?.id, user?.lat, user?.lng, selectedCategories, radiusKm]);
 
   useEffect(() => {
     fetchHelpRequests();
   }, [fetchHelpRequests]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      const { data, error } = await supabase
-        .from('svc_posts')
-        .select('category_slug')
-        .eq('user_id', user.id)
-        .neq('post_type', 'volunteer')
-        .eq('status', 'open');
-      if (error) {
-        console.warn('user requested categories fetch error', error);
-        return;
-      }
-      setRequestedCategories(Array.from(new Set((data || []).map((p) => p.category_slug).filter(Boolean))));
-    })();
-  }, [user?.id]);
 
   // Realtime: refresh when new job posts appear
   useEffect(() => {
@@ -472,7 +442,7 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-5">
               {/* Avatar grande com online dot */}
               <div className="relative flex-shrink-0">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full ring-4 ring-white shadow-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
+                <div className="w-32 h-32 rounded-full ring-4 ring-white shadow-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
                   {avatarSrc ? (
                     <img key={avatarSrc} src={avatarSrc} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -483,7 +453,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={uploadingAvatar}
-                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary rounded-full shadow-lg flex items-center justify-center border-2 border-white hover:bg-primary/90 transition disabled:opacity-60"
+                  className="absolute -bottom-1 -right-1 w-10 h-10 bg-primary rounded-full shadow-lg flex items-center justify-center border-2 border-white hover:bg-primary/90 transition disabled:opacity-60"
                   title="Alterar foto de perfil"
                   data-testid="change-avatar-btn"
                 >
@@ -574,13 +544,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Stories + Live (estilo Instagram) */}
-          <div className="px-6 sm:px-10 pt-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-textPrimary uppercase tracking-wide">Stories e Ao vivo</h3>
-            <span className="text-xs text-textMuted">Toque em <b>+</b> para publicar ou <b>Ao vivo</b> para transmitir</span>
-          </div>
-          <ProfileStories avatarSrc={avatarSrc} userName={user?.display_name || user?.name || 'Você'} />
-
           {/* Tabs */}
           <div className="border-t border-gray-100 px-6 sm:px-10">
             <div className="flex gap-8 -mb-px overflow-x-auto">
@@ -612,12 +575,11 @@ export default function ProfilePage() {
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <h3 className="font-bold text-textPrimary flex items-center gap-2 text-lg">
-                  {isVolunteer ? <HandHeart size={22} className="text-rose-500" /> : <Briefcase size={22} className="text-rose-500" />}
-                  {isVolunteer ? 'Pedidos próximos para ajudar' : 'Propostas de emprego do seu interesse'}
-                  {!isVolunteer && <span className="inline-block animate-bounce">💼</span>}
+                  <HandHeart size={22} className="text-rose-500" />
+                  Propostas do seu interesse
                 </h3>
                 <p className="text-xs text-textMuted mt-1">
-                  {helpRequests.length} {isVolunteer ? 'pedido' : 'proposta'}{helpRequests.length !== 1 ? 's' : ''} · mapa conectado ao buscador por categoria e localização
+                  {helpRequests.length} proposta{helpRequests.length !== 1 ? 's' : ''} · filtradas pelas categorias escolhidas no perfil e com localização
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">
@@ -710,11 +672,9 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="font-semibold text-textPrimary text-sm truncate flex items-center gap-1">
-                              {p.title} {isOffer && <VerifiedBadge size={14} title="Proposta verificada" />}
-                            </p>
+                            <p className="font-semibold text-textPrimary text-sm truncate">{p.title}</p>
                             <span className="text-[10px] uppercase tracking-wide text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              <span className="inline-block animate-pulse">{isOffer ? '💼' : '🤝'}</span> {isOffer ? 'Oferta' : 'Pedido'} · {info.label}
+                              {isOffer ? 'Oferta' : 'Pedido'} · {info.label}
                             </span>
                           </div>
                           {p.description && (
@@ -734,62 +694,12 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-8 text-sm text-textMuted bg-white/60 rounded-2xl">
                 <HandHeart size={32} className="mx-auto mb-2 text-rose-300" />
-                {isVolunteer ? 'Nenhum pedido encontrado para suas categorias.' : 'Nenhuma proposta de emprego encontrada para as categorias que você solicitou.'}
+                Nenhuma proposta da sua categoria no momento.
               </div>
             )}
 
-            <div className="mt-5 mb-3 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              <div className="flex-1 flex items-center gap-2 bg-white rounded-full border border-gray-200 px-3 py-1.5">
-                <MapPin size={16} className="text-primary" />
-                <Input
-                  value={locInput}
-                  onChange={(e) => setLocInput(e.target.value)}
-                  placeholder={sharedLocation?.address || 'Digite endereço ou "lat,lng"'}
-                  className="border-0 focus-visible:ring-0 h-8 px-0 text-sm"
-                />
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  const v = locInput.trim();
-                  if (!v) return;
-                  const m = v.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-                  if (m) {
-                    setManualLocation({ lat: parseFloat(m[1]), lng: parseFloat(m[2]), source: 'manual' });
-                    toast.success('📍 Localização atualizada');
-                  } else {
-                    try {
-                      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(v)}`);
-                      const d = await r.json();
-                      if (d?.[0]) {
-                        setManualLocation({ lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), address: d[0].display_name, source: 'manual' });
-                        toast.success(`📍 ${d[0].display_name}`);
-                      } else toast.error('Endereço não encontrado');
-                    } catch { toast.error('Falha ao buscar endereço'); }
-                  }
-                }}
-                className="rounded-full"
-              >
-                Salvar
-              </Button>
-              <Button
-                size="sm"
-                onClick={async () => {
-                  setLocatingShared(true);
-                  const loc = await refreshAuto({ forceBrowser: true, silent: false });
-                  setLocatingShared(false);
-                  if (loc) toast.success('📍 Localização do celular atualizada');
-                  else toast.error('Não foi possível obter localização');
-                }}
-                disabled={locatingShared}
-                className="rounded-full bg-primary hover:bg-primary/90"
-              >
-                {locatingShared ? <Loader2 size={14} className="animate-spin" /> : 'Usar GPS'}
-              </Button>
-            </div>
-            <div className="mt-2">
-              <ServicesMap height={320} showHelpRequests={true} postTypeFilter={profilePostTypeFilter} categories={interestCategories} radiusKm={radiusKm} userLocation={sharedLocation || { lat: user?.lat, lng: user?.lng }} userId={user?.id} showSearchJobs={!isVolunteer} />
+            <div className="mt-5">
+              <ServicesMap height={320} showHelpRequests={true} postTypeFilter="all" categories={selectedCategories} radiusKm={radiusKm} userLocation={{ lat: user?.lat, lng: user?.lng }} />
             </div>
           </div>
 

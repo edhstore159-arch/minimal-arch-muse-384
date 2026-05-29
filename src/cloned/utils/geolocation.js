@@ -6,53 +6,19 @@ import { toast } from 'sonner';
  */
 export const getIpLocation = async () => {
   try {
-    const providers = [
-      async () => {
-        const res = await fetch('https://ipapi.co/json/');
-        if (!res.ok) throw new Error('ipapi failed');
-        const data = await res.json();
-        return {
-          lat: data.latitude,
-          lng: data.longitude,
-          city: data.city,
-          region: data.region,
-          country: data.country_name,
-        };
-      },
-      async () => {
-        const res = await fetch('https://ipwho.is/?fields=success,city,region,country,latitude,longitude');
-        if (!res.ok) throw new Error('ipwho failed');
-        const data = await res.json();
-        if (data.success === false) throw new Error('ipwho unsuccessful');
-        return {
-          lat: data.latitude,
-          lng: data.longitude,
-          city: data.city,
-          region: data.region,
-          country: data.country,
-        };
-      },
-    ];
-
-    for (const provider of providers) {
-      try {
-        const data = await provider();
-        if (typeof data.lat !== 'number' || typeof data.lng !== 'number') continue;
-        return {
-          lat: data.lat,
-          lng: data.lng,
-          accuracy: 50000, // cidade
-          city: data.city || '',
-          region: data.region || '',
-          country: data.country || '',
-          address: [data.city, data.region, data.country].filter(Boolean).join(', '),
-          source: 'ip',
-        };
-      } catch (_) {
-        /* tenta próximo provedor */
-      }
+    const res = await fetch('https://ipapi.co/json/');
+    if (!res.ok) throw new Error('ipapi failed');
+    const data = await res.json();
+    if (typeof data.latitude !== 'number' || typeof data.longitude !== 'number') {
+      throw new Error('no coords');
     }
-    throw new Error('no ip provider coords');
+    return {
+      lat: data.latitude,
+      lng: data.longitude,
+      accuracy: 50000, // cidade
+      address: [data.city, data.region, data.country_name].filter(Boolean).join(', '),
+      source: 'ip',
+    };
   } catch (e) {
     console.log('IP geolocation falhou:', e);
     return null;
@@ -108,10 +74,6 @@ export const requestLocationPermission = async (options = {}) => {
             );
             const d = await r.json();
             if (d?.display_name) location.address = d.display_name;
-            const a = d?.address || {};
-            location.city = a.city || a.town || a.village || a.municipality || a.county || '';
-            location.region = a.state || a.region || '';
-            location.country = a.country || '';
           } catch (_) {
             /* ignore */
           }

@@ -32,18 +32,6 @@ export function pinIcon(color = '#ef4444', stroke = '#ffffff') {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-export function jobPinIcon(color = '#2563eb', emoji = '💼') {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='42' height='52' viewBox='0 0 42 52'>
-    <defs><filter id='s' x='-20%' y='-20%' width='140%' height='140%'>
-      <feDropShadow dx='0' dy='3' stdDeviation='2' flood-color='#000' flood-opacity='0.28'/>
-    </filter></defs>
-    <path filter='url(#s)' d='M21 2C11.6 2 4 9.6 4 19c0 12.5 17 30 17 30s17-17.5 17-30C38 9.6 30.4 2 21 2z' fill='${color}' stroke='#ffffff' stroke-width='2.5'/>
-    <circle cx='21' cy='19' r='10.5' fill='#ffffff' fill-opacity='0.96'/>
-    <text x='21' y='24' text-anchor='middle' font-size='14'>${emoji}</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
-
 export function dotIcon(color = '#3b82f6') {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'>
     <circle cx='14' cy='14' r='10' fill='${color}' fill-opacity='0.25'/>

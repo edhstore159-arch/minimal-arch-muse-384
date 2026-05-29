@@ -9,23 +9,6 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
-import { saveLastJobSearch } from '../lib/jobSearchBridge';
-import { requestLocationPermission } from '../utils/geolocation';
-import { useUserLocation, setUserLocation as setSharedLocation } from '../lib/userLocation';
-import { Loader2, Navigation } from 'lucide-react';
-
-const extractCityFromAddress = (address = '') => {
-  if (!address) return '';
-  const ignored = /^(brasil|brazil|rua|avenida|av\.?|rodovia|estrada|travessa|praça|cep|state of|região|region)$/i;
-  const parts = String(address).split(',').map((s) => s.trim()).filter(Boolean);
-  const city = parts.find((p) => !/^\d/.test(p) && p.length > 2 && !ignored.test(p));
-  return city || parts.find((p) => p.length > 2) || '';
-};
-
-const getLocationSearchCity = (loc, fallback = 'São Paulo') => {
-  if (!loc) return fallback;
-  return loc.city || extractCityFromAddress(loc.address) || loc.region || fallback;
-};
 
 // Plataformas de emprego externas (Brasil)
 const JOB_PLATFORMS = [
@@ -152,7 +135,6 @@ const normalizeText = (value = '') => String(value).toLowerCase().normalize('NFD
 
 export default function JobsPage() {
   const { user } = useContext(AuthContext);
-  const { location: sharedLocation } = useUserLocation();
   const navigate = useNavigate();
   const profileCategories = Array.isArray(user?.categories) ? user.categories.filter(Boolean) : [];
   const [requestedCategories, setRequestedCategories] = useState([]);
@@ -173,47 +155,16 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
   const [openedMatchedOffers, setOpenedMatchedOffers] = useState(false);
-  const [locating, setLocating] = useState(false);
-
-  const autoLocateAndSearch = async ({ silent = false, forceBrowser = false } = {}) => {
-    setLocating(true);
-    const loc = await requestLocationPermission({
-      forceBrowser,
-      showToast: !silent,
-      fallbackLocation: sharedLocation || { lat: -23.5505, lng: -46.6333, city: user?.city || 'São Paulo', address: `${user?.city || 'São Paulo'}, Brasil`, source: 'fallback' },
-    });
-    setLocating(false);
-    if (!loc) {
-      if (!silent) toast.error('Não foi possível obter sua localização');
-      return null;
-    }
-    setSharedLocation(loc); // sincroniza com todos os mapas do app
-    const city = getLocationSearchCity(loc, user?.city || locationQuery || 'São Paulo');
-    setLocationQuery(city);
-    if (!silent) toast.success(`📍 Buscando vagas em ${city}`);
-    const term = (searchQuery && searchQuery.trim())
-      || SEARCH_SUGGESTIONS[selectedCategory]?.[0]
-      || SEARCH_SUGGESTIONS[primaryUserCategory]?.[0]
-      || 'emprego';
-    searchExternalJobs(term, city);
-    return city;
-  };
 
   useEffect(() => {
     fetchJobs();
     const initialCategory = primaryUserCategory !== 'all' ? primaryUserCategory : 'all';
     const initialQuery = SEARCH_SUGGESTIONS[initialCategory]?.[0] || 'emprego';
+    const initialLocation = user?.city || 'Brasil';
     setSelectedCategory(initialCategory);
     setSearchQuery(initialQuery === 'emprego' ? '' : initialQuery);
-    // Tenta detectar localização automaticamente (via IP, sem prompt)
-    (async () => {
-      const city = await autoLocateAndSearch({ silent: true });
-      if (!city) {
-        const initialLocation = user?.city || 'São Paulo';
-        setLocationQuery(initialLocation);
-        searchExternalJobs(initialQuery, initialLocation);
-      }
-    })();
+    setLocationQuery(initialLocation);
+    searchExternalJobs(initialQuery, initialLocation);
   }, [user?.id]);
 
   useEffect(() => {
@@ -222,17 +173,6 @@ export default function JobsPage() {
       searchExternalJobs(categoryQuery, locationQuery);
     }
   }, [selectedCategory]);
-
-  // Reage quando a localização compartilhada muda (perfil, GPS automático, etc.)
-  useEffect(() => {
-    if (!sharedLocation?.address && !sharedLocation?.lat) return;
-    const city = getLocationSearchCity(sharedLocation, locationQuery);
-    if (city && city !== locationQuery) {
-      setLocationQuery(city);
-      const term = (searchQuery && searchQuery.trim()) || SEARCH_SUGGESTIONS[selectedCategory]?.[0] || 'emprego';
-      searchExternalJobs(term, city);
-    }
-  }, [sharedLocation?.lat, sharedLocation?.lng, sharedLocation?.address]);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -323,7 +263,6 @@ export default function JobsPage() {
       setTotalJobs(combinedJobs.length);
       setCurrentPage(page);
       setViewMode(nextViewMode);
-      saveLastJobSearch({ userId: user?.id, query: q, location: loc, category: selectedCategory, jobs: combinedJobs });
 
       if (combinedJobs.length > 0) {
         toast.success(`${combinedJobs.length} opções de emprego carregadas!`);
@@ -348,7 +287,6 @@ export default function JobsPage() {
       toast.info('Busca externa instável; mostrando plataformas brasileiras para pesquisar direto.');
       setExternalJobs(fallbackJobs);
       setTotalJobs(fallbackJobs.length);
-      saveLastJobSearch({ userId: user?.id, query: q, location: loc, category: selectedCategory, jobs: fallbackJobs });
     } finally {
       setSearchLoading(false);
     }
@@ -492,8 +430,8 @@ export default function JobsPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-20" data-testid="jobs-page">
       {/* Header */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto max-w-4xl px-3 sm:px-4 py-2 sm:py-4">
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
+        <div className="container mx-auto max-w-4xl px-4 py-4">
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-800">💼 Buscar Emprego</h1>
             <Button
               onClick={() => navigate('/home')}
@@ -507,7 +445,7 @@ export default function JobsPage() {
           </div>
 
           {/* Barra de Pesquisa Principal */}
-          <div className="bg-gradient-to-r from-blue-600 to-orange-600 rounded-2xl p-3 sm:p-4 mb-3 sm:mb-4">
+          <div className="bg-gradient-to-r from-blue-600 to-orange-600 rounded-2xl p-4 mb-4">
             <p className="text-white text-sm mb-3 font-medium">🔍 Busque vagas em todas as plataformas</p>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 relative">
@@ -526,17 +464,8 @@ export default function JobsPage() {
                   placeholder="Cidade"
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
-                  className="pl-10 pr-10 rounded-xl bg-white h-12 w-full sm:w-44"
+                  className="pl-10 rounded-xl bg-white h-12 w-full sm:w-36"
                 />
-                <button
-                  type="button"
-                  title="Usar minha localização"
-                  onClick={() => autoLocateAndSearch({ forceBrowser: true })}
-                  disabled={locating}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-blue-50 text-blue-600 disabled:opacity-50"
-                >
-                  {locating ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
-                </button>
               </div>
               <Button 
                 onClick={handleSearch}
@@ -569,7 +498,7 @@ export default function JobsPage() {
           </div>
 
           {/* Toggle de Modos */}
-          <div className="flex gap-2 mb-2 sm:mb-4 overflow-x-auto">
+          <div className="flex gap-2 mb-4 overflow-x-auto">
             <button
               onClick={() => setViewMode('search')}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
@@ -642,7 +571,7 @@ export default function JobsPage() {
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="container mx-auto max-w-4xl px-3 sm:px-4 py-3 sm:py-4">
+      <div className="container mx-auto max-w-4xl px-4 py-4">
         
         {/* Modo: Resultados de Busca de Vagas */}
         {viewMode === 'search' && (
