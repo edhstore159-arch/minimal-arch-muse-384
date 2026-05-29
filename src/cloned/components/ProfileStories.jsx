@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Plus, Radio, X, Video, VideoOff, Mic, MicOff, ImagePlus } from 'lucide-react';
+import { Plus, Radio, X, Video, VideoOff, Mic, MicOff } from 'lucide-react';
 
 const STORAGE_KEY = 'svc:stories:v1';
 
@@ -34,7 +34,6 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
   const [camOn, setCamOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
   const [viewers, setViewers] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => saveStories(stories), [stories]);
 
@@ -42,12 +41,6 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
     if (!live) return;
     const t = setInterval(() => setViewers((v) => v + Math.floor(Math.random() * 3)), 2500);
     return () => clearInterval(t);
-  }, [live]);
-
-  useEffect(() => {
-    if (live && liveVideoRef.current && liveStreamRef.current) {
-      liveVideoRef.current.srcObject = liveStreamRef.current;
-    }
   }, [live]);
 
   const onAddStory = () => fileRef.current?.click();
@@ -68,25 +61,13 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
 
   const startLive = async () => {
     try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        alert('Seu navegador não liberou câmera/microfone neste dispositivo.');
-        return;
-      }
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
-      } catch {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-        } catch {
-          stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-        }
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       liveStreamRef.current = stream;
-      setCamOn(stream.getVideoTracks().some((track) => track.enabled));
-      setMicOn(stream.getAudioTracks().some((track) => track.enabled));
       setLive(true);
       setViewers(1);
+      setTimeout(() => {
+        if (liveVideoRef.current) liveVideoRef.current.srcObject = stream;
+      }, 50);
     } catch (err) {
       alert('Não foi possível acessar câmera/microfone: ' + err.message);
     }
@@ -109,65 +90,47 @@ export default function ProfileStories({ avatarSrc, userName = 'Você' }) {
   };
 
   return (
-    <div className="relative py-2 overflow-visible">
-      <div className="flex items-center gap-3 overflow-x-auto overflow-y-visible no-scrollbar pb-1">
-        {/* Botão único: Story + Ao vivo (menu) */}
-        <div className="relative flex-shrink-0">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex flex-col items-center gap-1"
-            title="Publicar story ou iniciar ao vivo"
-          >
-            <div className={`relative w-16 h-16 rounded-full p-[2px] ${live ? 'bg-red-500 animate-pulse' : 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600'}`}>
-              <div className="w-full h-full rounded-full bg-white p-[2px]">
-                <div className="w-full h-full rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                  {avatarSrc ? (
-                    <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-gray-500 text-xs">Eu</span>
-                  )}
-                </div>
+    <div className="px-6 sm:px-10 py-4 border-b border-gray-100">
+      <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
+        {/* Add story / your own */}
+        <button
+          onClick={onAddStory}
+          className="flex flex-col items-center gap-1 flex-shrink-0"
+          title="Adicionar story"
+        >
+          <div className="relative w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
+            <div className="w-full h-full rounded-full bg-white p-[2px]">
+              <div className="w-full h-full rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-gray-500 text-xs">Eu</span>
+                )}
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-primary rounded-full border-2 border-white flex items-center justify-center shadow">
-                <Plus size={14} className="text-white" />
-              </div>
-              {live && (
-                <span className="absolute -top-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded uppercase">
-                  AO VIVO
-                </span>
-              )}
             </div>
-            <span className="text-xs text-textPrimary">{live ? 'Encerrar' : 'Story / Ao vivo'}</span>
-          </button>
+            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-primary rounded-full border-2 border-white flex items-center justify-center">
+              <Plus size={12} className="text-white" />
+            </div>
+          </div>
+          <span className="text-xs text-textPrimary truncate max-w-[64px]">Seu story</span>
+        </button>
 
-          {menuOpen && !live && (
-            <div className="fixed left-3 right-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[9999] bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 py-3 sm:absolute sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-20 sm:w-52 sm:-translate-x-1/2 sm:rounded-xl">
-              <button
-                onClick={() => { setMenuOpen(false); onAddStory(); }}
-                className="w-full px-5 py-4 sm:py-2 text-left text-base sm:text-sm hover:bg-gray-50 flex items-center gap-3"
-              >
-                <ImagePlus size={16} className="text-primary" /> Publicar story
-              </button>
-              <button
-                onClick={() => { setMenuOpen(false); startLive(); }}
-                className="w-full px-5 py-4 sm:py-2 text-left text-base sm:text-sm hover:bg-gray-50 flex items-center gap-3"
-              >
-                <Radio size={16} className="text-red-500" /> Iniciar ao vivo
-              </button>
+        {/* Go live */}
+        <button
+          onClick={live ? stopLive : startLive}
+          className="flex flex-col items-center gap-1 flex-shrink-0"
+          title={live ? 'Encerrar transmissão' : 'Iniciar transmissão ao vivo'}
+        >
+          <div className={`relative w-16 h-16 rounded-full p-[2px] ${live ? 'bg-red-500 animate-pulse' : 'bg-gradient-to-tr from-red-500 to-pink-500'}`}>
+            <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+              <Radio size={26} className={live ? 'text-red-500' : 'text-red-500'} />
             </div>
-          )}
-          {menuOpen && live && (
-            <div className="fixed left-3 right-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[9999] bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 py-3 sm:absolute sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-20 sm:w-52 sm:-translate-x-1/2 sm:rounded-xl">
-              <button
-                onClick={() => { setMenuOpen(false); stopLive(); }}
-                className="w-full px-5 py-4 sm:py-2 text-left text-base sm:text-sm hover:bg-gray-50 flex items-center gap-3 text-red-600"
-              >
-                <Radio size={16} /> Encerrar transmissão
-              </button>
-            </div>
-          )}
-        </div>
-
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded uppercase">
+              {live ? 'AO VIVO' : 'Live'}
+            </span>
+          </div>
+          <span className="text-xs text-textPrimary">{live ? 'Encerrar' : 'Ao vivo'}</span>
+        </button>
 
         {/* Existing stories */}
         {stories.map((s) => (

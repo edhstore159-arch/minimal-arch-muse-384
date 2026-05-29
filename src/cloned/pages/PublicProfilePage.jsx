@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video, UserPlus, UserMinus, X, Sparkles } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Star, Users, Calendar, Phone, Video, UserPlus, UserMinus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import MiniGoogleMap from '../components/MiniGoogleMap';
 import VerifiedBadge from '../components/VerifiedBadge';
@@ -49,27 +49,6 @@ export default function PublicProfilePage() {
     } else {
       addFriend(me.id, { user_id: userId, display_name: profile?.display_name, avatar_url: profile?.avatar_url });
       toast.success('Amigo adicionado!');
-    }
-  };
-
-  const [generatingCover, setGeneratingCover] = useState(false);
-  const generateCover = async () => {
-    if (!me?.id || me.id !== userId) return;
-    setGeneratingCover(true);
-    try {
-      const prompt = `Capa de perfil cinematográfica, abstrata e elegante para ${profile.display_name || 'um profissional'}${profile.categories?.length ? `, área: ${profile.categories.join(', ')}` : ''}, cores suaves, banner horizontal 16:9`;
-      const { data, error } = await supabase.functions.invoke('generate-cover-image', { body: { prompt } });
-      if (error) throw error;
-      const url = data?.imageUrl || data?.url || data?.image_url;
-      if (!url) throw new Error('Sem imagem retornada');
-      await supabase.from('svc_profiles').update({ cover_url: url }).eq('user_id', userId);
-      setProfile((p) => ({ ...p, cover_url: url }));
-      toast.success('Capa gerada!');
-    } catch (e) {
-      console.error('[cover] failed', e);
-      toast.error('Falha ao gerar capa: ' + (e?.message || 'erro'));
-    } finally {
-      setGeneratingCover(false);
     }
   };
 
@@ -132,26 +111,12 @@ export default function PublicProfilePage() {
       </header>
 
       <main className="max-w-5xl mx-auto">
-        {/* Cover (com geração por IA quando dono) */}
-        <div className="relative h-32 sm:h-40 bg-gradient-to-b from-slate-200 to-slate-100 overflow-hidden">
-          {profile.cover_url && (
-            <img src={profile.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          )}
-          {me?.id === userId && (
-            <button
-              onClick={generateCover}
-              disabled={generatingCover}
-              className="absolute top-2 right-2 z-10 px-3 py-1.5 bg-black/60 hover:bg-black/80 text-white text-xs font-medium rounded-full backdrop-blur-sm flex items-center gap-1.5 disabled:opacity-60"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              {generatingCover ? 'Gerando…' : 'Gerar capa com IA'}
-            </button>
-          )}
-        </div>
+        {/* Cover */}
+        <div className="h-32 sm:h-40 bg-gradient-to-b from-slate-200 to-slate-100" />
 
         {/* Identity */}
         <div className="bg-white">
-          <div className="px-4 sm:px-8 pb-4 -mt-14 sm:-mt-16 flex flex-col sm:flex-row sm:items-end gap-4 overflow-visible">
+          <div className="px-4 sm:px-8 pb-4 -mt-14 sm:-mt-16 flex flex-col sm:flex-row sm:items-end gap-4">
             <div className="relative shrink-0 mx-auto sm:mx-0">
               <Avatar className="w-28 h-28 sm:w-32 sm:h-32 ring-4 ring-white shadow-md">
                 <AvatarImage src={profile.avatar_url} className="object-cover" />
@@ -159,7 +124,7 @@ export default function PublicProfilePage() {
               </Avatar>
               <span className="absolute bottom-2 right-2 w-4 h-4 rounded-full bg-green-500 ring-2 ring-white" />
             </div>
-            <div className="flex-1 min-w-0 sm:pb-2 text-center sm:text-left overflow-visible">
+            <div className="flex-1 min-w-0 sm:pb-2 text-center sm:text-left">
               <div className="flex flex-col sm:flex-row sm:items-start items-center gap-1 sm:gap-2">
                 <h2 className="font-bold text-xl sm:text-2xl break-words max-w-full inline-flex items-center gap-1.5">{profile.display_name}<VerifiedBadge size={18} /></h2>
                 <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full sm:mt-1.5 capitalize">
@@ -168,11 +133,6 @@ export default function PublicProfilePage() {
               </div>
               {profile.city && (
                 <p className="text-sm text-gray-600 flex items-center justify-center sm:justify-start gap-1 mt-1"><MapPin className="w-3.5 h-3.5" />{profile.city}</p>
-              )}
-              {me?.id === userId && (
-                <div className="mt-2 relative z-[60] flex justify-center sm:justify-start overflow-visible pb-2">
-                  <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
-                </div>
               )}
               <p className="text-xs text-green-600 mt-0.5">● Online</p>
             </div>
@@ -203,6 +163,16 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
+          {/* Stories e Ao vivo (visível para o dono do perfil) */}
+          {me?.id === userId && (
+            <>
+              <div className="px-4 sm:px-8 pt-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Stories e Ao vivo</h3>
+                <span className="text-xs text-gray-500">Toque em <b>+</b> para publicar ou <b>Ao vivo</b> para transmitir</span>
+              </div>
+              <ProfileStories avatarSrc={profile.avatar_url} userName={profile.display_name || 'Você'} />
+            </>
+          )}
 
           {/* Tabs */}
           <div className="border-t border-gray-100">

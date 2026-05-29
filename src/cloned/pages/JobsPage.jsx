@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/
 import BottomNav from '../components/BottomNav';
 import { Search, MapPin, Clock, MessageCircle, Plus, Filter, Wrench, Brush, Lightbulb, Droplets, Hammer, BrickWall, Sparkles, Leaf, Truck, Settings, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { WORK_SERVICE_CATEGORIES, prettifyCategoryLabel } from '../lib/serviceCategories';
 import { saveLastJobSearch } from '../lib/jobSearchBridge';
@@ -154,7 +154,6 @@ export default function JobsPage() {
   const { user } = useContext(AuthContext);
   const { location: sharedLocation } = useUserLocation();
   const navigate = useNavigate();
-  const routeLocation = useLocation();
   const profileCategories = Array.isArray(user?.categories) ? user.categories.filter(Boolean) : [];
   const [requestedCategories, setRequestedCategories] = useState([]);
   const userInterestCategories = Array.from(new Set([...profileCategories, ...requestedCategories])).filter(Boolean);
@@ -272,10 +271,8 @@ export default function JobsPage() {
       )));
       setJobOffers(posts.filter((p) => p.type === 'offer'));
       setJobSeekers(posts.filter((p) => p.type === 'need'));
-      return posts;
     } catch (error) {
       console.error('Error fetching jobs:', error);
-      return [];
     } finally {
       setLoading(false);
     }
@@ -490,28 +487,6 @@ export default function JobsPage() {
     setViewMode('offers');
     setOpenedMatchedOffers(true);
   }, [openedMatchedOffers, userInterestCategories.join('|'), matchedOfferCount]);
-
-  useEffect(() => {
-    const postId = new URLSearchParams(routeLocation.search).get('postId');
-    if (!postId) return;
-    (async () => {
-      const loadedPosts = [...jobOffers, ...jobSeekers].length ? [...jobOffers, ...jobSeekers] : await fetchJobs();
-      const found = (loadedPosts || []).find((item) => String(item.id) === String(postId));
-      if (found) {
-        setSelectedJob({
-          ...found,
-          title: found.title,
-          company: found.user?.name || 'Publicado no app',
-          company_logo: found.user?.avatar,
-          location: found.location || found.address || 'Brasil',
-          source: 'Publicado no app',
-          isCommunityPost: true,
-        });
-        setShowJobDetails(true);
-        setViewMode(found.type === 'offer' ? 'offers' : 'seekers');
-      }
-    })();
-  }, [routeLocation.search]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-20" data-testid="jobs-page">
@@ -872,7 +847,7 @@ export default function JobsPage() {
                     />
                   ) : (
                     <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-                      {selectedJob.company?.charAt(0) || '💼'}
+                      {selectedJob.company?.charAt(0)}
                     </div>
                   )}
                   <div>
@@ -912,16 +887,12 @@ export default function JobsPage() {
                 {selectedJob.description && (
                   <div>
                     <h4 className="font-bold mb-2">📝 Descrição da Vaga</h4>
-                    {selectedJob.isCommunityPost ? (
-                      <p className="text-sm text-gray-600 whitespace-pre-line">{selectedJob.description}</p>
-                    ) : (
-                      <div 
-                        className="text-sm text-gray-600 prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ 
-                          __html: selectedJob.description.substring(0, 2000) 
-                        }}
-                      />
-                    )}
+                    <div 
+                      className="text-sm text-gray-600 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ 
+                        __html: selectedJob.description.substring(0, 2000) 
+                      }}
+                    />
                   </div>
                 )}
 
@@ -943,18 +914,11 @@ export default function JobsPage() {
                 {/* Botões de ação */}
                 <div className="flex gap-3 pt-4 border-t">
                   <Button
-                    onClick={() => {
-                      if (selectedJob.isCommunityPost && selectedJob.user_id) {
-                        setShowJobDetails(false);
-                        navigate(`/direct-chat/${selectedJob.user_id}`);
-                        return;
-                      }
-                      if (selectedJob.url) window.open(selectedJob.url, '_blank');
-                    }}
+                    onClick={() => window.open(selectedJob.url, '_blank')}
                     className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700"
                   >
                     <ExternalLink size={16} className="mr-2" />
-                    {selectedJob.isCommunityPost ? 'Conversar sobre a vaga' : 'Candidatar-se Agora'}
+                    Candidatar-se Agora
                   </Button>
                   <Button
                     onClick={() => setShowJobDetails(false)}
@@ -966,7 +930,7 @@ export default function JobsPage() {
                 </div>
                 
                 <p className="text-xs text-gray-400 text-center">
-                  {selectedJob.isCommunityPost ? 'Publicado dentro do app' : `Fonte: ${selectedJob.source} • Você será redirecionado para o site original`}
+                  Fonte: {selectedJob.source} • Você será redirecionado para o site original
                 </p>
               </div>
             )}
