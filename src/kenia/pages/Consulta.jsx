@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import { api } from "@/kenia/lib/api";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Input } from "@/kenia/components/ui/input";
@@ -12,8 +12,6 @@ import {
   Scale, Search, Calendar, Building2, FileText, ArrowRight,
   CheckCircle2, AlertCircle, Clock, Info, MessageCircle,
 } from "lucide-react";
-
-const BACKEND = (import.meta.env.VITE_BACKEND_URL || "");
 
 export default function Consulta() {
   const [phone, setPhone] = useState("");
@@ -28,7 +26,7 @@ export default function Consulta() {
     setResult(null);
     setSelected(null);
     try {
-      const { data } = await axios.post(`${BACKEND}/api/public/consulta`, { phone });
+      const { data } = await api.post("/public/consulta", { phone });
       setResult(data);
       if (data.processes?.length === 1) setSelected(data.processes[0]);
       if (!data.found) toast.info("Nenhum processo encontrado para esse número");
