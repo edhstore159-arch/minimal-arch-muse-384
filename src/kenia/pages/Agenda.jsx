@@ -20,21 +20,6 @@ const STATUS_COLORS = {
   cancelado: "bg-rose-100 text-rose-800",
 };
 
-const pad2 = (n) => String(n).padStart(2, "0");
-const parseAppointmentDate = (value) => {
-  if (!value) return null;
-  const [datePart, timePart = "00:00"] = String(value).split("T");
-  const [y, m, d] = datePart.split("-").map(Number);
-  const [hh, mm] = timePart.replace(/Z$/, "").split(":").map(Number);
-  if (String(value).endsWith("Z") || ![y, m, d, hh, mm].every(Number.isFinite)) return new Date(value);
-  return new Date(y, m - 1, d, hh, mm, 0, 0);
-};
-const storeLocalDateTime = (value) => {
-  const d = parseAppointmentDate(value);
-  if (!d || Number.isNaN(d.getTime())) return value;
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-};
-
 export default function Agenda() {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
@@ -65,7 +50,7 @@ export default function Agenda() {
   const create = async () => {
     if (!form.title || !form.starts_at) { toast.error("Título e data obrigatórios"); return; }
     try {
-      await api.post("/appointments", { ...form, starts_at: storeLocalDateTime(form.starts_at) });
+      await api.post("/appointments", { ...form, starts_at: new Date(form.starts_at).toISOString() });
       toast.success("Reunião agendada");
       setOpen(false);
       setForm({ title: "", client_name: "", starts_at: "", duration_min: 60, location: "Google Meet", notes: "", status: "confirmado" });
@@ -100,8 +85,7 @@ export default function Agenda() {
   const appointments = Array.isArray(items) ? items : [];
   const itemsByDay = {};
   appointments.forEach(i => {
-    const d = parseAppointmentDate(i.starts_at);
-    if (!d || Number.isNaN(d.getTime())) return;
+    const d = new Date(i.starts_at);
     if (d.getMonth() !== cursor.getMonth() || d.getFullYear() !== cursor.getFullYear()) return;
     const key = d.getDate();
     itemsByDay[key] = itemsByDay[key] || [];
@@ -109,11 +93,8 @@ export default function Agenda() {
   });
 
   const upcoming = appointments
-    .filter(i => {
-      const d = parseAppointmentDate(i.starts_at);
-      return d && d >= new Date(new Date().setHours(0, 0, 0, 0));
-    })
-    .sort((a, b) => parseAppointmentDate(a.starts_at) - parseAppointmentDate(b.starts_at))
+    .filter(i => new Date(i.starts_at) >= new Date(today.setHours(0, 0, 0, 0)))
+    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
     .slice(0, 20);
 
   return (
@@ -202,7 +183,7 @@ export default function Agenda() {
                     <div className="mt-1 space-y-0.5">
                       {dayItems.slice(0, 3).map(it => (
                         <div key={it.id} className="truncate text-[10px] bg-nude-900 text-white px-1 py-0.5 rounded">
-                          {parseAppointmentDate(it.starts_at)?.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} {it.title}
+                          {new Date(it.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} {it.title}
                         </div>
                       ))}
                       {dayItems.length > 3 && (
@@ -223,7 +204,7 @@ export default function Agenda() {
                 Nenhuma reunião agendada. Clique em "Nova reunião" para começar.
               </Card>
             ) : upcoming.map(it => {
-              const d = parseAppointmentDate(it.starts_at);
+              const d = new Date(it.starts_at);
               const dateLabel = d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
               const timeLabel = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
               const meetingLink = it.meeting_link || it.meet_url;
