@@ -256,16 +256,19 @@ async function sendBotText(jid, reply, meta = {}) {
     try {
       if (!sock || connectionState !== "open") throw new Error(`socket_not_open:${connectionState}`);
       recordAutoReply({ step: "send_attempt", jid, attempt, source: meta.source || "auto", reply: reply.slice(0, 200) });
+      console.log("[sendBotText] enviando", { jid, attempt, len: reply.length });
       const providerResult = await Promise.race([
         sock.sendMessage(jid, { text: reply }),
         new Promise((_, rej) => setTimeout(() => rej(new Error(`sendMessage timeout ${AUTO_REPLY_SEND_TIMEOUT_MS}ms`)), AUTO_REPLY_SEND_TIMEOUT_MS)),
       ]);
+      console.log("[sendBotText] ENVIADO", { jid, id: providerResult?.key?.id, status: providerResult?.status });
       const out = outboundMessage(reply, jid, providerResult);
       upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
       appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
       return { ok: true, out, providerResult, attempt };
     } catch (e) {
       lastSendErr = e?.message || String(e);
+      console.error("[sendBotText] ERRO ENVIO", { jid, attempt, error: lastSendErr });
       recordAutoReply({ step: "send_error", jid, attempt, source: meta.source || "auto", error: lastSendErr });
       await new Promise((r) => setTimeout(r, 1000 * attempt));
     }
