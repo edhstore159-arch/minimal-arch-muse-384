@@ -187,6 +187,30 @@ export default function DebugTool() {
                 placeholder="Descreva a instrução técnica..."
                 data-testid="dbg-instruction"
               />
+
+              <div
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-rose-400", "bg-rose-50"); }}
+                onDragLeave={(e) => { e.currentTarget.classList.remove("ring-2", "ring-rose-400", "bg-rose-50"); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove("ring-2", "ring-rose-400", "bg-rose-50");
+                  const files = Array.from(e.dataTransfer?.files || []);
+                  if (files.length) handleAttachUpload(files);
+                }}
+                onPaste={(e) => {
+                  const items = Array.from(e.clipboardData?.items || []);
+                  const files = items.map((it) => it.getAsFile()).filter(Boolean);
+                  if (files.length) handleAttachUpload(files);
+                }}
+                tabIndex={0}
+                className="mt-3 border-2 border-dashed border-nude-300 rounded-md p-4 text-center text-xs text-nude-500 cursor-pointer hover:bg-nude-50 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-400"
+                onClick={() => attachInputRef.current?.click()}
+              >
+                <ImagePlus className="w-6 h-6 mx-auto mb-1 text-nude-400" />
+                <div className="font-semibold text-nude-700">Arraste imagens aqui, cole (Ctrl/Cmd+V) ou clique para anexar</div>
+                <div className="text-[11px] text-nude-400 mt-0.5">Imagens, PDF, TXT, JSON, CSV — múltiplos arquivos</div>
+              </div>
+
               {attachments.length > 0 && (
                 <ul className="mt-3 space-y-1 max-h-40 overflow-y-auto text-xs">
                   {attachments.map((f, i) => (
