@@ -555,7 +555,7 @@ export default function WhatsAppSettings() {
                   configurar webhook — tudo interno.
                 </div>
 
-                {!baileysStatus?.connected && (
+                {!baileysStatus?.connected && baileysStatus?.state !== "static" && (
                   <div className="p-3 bg-gold-50 border border-gold-200 rounded text-xs text-gold-900" data-testid="baileys-howto">
                     <div className="font-semibold mb-1">⚠️ Conectando ao WhatsApp…</div>
                     <div>
@@ -580,10 +580,15 @@ export default function WhatsAppSettings() {
                           <AlertCircle className="w-4 h-4" />
                           Conflito de sessão
                         </div>
+                      ) : baileysStatus?.state === "static" ? (
+                        <div className="flex items-center gap-2 text-gold-700 font-medium">
+                          <AlertTriangle className="w-4 h-4" />
+                          Site estático ativo
+                        </div>
                       ) : baileysStatus?.state === "offline" ? (
-                        <div className="flex items-center gap-2 text-rose-700 font-medium">
-                          <AlertCircle className="w-4 h-4" />
-                          Backend offline
+                        <div className="flex items-center gap-2 text-gold-700 font-medium">
+                          <AlertTriangle className="w-4 h-4" />
+                          Serviço externo indisponível
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-gold-700 font-medium">
@@ -594,8 +599,8 @@ export default function WhatsAppSettings() {
                       <div className="text-xs text-nude-500 mt-1">
                         Estado: <code className="bg-white px-1.5 py-0.5 rounded text-[11px]">{baileysStatus?.state || "—"}</code>
                       </div>
-                      {baileysStatus?.last_error && (baileysStatus?.state === "conflicted" || baileysStatus?.state === "offline") && (
-                        <div className="text-xs text-rose-700 mt-2 p-2 bg-rose-50 border border-rose-200 rounded" data-testid="baileys-conflict-msg">
+                      {baileysStatus?.last_error && (baileysStatus?.state === "conflicted" || baileysStatus?.state === "offline" || baileysStatus?.state === "static") && (
+                        <div className="text-xs text-gold-800 mt-2 p-2 bg-gold-50 border border-gold-200 rounded" data-testid="baileys-conflict-msg">
                           ⚠️ {baileysStatus.last_error}
                         </div>
                       )}
