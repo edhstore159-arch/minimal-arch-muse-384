@@ -31,6 +31,42 @@ let lastError = null;
 let starting = false;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
+// ---- Armazenamento em memória de contatos e mensagens ----
+const contactsStore = new Map(); // jid -> contato
+const messagesStore = new Map(); // jid -> Array<mensagens>
+
+const jidToPhone = (jid) => String(jid || "").split("@")[0].replace(/\D/g, "");
+const extractText = (m) =>
+  m?.message?.conversation ||
+  m?.message?.extendedTextMessage?.text ||
+  m?.message?.imageMessage?.caption ||
+  m?.message?.videoMessage?.caption ||
+  m?.message?.documentMessage?.caption ||
+  "";
+
+const upsertContact = (jid, patch = {}) => {
+  if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") return null;
+  const prev = contactsStore.get(jid) || {
+    id: jid,
+    jid,
+    phone: jidToPhone(jid),
+    name: jidToPhone(jid),
+    last_message: "",
+    last_message_at: new Date().toISOString(),
+    unread: 0,
+  };
+  const next = { ...prev, ...patch };
+  contactsStore.set(jid, next);
+  return next;
+};
+
+const appendMessage = (jid, msg) => {
+  if (!jid) return;
+  const list = messagesStore.get(jid) || [];
+  list.push(msg);
+  messagesStore.set(jid, list);
+};
+
 async function closeSock() {
   try { sock?.end?.(); } catch {}
   try { sock?.ws?.close?.(); } catch {}
