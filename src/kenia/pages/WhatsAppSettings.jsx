@@ -304,6 +304,11 @@ export default function WhatsAppSettings() {
   };
 
   const autoSetupWebhook = async () => {
+    if (cfg?.provider === "baileys") {
+      setWebhookResult(null);
+      toast.info("Baileys não usa webhook. Para conectar, use o QR Code da aba Baileys.", { duration: 7000 });
+      return;
+    }
     setSettingWebhook(true);
     setWebhookResult(null);
     try {
@@ -408,7 +413,7 @@ export default function WhatsAppSettings() {
                   </div>
                 </div>
               ))}
-              {!diag.ok && cfg?.provider === "zapi" && (
+              {!diag.ok && cfg?.provider !== "baileys" && (
                 <div className="pt-2 flex justify-end">
                   <Button
                     onClick={autoSetupWebhook}
@@ -426,7 +431,7 @@ export default function WhatsAppSettings() {
           )}
         </Card>
 
-        {webhookResult && (
+        {webhookResult && cfg?.provider !== "baileys" && (
           <Card
             className={`p-4 border-2 ${webhookResult.verified ? "border-gold-200 bg-gold-50" : "border-gold-200 bg-gold-50"}`}
             data-testid="wa-webhook-result"
@@ -559,7 +564,18 @@ export default function WhatsAppSettings() {
                   configurar webhook — tudo interno.
                 </div>
 
-                {!baileysStatus?.connected && baileysStatus?.state !== "static" && (
+                {!HAS_BACKEND && (
+                  <div className="p-3 bg-gold-50 border border-gold-200 rounded text-xs text-gold-900" data-testid="baileys-static-notice">
+                    <div className="font-semibold mb-1">Backend do WhatsApp ainda não está conectado a este site.</div>
+                    <div>
+                      O preview/publicação está rodando como site estático. Para o QR real aparecer,
+                      publique o backend da pasta <code>backend/</code> e configure <code>VITE_BACKEND_URL</code>
+                      no frontend com a URL pública desse backend.
+                    </div>
+                  </div>
+                )}
+
+                {!baileysStatus?.connected && baileysStatus?.state !== "static" && HAS_BACKEND && (
                   <div className="p-3 bg-gold-50 border border-gold-200 rounded text-xs text-gold-900" data-testid="baileys-howto">
                     <div className="font-semibold mb-1">⚠️ Conectando ao WhatsApp…</div>
                     <div>

@@ -16,7 +16,7 @@ const DEFAULT_PROMPT =
   "Você é a atendente Kênia Garcia. Atenda com linguagem humana, acolhedora e profissional. Identifique nome, telefone, área do caso, urgência e próximos documentos necessários. Nunca diga que é IA.";
 
 const defaultWhatsAppConfig = {
-  provider: "zapi",
+  provider: "baileys",
   zapi_instance_id: "",
   zapi_instance_token: "",
   zapi_client_token: "",
