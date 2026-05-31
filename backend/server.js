@@ -31,6 +31,42 @@ let lastError = null;
 let starting = false;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
+// ---- Armazenamento em memória de contatos e mensagens ----
+const contactsStore = new Map(); // jid -> contato
+const messagesStore = new Map(); // jid -> Array<mensagens>
+
+const jidToPhone = (jid) => String(jid || "").split("@")[0].replace(/\D/g, "");
+const extractText = (m) =>
+  m?.message?.conversation ||
+  m?.message?.extendedTextMessage?.text ||
+  m?.message?.imageMessage?.caption ||
+  m?.message?.videoMessage?.caption ||
+  m?.message?.documentMessage?.caption ||
+  "";
+
+const upsertContact = (jid, patch = {}) => {
+  if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") return null;
+  const prev = contactsStore.get(jid) || {
+    id: jid,
+    jid,
+    phone: jidToPhone(jid),
+    name: jidToPhone(jid),
+    last_message: "",
+    last_message_at: new Date().toISOString(),
+    unread: 0,
+  };
+  const next = { ...prev, ...patch };
+  contactsStore.set(jid, next);
+  return next;
+};
+
+const appendMessage = (jid, msg) => {
+  if (!jid) return;
+  const list = messagesStore.get(jid) || [];
+  list.push(msg);
+  messagesStore.set(jid, list);
+};
+
 async function closeSock() {
   try { sock?.end?.(); } catch {}
   try { sock?.ws?.close?.(); } catch {}
@@ -84,6 +120,45 @@ async function startSock() {
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
       if (shouldReconnect) setTimeout(() => startSock().catch(() => {}), 2000);
+    }
+  });
+
+  // Capturar mensagens recebidas/enviadas para alimentar a lista de contatos
+  sock.ev.on("messages.upsert", ({ messages }) => {
+    if (sock !== activeSock || !Array.isArray(messages)) return;
+    for (const m of messages) {
+      const jid = m?.key?.remoteJid;
+      if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") continue;
+      const text = extractText(m);
+      if (!text) continue;
+      const fromMe = Boolean(m?.key?.fromMe);
+      const created_at = m?.messageTimestamp
+        ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
+        : new Date().toISOString();
+      const name = m?.pushName || jidToPhone(jid);
+      const prev = contactsStore.get(jid);
+      upsertContact(jid, {
+        name: prev?.name && prev.name !== jidToPhone(jid) ? prev.name : name,
+        last_message: text,
+        last_message_at: created_at,
+        unread: fromMe ? prev?.unread || 0 : (prev?.unread || 0) + 1,
+      });
+      appendMessage(jid, {
+        id: m?.key?.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        text,
+        from_me: fromMe,
+        created_at,
+      });
+    }
+  });
+
+  // Atualizar nomes quando o WhatsApp empurra contatos conhecidos
+  sock.ev.on("contacts.update", (updates) => {
+    if (sock !== activeSock || !Array.isArray(updates)) return;
+    for (const u of updates) {
+      if (!u?.id) continue;
+      const name = u.name || u.notify || u.verifiedName;
+      if (name) upsertContact(u.id, { name });
     }
   });
 
@@ -243,7 +318,10 @@ app.post("/api/whatsapp/send", async (req, res) => {
     const body = message || text || "";
     if (!String(body).trim()) return res.status(400).json({ ok: false, delivered: false, error: "missing message" });
     const providerResult = await sock.sendMessage(jid, { text: String(body) });
-    res.json(ok({ delivered: true, to: jid, message: outboundMessage(body, jid, providerResult), provider_result: providerResult }));
+    const outMsg = outboundMessage(body, jid, providerResult);
+    upsertContact(jid, { last_message: outMsg.text, last_message_at: outMsg.created_at });
+    appendMessage(jid, { id: outMsg.id, text: outMsg.text, from_me: true, created_at: outMsg.created_at });
+    res.json(ok({ delivered: true, to: jid, message: outMsg, provider_result: providerResult }));
   } catch (e) {
     res.status(500).json({ ok: false, delivered: false, error: e?.message || "send_failed" });
   }
@@ -260,7 +338,10 @@ app.post("/api/whatsapp/send-direct", async (req, res) => {
     const body = text || message || "";
     if (!String(body).trim()) return res.status(400).json({ delivered: false, ok: false, error: "missing message" });
     const providerResult = await sock.sendMessage(jid, { text: String(body) });
-    res.json(ok({ delivered: true, to: jid, message: outboundMessage(body, jid, providerResult), provider_result: providerResult }));
+    const outMsg = outboundMessage(body, jid, providerResult);
+    upsertContact(jid, { last_message: outMsg.text, last_message_at: outMsg.created_at });
+    appendMessage(jid, { id: outMsg.id, text: outMsg.text, from_me: true, created_at: outMsg.created_at });
+    res.json(ok({ delivered: true, to: jid, message: outMsg, provider_result: providerResult }));
   } catch (e) {
     res.status(500).json({ delivered: false, ok: false, error: e?.message || "send_failed" });
   }
@@ -303,6 +384,26 @@ app.post("/api/whatsapp/baileys/logout", async (req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e?.message });
   }
+});
+
+// ---- Contatos e mensagens ----
+app.get("/api/whatsapp/contacts", (_req, res) => {
+  const list = Array.from(contactsStore.values()).sort((a, b) =>
+    String(b.last_message_at || "").localeCompare(String(a.last_message_at || ""))
+  );
+  res.json(list);
+});
+
+app.get("/api/whatsapp/messages/:id", (req, res) => {
+  const raw = req.params.id;
+  const direct = messagesStore.get(raw);
+  if (direct) return res.json(direct);
+  // permite buscar pelo telefone também
+  const digits = String(raw).replace(/\D/g, "");
+  for (const [jid, list] of messagesStore.entries()) {
+    if (jidToPhone(jid).endsWith(digits.slice(-8))) return res.json(list);
+  }
+  res.json([]);
 });
 
 // ---- Fallback /api/* ----
