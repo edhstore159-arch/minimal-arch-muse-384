@@ -64,6 +64,10 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/09a14ae7-bd4a-415b-b22e-66bbeb1a9240) and click on Share -> Publish.
 
+For Render deployment, use `MANUAL_DEPLOY_RENDER.md`.
+
+If you cannot access the external troubleshooting docs, use `TROUBLESHOOTING_LOCAL.md` inside this repository.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
