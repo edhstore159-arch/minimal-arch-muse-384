@@ -217,9 +217,13 @@ export default function WhatsAppSettings() {
     try {
       const publicUrl = (backendUrl || window.location.origin).replace(/\/$/, "");
       const { data } = await api.get(`/whatsapp/diagnostics?public_url=${encodeURIComponent(publicUrl)}`);
-      setDiag(data);
+      setDiag({
+        ...(data || {}),
+        checks: Array.isArray(data?.checks) ? data.checks : [],
+      });
     } catch {
       // silencia
+      setDiag({ ok: false, checks: [] });
     } finally {
       setLoadingDiag(false);
     }
@@ -229,6 +233,8 @@ export default function WhatsAppSettings() {
 
   const up = (k, v) => setCfg({ ...cfg, [k]: v });
   const isBaileys = cfg.provider === "baileys";
+  const diagnosticChecks = Array.isArray(diag?.checks) ? diag.checks : [];
+  const webhookErrors = Array.isArray(webhookResult?.errors) ? webhookResult.errors : [];
 
   return (
     <div className="h-screen flex flex-col bg-nude-50 overflow-hidden">
@@ -267,7 +273,7 @@ export default function WhatsAppSettings() {
             <div className="text-sm text-nude-400 py-2">Carregando diagnóstico…</div>
           ) : (
             <div className="space-y-2">
-              {diag.checks.map((c) => (
+              {diagnosticChecks.map((c) => (
                 <div
                   key={c.id}
                   className={`flex items-start gap-3 p-3 rounded-md border ${
@@ -333,9 +339,9 @@ export default function WhatsAppSettings() {
                 {webhookResult.error_summary && (
                   <div className="text-xs text-gold-900 mt-2">{webhookResult.error_summary}</div>
                 )}
-                {webhookResult.errors?.length > 0 && (
+                {webhookErrors.length > 0 && (
                   <ul className="text-xs text-rose-800 mt-2 list-disc pl-5 space-y-0.5">
-                    {webhookResult.errors.map((e, i) => <li key={i} className="font-mono break-all">{e}</li>)}
+                    {webhookErrors.map((e, i) => <li key={i} className="font-mono break-all">{e}</li>)}
                   </ul>
                 )}
               </div>
