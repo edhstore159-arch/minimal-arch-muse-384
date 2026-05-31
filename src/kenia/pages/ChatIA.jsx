@@ -18,9 +18,31 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
+// Sala de vídeo pública via Jitsi Meet — funciona sem login/integração e
+// abre direto no navegador do cliente quando ele clica no link enviado.
 const getMeetLink = () => {
-  const meetCode = `${Math.random().toString(36).slice(2, 5)}-${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 5)}`;
-  return `https://meet.google.com/${meetCode}`;
+  const room = `KeniaGarcia-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return `https://meet.jit.si/${room}`;
+};
+
+// Detecta URLs no texto e devolve <a> clicáveis, preservando quebras de linha.
+const renderMessageContent = (text) => {
+  const parts = String(text).split(/(https?:\/\/[^\s)]+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noreferrer"
+        className="underline text-gold-700 hover:text-gold-900 break-all"
+      >
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
 };
 
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -614,7 +636,7 @@ export default function ChatIA() {
                         <Sparkles className="w-3 h-3" /> Ana · secretária
                       </div>
                     )}
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</div>
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap">{renderMessageContent(m.content)}</div>
                     {m.role === "assistant" && m.audio_base64 && (
                       <div className="mt-3 space-y-1.5" data-testid={`audio-block-${i}`}>
                         <button
