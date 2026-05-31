@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState([]);
   const [leadForContact, setLeadForContact] = useState(null);
   const [metrics, setMetrics] = useState(null);
+  const [appointments, setAppointments] = useState([]);
   const [draft, setDraft] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiSession, setAiSession] = useState(null);
