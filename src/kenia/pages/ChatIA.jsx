@@ -180,7 +180,7 @@ export default function ChatIA() {
     setInput("");
     setThinking(true);
     try {
-      const { data } = await axios.post(
+      const { data } = await api.post(
         "/chat/message",
         {
           message: msg,
