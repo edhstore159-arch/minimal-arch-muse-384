@@ -2,6 +2,8 @@
 
 Este projeto está configurado para rodar no Render como **Static Site**. Nesse modo, a aplicação funciona sem servidor Node/Express próprio e usa apenas os arquivos gerados pelo Vite em `dist/`.
 
+Se você não conseguir abrir a documentação externa de troubleshooting, consulte também `TROUBLESHOOTING_LOCAL.md` na raiz deste repositório.
+
 ## 1. Preparar o repositório
 
 1. Envie o projeto para um repositório GitHub/GitLab.
