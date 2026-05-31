@@ -67,7 +67,10 @@ const appendMessage = (jid, msg) => {
   messagesStore.set(jid, list);
 };
 
-// ---- Atendente automático com IA (Emergent ou Lovable AI Gateway) ----
+// ---- Atendente automático com IA (OpenAI, Emergent ou Lovable AI Gateway) ----
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const EMERGENT_API_KEY = process.env.EMERGENT_API_KEY || process.env.EMERGENT_LLM_KEY || "";
 const EMERGENT_BASE_URL =
   process.env.EMERGENT_BASE_URL || "https://integrations.emergentagent.com/llm/v1";
@@ -80,16 +83,25 @@ const AI_SYSTEM_PROMPT =
 const aiHistory = new Map(); // jid -> [{role, content}]
 
 async function callAI(messagesPayload) {
-  const useEmergent = Boolean(EMERGENT_API_KEY);
-  if (!useEmergent && !LOVABLE_API_KEY) {
-    return { ok: false, error: "Nenhuma chave de IA configurada (EMERGENT_API_KEY ou LOVABLE_API_KEY)." };
+  let provider, endpoint, apiKey, model;
+  if (OPENAI_API_KEY) {
+    provider = "openai";
+    endpoint = `${OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`;
+    apiKey = OPENAI_API_KEY;
+    model = OPENAI_MODEL;
+  } else if (EMERGENT_API_KEY) {
+    provider = "emergent";
+    endpoint = `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`;
+    apiKey = EMERGENT_API_KEY;
+    model = EMERGENT_MODEL;
+  } else if (LOVABLE_API_KEY) {
+    provider = "lovable";
+    endpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    apiKey = LOVABLE_API_KEY;
+    model = AI_MODEL;
+  } else {
+    return { ok: false, error: "Nenhuma chave de IA configurada (OPENAI_API_KEY, EMERGENT_API_KEY ou LOVABLE_API_KEY)." };
   }
-  const endpoint = useEmergent
-    ? `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`
-    : "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const apiKey = useEmergent ? EMERGENT_API_KEY : LOVABLE_API_KEY;
-  const model = useEmergent ? EMERGENT_MODEL : AI_MODEL;
-  const provider = useEmergent ? "emergent" : "lovable";
   try {
     const resp = await fetch(endpoint, {
       method: "POST",
