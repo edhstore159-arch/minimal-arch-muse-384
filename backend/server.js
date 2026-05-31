@@ -162,18 +162,36 @@ async function autoReply(jid, userText, contactName) {
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
   aiHistory.set(jid, history.slice(-20));
+  try { await sock.presenceSubscribe(jid); } catch {}
   try { await sock.sendPresenceUpdate("composing", jid); } catch {}
   await new Promise((r) => setTimeout(r, 600));
-  try {
-    recordAutoReply({ step: "send_attempt", jid, reply: reply.slice(0, 200) });
-    const providerResult = await sock.sendMessage(jid, { text: reply });
-    const out = outboundMessage(reply, jid, providerResult);
-    upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
-    appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
-    recordAutoReply({ step: "sent", jid, provider: result.provider, model: result.model, reply: reply.slice(0, 200) });
-  } catch (e) {
-    recordAutoReply({ step: "send_error", jid, error: e?.message || String(e) });
+  try { await sock.sendPresenceUpdate("paused", jid); } catch {}
+
+  let lastSendErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (!sock || connectionState !== "open") {
+        recordAutoReply({ step: "send_skip_socket", jid, attempt, connectionState });
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      recordAutoReply({ step: "send_attempt", jid, attempt, reply: reply.slice(0, 200) });
+      const providerResult = await Promise.race([
+        sock.sendMessage(jid, { text: reply }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("sendMessage timeout 15s")), 15000)),
+      ]);
+      const out = outboundMessage(reply, jid, providerResult);
+      upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
+      appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
+      recordAutoReply({ step: "sent", jid, attempt, provider: result.provider, model: result.model, reply: reply.slice(0, 200) });
+      return;
+    } catch (e) {
+      lastSendErr = e?.message || String(e);
+      recordAutoReply({ step: "send_error", jid, attempt, error: lastSendErr });
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
   }
+  recordAutoReply({ step: "send_failed_final", jid, error: lastSendErr });
 }
 
 async function closeSock() {
