@@ -388,6 +388,8 @@ export default function ChatIA() {
       };
       setMessages((prev) => [...prev, newMsg]);
       if (data.analysis) setAnalysis(data.analysis);
+      // Atualiza CRM: cria/atualiza lead automaticamente conforme o chat avança
+      upsertLead({ description: msg });
       if (autoplay && data.audio_base64) {
         // auto-play depois do paint
         setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 250);
