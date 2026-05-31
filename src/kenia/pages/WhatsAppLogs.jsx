@@ -25,10 +25,25 @@ export default function WhatsAppLogs() {
         api.get("/whatsapp/logs?limit=200"),
         api.get("/whatsapp/bot-delivery-stats").catch(() => ({ data: null })),
       ]);
-      setLogs(data);
-      if (st) setStats(st);
+      const logList = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.logs)
+          ? data.logs
+          : Array.isArray(data?.items)
+            ? data.items
+            : Array.isArray(data?.messages)
+              ? data.messages
+              : [];
+      setLogs(logList);
+      if (st) {
+        setStats({
+          ...st,
+          recent_failures: Array.isArray(st?.recent_failures) ? st.recent_failures : [],
+        });
+      }
     } catch {
       toast.error("Erro ao carregar logs");
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -42,7 +57,10 @@ export default function WhatsAppLogs() {
     return () => clearInterval(t);
   }, [auto]);
 
-  const filtered = logs.filter((l) => {
+  const safeLogs = Array.isArray(logs) ? logs : [];
+  const recentFailures = Array.isArray(stats?.recent_failures) ? stats.recent_failures : [];
+
+  const filtered = safeLogs.filter((l) => {
     if (!filter) return true;
     const q = filter.toLowerCase();
     return (
@@ -52,9 +70,9 @@ export default function WhatsAppLogs() {
     );
   });
 
-  const totalIn = logs.filter((l) => !l.from_me).length;
-  const totalBot = logs.filter((l) => l.bot).length;
-  const totalOut = logs.filter((l) => l.from_me && !l.bot).length;
+  const totalIn = safeLogs.filter((l) => !l.from_me).length;
+  const totalBot = safeLogs.filter((l) => l.bot).length;
+  const totalOut = safeLogs.filter((l) => l.from_me && !l.bot).length;
 
   return (
     <div className="h-screen flex flex-col bg-nude-50 overflow-hidden">
@@ -79,7 +97,7 @@ export default function WhatsAppLogs() {
 
       <div className="flex-1 overflow-auto p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <StatCard label="Total de mensagens" value={logs.length} color="slate" />
+          <StatCard label="Total de mensagens" value={safeLogs.length} color="slate" />
           <StatCard label="Recebidas" value={totalIn} color="blue" Icon={ArrowDownLeft} />
           <StatCard label="Enviadas (manual)" value={totalOut} color="emerald" Icon={ArrowUpRight} />
           <StatCard label="Robô IA" value={totalBot} color="amber" Icon={Bot} />
@@ -121,11 +139,11 @@ export default function WhatsAppLogs() {
                 <div className="text-[10px] uppercase tracking-wider text-rose-700">Falharam</div>
               </div>
             </div>
-            {stats.recent_failures?.length > 0 && (
+            {recentFailures.length > 0 && (
               <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded text-xs">
                 <div className="font-medium text-rose-900 mb-1.5">⚠️ Últimas falhas de entrega:</div>
                 <ul className="space-y-1 list-disc pl-5 text-rose-800">
-                  {stats.recent_failures.slice(0, 3).map((f, i) => (
+                  {recentFailures.slice(0, 3).map((f, i) => (
                     <li key={i} className="break-words">
                       <span className="font-mono">{f.text?.slice(0, 60)}…</span>
                       {f.send_error && <span className="ml-1 text-rose-600"> — {f.send_error.slice(0, 80)}</span>}
@@ -153,7 +171,7 @@ export default function WhatsAppLogs() {
             <div className="space-y-2 pr-3">
               {filtered.length === 0 ? (
                 <div className="text-center text-nude-400 py-12">
-                  {logs.length === 0 ? "Aguardando mensagens..." : "Nenhuma mensagem com esse filtro"}
+                  {safeLogs.length === 0 ? "Aguardando mensagens..." : "Nenhuma mensagem com esse filtro"}
                 </div>
               ) : (
                 filtered.map((m) => (
