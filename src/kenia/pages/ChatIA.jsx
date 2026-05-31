@@ -17,23 +17,6 @@ import {
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
-const AREA_PATTERNS = [
-  { area: "Família/Sucessões", regex: /\b(div[oó]rcio|invent[aá]rio|pens[aã]o|guarda|uni[aã]o est[aá]vel|fam[ií]lia|sucess[oõ]es)\b/i },
-  { area: "Bancário", regex: /\b(banc[aá]rio|juros|empr[eé]stimo|cart[aã]o|financiamento|banco|abusiv[oa])\b/i },
-  { area: "Previdenciário/INSS", regex: /\b(inss|previdenci[aá]rio|aposentadoria|benef[ií]cio|aux[ií]lio|bpc|loas)\b/i },
-];
-
-const extractLeadInfo = (text = "") => {
-  const phoneMatch = text.match(/(?:\+55\s*)?(?:\(?\d{2}\)?\s*)?9?\d{4}[-\s]?\d{4}/);
-  const nameMatch = text.match(/(?:meu nome [eé]|me chamo|sou a?|aqui [eé])\s+([A-Za-zÀ-ÿ]{2,}(?:\s+[A-Za-zÀ-ÿ]{2,}){0,3})/i);
-  const area = AREA_PATTERNS.find((item) => item.regex.test(text))?.area;
-  return {
-    name: nameMatch?.[1]?.trim(),
-    phone: phoneMatch?.[0]?.trim(),
-    area,
-  };
-};
-
 const getMeetLink = () => {
   const meetCode = `${Math.random().toString(36).slice(2, 5)}-${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 5)}`;
   return `https://meet.google.com/${meetCode}`;
@@ -182,8 +165,8 @@ export default function ChatIA() {
   const scrollRef = useRef(null);
 
   const upsertLead = async (extra = {}) => {
-    const clientName = (extra.name || name || "").trim();
-    const clientPhone = (extra.phone || phone || "").trim();
+    const clientName = (name || "").trim();
+    const clientPhone = (phone || "").trim();
     if (!clientName && !clientPhone) return;
     try {
       if (leadId) {
@@ -349,10 +332,6 @@ export default function ChatIA() {
   const send = async (text) => {
     const msg = (text ?? input).trim();
     if (!msg) return;
-    const leadFromMessage = extractLeadInfo(msg);
-    const historyForAi = messages.map(({ role, content }) => ({ role, content }));
-    if (leadFromMessage.name && !name) setName(leadFromMessage.name);
-    if (leadFromMessage.phone && !phone) setPhone(leadFromMessage.phone);
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setThinking(true);
@@ -395,11 +374,9 @@ export default function ChatIA() {
         "/chat/message",
         {
           message: msg,
-          history: historyForAi,
           session_id: sessionId,
-          visitor_name: leadFromMessage.name || name || null,
-          visitor_phone: leadFromMessage.phone || phone || null,
-          visitor_area: leadFromMessage.area || analysis?.area || null,
+          visitor_name: name || null,
+          visitor_phone: phone || null,
           voice,
           want_audio: true,
           return_analysis: true,
@@ -415,11 +392,7 @@ export default function ChatIA() {
       setMessages((prev) => [...prev, newMsg]);
       if (data.analysis) setAnalysis(data.analysis);
       // Atualiza CRM: cria/atualiza lead automaticamente conforme o chat avança
-      upsertLead({
-        ...leadFromMessage,
-        area: leadFromMessage.area || data.analysis?.area,
-        description: msg,
-      });
+      upsertLead({ description: msg });
       if (autoplay && data.audio_base64) {
         // auto-play depois do paint
         setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 250);

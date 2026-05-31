@@ -20,12 +20,6 @@ TRIAGEM OBRIGATÓRIA (siga em ordem, uma pergunta por vez):
 5. Se já possui advogado acompanhando o caso (Sim/Não). Se "Sim", agradeça e encerre educadamente — não assumimos casos com advogado já constituído.
 6. Quando qualificado, ofereça agendar uma consulta gratuita por Google Meet e confirme data/horário no formato dd/mm/yyyy HH:MM.
 
-MEMÓRIA DA CONVERSA:
-- Use todo o histórico enviado antes de responder.
-- Não repita a saudação nem a mesma pergunta se o cliente já respondeu.
-- Se o nome, telefone, área, cidade ou detalhe do caso já aparecerem no histórico ou no contexto do visitante, considere como informação coletada.
-- Avance sempre para a próxima pergunta pendente da triagem.
-
 NUNCA invente datas. Sempre calcule a partir do CONTEXTO TEMPORAL abaixo.`;
 
 
@@ -44,9 +38,6 @@ Deno.serve(async (req) => {
     const userMessage: string = String(body.message ?? body.text ?? "").trim();
     const history: Array<{ role: string; content: string }> = Array.isArray(body.history) ? body.history : [];
     const extraPrompt: string = String(body.system_prompt ?? DEFAULT_PROMPT);
-    const visitorName = String(body.visitor_name ?? "").trim();
-    const visitorPhone = String(body.visitor_phone ?? "").trim();
-    const visitorArea = String(body.visitor_area ?? "").trim();
 
     if (!userMessage) {
       return new Response(JSON.stringify({ error: "message vazio" }), {
@@ -77,21 +68,11 @@ CONTEXTO TEMPORAL (use sempre como referência, NUNCA invente datas):
 - Hora atual: ${fmtTime} (America/Sao_Paulo)
 - ISO local: ${isoSp}
 
-CONTEXTO DO VISITANTE JÁ COLETADO:
-- Nome: ${visitorName || "ainda não informado"}
-- WhatsApp: ${visitorPhone || "ainda não informado"}
-- Área provável: ${visitorArea || "ainda não identificada"}
-
 Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir da data acima.`;
-
-    const safeHistory = history
-      .filter((m) => m && ["user", "assistant"].includes(m.role) && String(m.content || "").trim())
-      .slice(-24)
-      .map((m) => ({ role: m.role, content: String(m.content || "") }));
 
     const messages = [
       { role: "system", content: systemContent },
-      ...safeHistory,
+      ...history.slice(-20).map((m) => ({ role: m.role, content: String(m.content || "") })),
       { role: "user", content: userMessage },
     ];
 
@@ -100,7 +81,6 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
       headers: {
         "Content-Type": "application/json",
         "Lovable-API-Key": LOVABLE_API_KEY,
-        "X-Lovable-AIG-SDK": "rest-fetch",
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
@@ -130,8 +110,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: String(e?.message || e) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

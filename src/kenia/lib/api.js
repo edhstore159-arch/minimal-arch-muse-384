@@ -278,9 +278,6 @@ const staticPost = (url, body = {}) => {
           body: {
             message: body.message || body.text || "",
             history: body.history || [],
-              visitor_name: body.visitor_name || null,
-              visitor_phone: body.visitor_phone || null,
-              visitor_area: body.visitor_area || null,
             system_prompt: body.system_prompt,
           },
         });

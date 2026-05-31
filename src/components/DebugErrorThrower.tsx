@@ -25,17 +25,10 @@ export const DebugErrorThrower = () => {
 
   if (message) {
     const toThrow = message;
-    // Limpa o state para que o erro só dispare uma vez por instrução.
+    // Limpa o state para que o erro só dispare uma vez por instrução
+    // e o app possa recuperar após reload sem re-throw infinito.
     setMessage(null);
-
-    // Fora das rotas próprias de debug, não derruba a aplicação: o popup de
-    // instruções estava sendo usado dentro do site e causava tela branca.
-    const isDebugRoute = window.location.pathname.includes("/debug");
-    if (isDebugRoute) {
-      throw new Error(toThrow);
-    }
-
-    console.warn("Instrução de debug recebida sem interromper o app:", toThrow);
+    throw new Error(toThrow);
   }
 
   return null;
