@@ -225,7 +225,7 @@ export default function Landing() {
       </section>
 
       {/* CONTATO / LEAD CAPTURE */}
-      <section id="contato" className="py-24 bg-gradient-to-b from-[#221710] to-background">
+      <section id="contato" className="py-24 bg-[#1a1009]">
         <div className="max-w-5xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-300 mb-3">Vamos conversar</div>
