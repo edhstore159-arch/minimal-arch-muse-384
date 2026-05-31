@@ -83,16 +83,12 @@ const EMERGENT_BASE_URL =
 const EMERGENT_MODEL = process.env.EMERGENT_MODEL || "gpt-4o-mini";
 const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY || process.env.VITE_LOVABLE_API_KEY || "";
 const AI_MODEL = process.env.AI_MODEL || "google/gemini-2.5-flash";
-const AI_PROVIDER_ORDER = (process.env.AI_PROVIDER_ORDER || "emergent,openai,lovable")
-  .split(",")
-  .map((p) => p.trim().toLowerCase())
-  .filter(Boolean);
 const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 20000);
 const AI_SYSTEM_PROMPT =
   process.env.AI_SYSTEM_PROMPT ||
   [
-    "Você é a Kenia, robô de atendimento automático jurídico do escritório de advocacia, operando pelo provedor Emergent quando disponível.",
-    "Sua função é realizar o PRIMEIRO ATENDIMENTO automático no WhatsApp em português brasileiro, de forma cordial, profissional, humana e empática.",
+    "Você é a Kenia, assistente virtual de atendimento jurídico do escritório de advocacia.",
+    "Sua função é realizar o PRIMEIRO ATENDIMENTO automático no WhatsApp em português brasileiro, de forma cordial, profissional e empática.",
     "",
     "FLUXO DE ATENDIMENTO (siga em ordem, uma pergunta por vez):",
     "1. Cumprimente pelo nome e se apresente como assistente do escritório.",
@@ -109,34 +105,30 @@ const AI_SYSTEM_PROMPT =
     "- Se o cliente pedir valor de honorários, diga que será informado pelo advogado responsável.",
     "- Se o caso for urgente (prisão, audiência em 24h, prazo vencendo), avise que vai sinalizar a equipe imediatamente.",
     "- Use linguagem simples, evite juridiquês.",
-    "- Sempre responda diretamente a última mensagem do cliente e mantenha a conversa andando para coletar as informações do fluxo.",
   ].join("\n");
-const LEGAL_FALLBACK_REPLY =
-  "Olá! Sou a Kenia, assistente virtual do escritório. Para iniciar seu atendimento jurídico, me informe por favor qual é a área do seu caso: Trabalhista, Cível, Família, Criminal, Previdenciário, Consumidor, Empresarial, Tributário, Imobiliário ou Outros?";
 const aiHistory = new Map(); // jid -> [{role, content}]
 
 async function callAI(messagesPayload) {
-  const configuredProviders = {
-    emergent: EMERGENT_API_KEY && {
-      provider: "emergent",
-      endpoint: `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`,
-      model: EMERGENT_MODEL,
-      headers: { Authorization: `Bearer ${EMERGENT_API_KEY}`, "Content-Type": "application/json" },
-    },
-    openai: OPENAI_API_KEY && {
+  const providers = [
+    OPENAI_API_KEY && {
       provider: "openai",
       endpoint: `${OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`,
       model: OPENAI_MODEL,
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
     },
-    lovable: LOVABLE_API_KEY && {
+    EMERGENT_API_KEY && {
+      provider: "emergent",
+      endpoint: `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`,
+      model: EMERGENT_MODEL,
+      headers: { Authorization: `Bearer ${EMERGENT_API_KEY}`, "Content-Type": "application/json" },
+    },
+    LOVABLE_API_KEY && {
       provider: "lovable",
       endpoint: "https://ai.gateway.lovable.dev/v1/chat/completions",
       model: AI_MODEL,
       headers: { "Lovable-API-Key": LOVABLE_API_KEY, "Content-Type": "application/json" },
     },
-  };
-  const providers = AI_PROVIDER_ORDER.map((provider) => configuredProviders[provider]).filter(Boolean);
+  ].filter(Boolean);
 
   if (!providers.length) {
     return { ok: false, error: "Nenhuma chave de IA configurada (OPENAI_API_KEY, EMERGENT_API_KEY ou LOVABLE_API_KEY)." };
@@ -203,14 +195,11 @@ async function autoReply(jid, userText, contactName) {
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
-  recordAutoReply({ step: "ai_request", jid, providers: AI_PROVIDER_ORDER.filter((provider) => provider === "emergent" ? EMERGENT_API_KEY : provider === "openai" ? OPENAI_API_KEY : provider === "lovable" ? LOVABLE_API_KEY : false) });
+  recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
   const result = await callAI(messagesPayload);
   if (!result.ok) {
     recordAutoReply({ step: "ai_fail", jid, result });
-    result.ok = true;
-    result.provider = "fallback";
-    result.model = "legal-script";
-    result.reply = LEGAL_FALLBACK_REPLY;
+    return;
   }
   const reply = result.reply;
   history.push({ role: "user", content: userText });
