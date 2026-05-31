@@ -17,6 +17,10 @@ import {
 
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
+const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
+const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || 60000);
+const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS || 20000);
+const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 2000);
 const logger = pino({ level: "warn" });
 
 const app = express();
@@ -26,9 +30,11 @@ app.use(express.json({ limit: "5mb" }));
 // ---- Estado do socket Baileys ----
 let sock = null;
 let currentQR = null;
+let currentQRAt = null;
 let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
 let starting = false;
+let reconnectTimer = null;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
 // ---- Armazenamento em memória de contatos e mensagens ----
