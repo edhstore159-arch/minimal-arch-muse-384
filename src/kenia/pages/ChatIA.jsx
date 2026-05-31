@@ -329,6 +329,14 @@ export default function ChatIA() {
             <BookOpen className="w-3 h-3" /> Legislação · {legDate || "atualizando..."}
           </Badge>
           <Button
+            size="sm"
+            onClick={() => openScheduler()}
+            className="gap-1.5 bg-gold-600 hover:bg-gold-700 text-white"
+            data-testid="open-scheduler-btn"
+          >
+            <CalendarPlus className="w-3.5 h-3.5" /> Agendar consulta
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={reset}
