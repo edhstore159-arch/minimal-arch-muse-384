@@ -39,6 +39,9 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/consulta" element={<Consulta />} />
+            {/* Admin debug tool — sempre acessível, sem auth */}
+            <Route path="/admin/debug" element={<DebugTool />} />
+            <Route path="/app/debug" element={<DebugTool />} />
             <Route
               element={
                 <Protected>
@@ -60,9 +63,9 @@ function App() {
               <Route path="/app/whatsapp" element={<WhatsAppSettings />} />
               <Route path="/app/whatsapp-logs" element={<WhatsAppLogs />} />
               <Route path="/app/settings" element={<Settings />} />
-              <Route path="/app/debug" element={<DebugTool />} />
             </Route>
           </Routes>
+
         </BrowserRouter>
         <Toaster position="top-right" richColors />
       </AuthProvider>
