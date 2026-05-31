@@ -290,9 +290,9 @@ export default function WhatsAppSettings() {
     try {
       const { data } = await api.post("/whatsapp/send-direct", sendTest);
       if (data.delivered) toast.success("Mensagem enviada!");
-      else toast.warning(`Não entregue: ${JSON.stringify(data.provider_result).slice(0,120)}`);
+      else toast.warning(`Não entregue: ${(data.error || JSON.stringify(data.provider_result || data)).slice(0,120)}`);
     } catch (e) {
-      toast.error("Erro ao enviar teste");
+      toast.error(e?.response?.data?.error || "Erro ao enviar teste");
     } finally {
       setSendingTest(false);
     }
