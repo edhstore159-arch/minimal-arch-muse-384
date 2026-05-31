@@ -314,18 +314,38 @@ const outboundMessage = (text, to, providerResult = {}) => ({
 
 const baileysRuntimeStatus = () => {
   const connected = connectionState === "open" || Boolean(sock?.user && connectionState !== "logged_out");
+  const connectingForMs = connectionStartedAt ? Date.now() - new Date(connectionStartedAt).getTime() : 0;
   return {
     ok: true,
     connected,
     state: connected ? "open" : connectionState,
     last_error: connected ? null : lastError,
     me: sock?.user || null,
+    qr_available: Boolean(currentQR),
+    starting,
+    connecting_for_ms: connected ? 0 : connectingForMs,
+    connection_started_at: connectionStartedAt,
+    last_connection_update_at: lastConnectionUpdateAt,
   };
 };
 
+function kickStaleConnection() {
+  const status = baileysRuntimeStatus();
+  const stale = !status.connected && status.state === "connecting" && !status.qr_available && status.connecting_for_ms > 45000;
+  if (!stale || reconnectTimer) return false;
+  recordAutoReply({ step: "connection_watchdog", state: status.state, connectingForMs: status.connecting_for_ms });
+  reconnectTimer = setTimeout(() => restartSock({ resetAuth: false }).catch((e) => {
+    lastError = e?.message || String(e);
+  }), 250);
+  return true;
+}
+
 // ---- Healthcheck ----
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
-app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
+app.get("/api/health", (_req, res) => {
+  kickStaleConnection();
+  res.json(ok({ state: connectionState }));
+});
 
 app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 
@@ -348,9 +368,15 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
 
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
+  const reconnect_scheduled = kickStaleConnection();
+  const status = baileysRuntimeStatus();
   res.json({
     bot_enabled: whatsappConfig.bot_enabled,
-    connection_state: connectionState,
+    connected: status.connected,
+    connection_state: status.state,
+    qr_available: status.qr_available,
+    connecting_for_ms: status.connecting_for_ms,
+    reconnect_scheduled,
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
     last: autoReplyDebug.last,
