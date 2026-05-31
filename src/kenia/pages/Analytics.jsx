@@ -33,7 +33,7 @@ export default function Analytics() {
   const processes = m.processes || { ativos: 0, total: 0 };
 
 
-  const fmt = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmt = v => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const stageData = Object.entries(leads.by_stage || {}).map(([k, v]) => ({
     name: STAGE_LABELS[k] || k, value: v, color: STAGE_COLORS[k] || "#64748B",
