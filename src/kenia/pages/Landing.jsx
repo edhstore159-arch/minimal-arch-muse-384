@@ -139,14 +139,15 @@ export default function Landing() {
           <div className="grid lg:grid-cols-12 gap-8 mb-16">
             <div className="lg:col-span-5">
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-3">Plataforma completa</div>
-              <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight text-nude-900">
+              <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight text-nude-50">
                 Da captação ao recebimento, tudo conectado.
               </h2>
             </div>
             <div className="lg:col-span-7 lg:pt-4">
-              <p className="text-lg text-gold-200/60 leading-relaxed">
-                Pare de pular entre 5 ferramentas diferentes. <strong className="text-gold-100">Espírito Santo</strong> concentra
+              <p className="text-lg text-nude-200 leading-relaxed">
+                Pare de pular entre 5 ferramentas diferentes. <strong className="text-gold-300">Espírito Santo</strong> concentra
                 todo o ciclo do cliente — do primeiro contato no WhatsApp (texto ou áudio) ao último pagamento —
+
                 com IA integrada e auto-hospedagem via Baileys.
               </p>
             </div>
@@ -164,13 +165,14 @@ export default function Landing() {
               { icon: BarChart3, title: "Dashboard de Métricas", desc: "Conversão, faturamento e produtividade em tempo real." },
               { icon: Bot, title: "Agendamento automático", desc: "Cliente confirma horário no chat → agenda + link Meet criados." },
             ].map((f, i) => (
-              <div key={i} className="bg-background p-8 hover:bg-[#2a1d12] transition-colors" data-testid={`feature-${i}`}>
-                <div className="w-10 h-10 rounded-md bg-gradient-to-br from-gold-500/20 to-gold-700/20 border border-gold-500/30 grid place-items-center mb-5">
-                  <f.icon className="w-5 h-5 text-gold-300" />
+              <div key={i} className="bg-[#2a1d12] p-8 hover:bg-[#3a2616] transition-colors" data-testid={`feature-${i}`}>
+                <div className="w-10 h-10 rounded-md bg-gradient-to-br from-gold-500/30 to-gold-700/30 border border-gold-500/40 grid place-items-center mb-5">
+                  <f.icon className="w-5 h-5 text-gold-200" />
                 </div>
-                <h3 className="font-display font-semibold text-xl mb-2 text-gold-100">{f.title}</h3>
-                <p className="text-sm text-gold-200/55 leading-relaxed">{f.desc}</p>
+                <h3 className="font-display font-semibold text-xl mb-2 text-nude-50">{f.title}</h3>
+                <p className="text-sm text-nude-200 leading-relaxed">{f.desc}</p>
               </div>
+
             ))}
           </div>
         </div>
