@@ -148,9 +148,8 @@ export default function WhatsAppSettings() {
     }
   };
 
-  // Aceita SOMENTE a imagem real do QR de pareamento do WhatsApp.
-  // Strings arbitrárias (ex.: token/instance) NÃO viram QR aqui, porque
-  // o WhatsApp só pareia com o payload exato emitido pela Z-API/Baileys.
+  // Aceita imagem real do QR ou o payload oficial de pareamento retornado pela Z-API.
+  // Não transforma tokens/IDs soltos em QR, para evitar gerar código inválido.
   const normalizeQrImage = (raw) => {
     if (!raw || typeof raw !== "string") return null;
     const s = raw.trim();
@@ -166,16 +165,42 @@ export default function WhatsAppSettings() {
     return null;
   };
 
-  const pickImageCandidate = (data) => {
+  const isLikelyWhatsAppQrPayload = (raw) => {
+    if (!raw || typeof raw !== "string") return false;
+    const s = raw.trim();
+    if (s.length < 80) return false;
+    if (s.startsWith("data:image") || /^https?:\/\//i.test(s)) return false;
+    if ([cfg?.zapi_instance_id, cfg?.zapi_instance_token, cfg?.zapi_client_token].includes(s)) return false;
+
+    // Payloads de pareamento do WhatsApp/Z-API normalmente são longos e começam
+    // com "1@"/"2@" ou possuem partes separadas por vírgula.
+    return /^\d@/.test(s) || (s.includes("@") && s.includes(","));
+  };
+
+  const normalizeQrPayload = async (raw) => {
+    const image = normalizeQrImage(raw);
+    if (image) return image;
+    if (!isLikelyWhatsAppQrPayload(raw)) return null;
+
+    return QRCode.toDataURL(raw.trim(), {
+      type: "image/png",
+      width: 320,
+      margin: 2,
+      errorCorrectionLevel: "M",
+    });
+  };
+
+  const pickQrCandidate = async (data) => {
     if (!data) return null;
-    // Procura por TODOS os campos onde a Z-API costuma colocar a imagem
+    // Procura por TODOS os campos onde a Z-API costuma colocar a imagem ou payload oficial.
     const candidates = [
       data?.data?.value, data?.data?.qrcode, data?.data?.image, data?.data?.base64,
-      data?.value, data?.qrcode, data?.image, data?.base64, data?.qr, data?.png,
+      data?.data?.qrCode, data?.data?.qr, data?.value, data?.qrcode, data?.image,
+      data?.base64, data?.qrCode, data?.qr, data?.png,
       typeof data === "string" ? data : null,
     ];
     for (const c of candidates) {
-      const img = normalizeQrImage(c);
+      const img = await normalizeQrPayload(c);
       if (img) return img;
     }
     return null;
@@ -189,14 +214,14 @@ export default function WhatsAppSettings() {
       let img = null;
       try {
         const { data } = await api.get("/whatsapp/qr/image");
-        img = pickImageCandidate(data);
+        img = await pickQrCandidate(data);
       } catch { /* fallback abaixo */ }
 
       // 2) Fallback ao endpoint genérico
       let connected = false;
       if (!img) {
         const { data } = await api.get("/whatsapp/qr");
-        img = pickImageCandidate(data);
+        img = await pickQrCandidate(data);
         connected = !!data?.connected || !!data?.data?.connected;
       }
 
