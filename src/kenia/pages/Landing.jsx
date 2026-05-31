@@ -183,7 +183,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-3">Como funciona</div>
+              <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-700 mb-3">Como funciona</div>
               <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight mb-8 text-nude-900">
                 Três passos para transformar seu escritório.
               </h2>
@@ -193,15 +193,16 @@ export default function Landing() {
                   { n: "02", t: "Ative o robô IA (texto + voz)", d: "Clientes mandam mensagem ou áudio. O bot transcreve, responde e agenda." },
                   { n: "03", t: "Acompanhe pelo painel", d: "CRM, agenda, financeiro e métricas em tempo real." },
                 ].map((s, i) => (
-                  <div key={i} className="flex gap-5 pb-6 border-b border-gold-900/30 last:border-0">
-                    <div className="font-mono text-sm font-semibold text-gold-400 w-8 shrink-0">{s.n}</div>
+                  <div key={i} className="flex gap-5 pb-6 border-b border-nude-200 last:border-0">
+                    <div className="font-mono text-sm font-semibold text-gold-700 w-8 shrink-0">{s.n}</div>
                     <div>
-                      <div className="font-display font-semibold text-lg mb-1 text-gold-100">{s.t}</div>
-                      <div className="text-sm text-gold-200/55">{s.d}</div>
+                      <div className="font-display font-semibold text-lg mb-1 text-nude-900">{s.t}</div>
+                      <div className="text-sm text-nude-700">{s.d}</div>
                     </div>
                   </div>
                 ))}
               </div>
+
             </div>
             <Card className="bg-[#221710] border-gold-900/40 p-8">
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-4">Exemplo — fluxo de voz</div>
@@ -227,14 +228,15 @@ export default function Landing() {
       <section id="contato" className="py-24 bg-gradient-to-b from-[#221710] to-background">
         <div className="max-w-5xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-3">Vamos conversar</div>
-            <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight mb-4 text-nude-900">
+            <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-300 mb-3">Vamos conversar</div>
+            <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight mb-4 text-nude-50">
               Receba uma demonstração personalizada.
             </h2>
-            <p className="text-gold-200/60 leading-relaxed">
+            <p className="text-nude-200 leading-relaxed">
               Conte um pouco do seu escritório e nossa equipe retorna em até 1 hora útil.
               Sem compromisso.
             </p>
+
           </div>
           <Card className="bg-[#221710] border-gold-900/40 p-6">
             <form onSubmit={submit} className="space-y-3" data-testid="landing-lead-form">
