@@ -207,6 +207,7 @@ export default function Agenda() {
               const d = new Date(it.starts_at);
               const dateLabel = d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
               const timeLabel = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              const meetingLink = it.meeting_link || it.meet_url;
               return (
                 <Card key={it.id} className="p-4 border-nude-200 hover:shadow-sm transition-shadow" data-testid={`appt-${it.id}`}>
                   <div className="flex items-start gap-4">
@@ -225,13 +226,13 @@ export default function Agenda() {
                             <span className="flex items-center gap-1"><Video className="w-3.5 h-3.5" />{it.location}</span>
                           </div>
                           {it.notes && <div className="text-xs text-nude-500 mt-1.5 line-clamp-2">{it.notes}</div>}
-                          {it.meeting_link && (
+                          {meetingLink && (
                             <div className="flex items-center gap-2 mt-2">
                               <Link2 className="w-3.5 h-3.5 text-gold-600" />
-                              <a href={it.meeting_link} target="_blank" rel="noreferrer" className="text-xs text-gold-700 hover:underline truncate max-w-md">
-                                {it.meeting_link}
+                              <a href={meetingLink} target="_blank" rel="noreferrer" className="text-xs text-gold-700 hover:underline truncate max-w-md">
+                                {meetingLink}
                               </a>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyLink(it.meeting_link)}>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyLink(meetingLink)}>
                                 <Copy className="w-3 h-3" />
                               </Button>
                             </div>

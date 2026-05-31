@@ -17,6 +17,33 @@ import {
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
+const getMeetLink = () => {
+  const meetCode = `${Math.random().toString(36).slice(2, 5)}-${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 5)}`;
+  return `https://meet.google.com/${meetCode}`;
+};
+
+const getAppointmentDateTime = (date, time) => new Date(`${date}T${time}:00`).toISOString();
+
+const extractScheduleIntent = (text) => {
+  const lower = text.toLowerCase();
+  if (!SCHEDULE_REGEX.test(lower)) return null;
+  const slot = nextBusinessSlot();
+  const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  const timeMatch = lower.match(/(?:às|as|para|por volta de)?\s*(\d{1,2})(?::|h)(\d{2})?/i);
+  let date = slot.date;
+  if (/amanh[ãa]/i.test(lower)) {
+    date = slot.date;
+  } else if (dateMatch) {
+    const day = dateMatch[1].padStart(2, "0");
+    const month = dateMatch[2].padStart(2, "0");
+    const rawYear = dateMatch[3] || String(new Date().getFullYear());
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    date = `${year}-${month}-${day}`;
+  }
+  const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${(timeMatch[2] || "00").padStart(2, "0")}` : slot.time;
+  return { date, time, duration: 60 };
+};
+
 function nextBusinessSlot() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -121,39 +148,41 @@ export default function ChatIA() {
     setScheduler({ date: slot.date, time: slot.time, duration: 60, area: area || analysis?.area || "" });
   };
 
+  const createAppointment = async ({ date, time, duration = 60, area = "" }) => {
+    const starts_at = getAppointmentDateTime(date, time);
+    const clientName = name?.trim() || "Cliente do chat";
+    const meetUrl = getMeetLink();
+    const title = `Consulta — ${area || analysis?.area || "Atendimento jurídico"} · ${clientName}`;
+    await api.post("/appointments", {
+      title,
+      client_name: clientName,
+      starts_at,
+      duration_min: Number(duration) || 60,
+      location: "Google Meet",
+      meet_url: meetUrl,
+      meeting_link: meetUrl,
+      notes: [phone ? `WhatsApp: ${phone}` : "", `Meet: ${meetUrl}`].filter(Boolean).join(" · "),
+      status: "confirmado",
+    });
+    const human = new Date(starts_at).toLocaleString("pt-BR", {
+      weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit",
+    });
+    return { human, meetUrl, duration: Number(duration) || 60 };
+  };
+
   const confirmSchedule = async () => {
     if (!scheduler?.date || !scheduler?.time) {
       toast.error("Escolha data e horário");
       return;
     }
-    if (!name?.trim()) {
-      toast.error("Informe seu nome para confirmar o agendamento");
-      return;
-    }
     setScheduling(true);
     try {
-      const starts_at = new Date(`${scheduler.date}T${scheduler.time}:00`).toISOString();
-      const title = `Consulta — ${scheduler.area || "Atendimento jurídico"}${name ? " · " + name : ""}`;
-      const meetCode = `${Math.random().toString(36).slice(2, 5)}-${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 5)}`;
-      const meetUrl = `https://meet.google.com/${meetCode}`;
-      await api.post("/appointments", {
-        title,
-        client_name: name || "Cliente",
-        starts_at,
-        duration_min: Number(scheduler.duration) || 60,
-        location: "Google Meet",
-        meet_url: meetUrl,
-        notes: [phone ? `WhatsApp: ${phone}` : "", `Meet: ${meetUrl}`].filter(Boolean).join(" · "),
-        status: "confirmado",
-      });
-      const human = new Date(starts_at).toLocaleString("pt-BR", {
-        weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit",
-      });
+      const { human, meetUrl, duration } = await createAppointment(scheduler);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: `✅ Consulta agendada para ${human} (${scheduler.duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda e você receberá o link no WhatsApp ${phone || "informado"}.`,
+          content: `✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp cadastrado é ${phone}` : ""}.`,
           audio_base64: null,
         },
       ]);
@@ -247,8 +276,38 @@ export default function ChatIA() {
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setThinking(true);
-    if (SCHEDULE_REGEX.test(msg) && !scheduler) {
-      openScheduler();
+    const scheduleIntent = extractScheduleIntent(msg);
+    if (scheduleIntent) {
+      try {
+        const { human, meetUrl, duration } = await createAppointment({
+          ...scheduleIntent,
+          area: analysis?.area || "Atendimento jurídico",
+        });
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp cadastrado é ${phone}` : ""}.`,
+            audio_base64: null,
+          },
+        ]);
+        toast.success("Agendamento criado no painel da Agenda");
+        setScheduler(null);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Não consegui salvar automaticamente agora. Abra o botão Agendar consulta e confirme o horário manualmente.",
+            audio_base64: null,
+          },
+        ]);
+        openScheduler(analysis?.area || "Atendimento jurídico");
+        toast.error("Não consegui criar o agendamento automaticamente");
+      } finally {
+        setThinking(false);
+      }
+      return;
     }
     try {
       const { data } = await api.post(
@@ -528,8 +587,8 @@ export default function ChatIA() {
                   </div>
                 </div>
                 {!name && (
-                  <p className="text-[11px] text-rose-700 mt-2">
-                    Preencha seu nome no topo do chat para confirmar o agendamento.
+                  <p className="text-[11px] text-gold-800 mt-2">
+                    Se o nome não for preenchido, o compromisso será salvo como Cliente do chat.
                   </p>
                 )}
               </div>
