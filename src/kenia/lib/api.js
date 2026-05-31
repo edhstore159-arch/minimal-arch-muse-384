@@ -289,7 +289,7 @@ const staticPost = (url, body = {}) => {
             session_id: body.session_id || nextId("session"),
             response: data?.response || "Sem resposta da IA.",
             audio_base64: data?.audio_base64 || null,
-            analysis: data?.analysis || { acertividade: 80, qualificacao: "ok" },
+            analysis: data?.analysis || { acertividade: 80, chance_exito: 60, qualificacao: "necessita_mais_info", area: "Em análise" },
             server_time: data?.server_time,
           },
           status: 200,
@@ -303,7 +303,7 @@ const staticPost = (url, body = {}) => {
             session_id: body.session_id || nextId("session"),
             response: `Erro ao consultar IA: ${e?.message || e}. Verifique se a edge function chat-ai está publicada.`,
             audio_base64: null,
-            analysis: { acertividade: 0, qualificacao: "erro" },
+            analysis: { acertividade: 0, chance_exito: 0, qualificacao: "necessita_mais_info", area: "Erro" },
           },
           status: 200, statusText: "OK", headers: {}, config: {},
         };
