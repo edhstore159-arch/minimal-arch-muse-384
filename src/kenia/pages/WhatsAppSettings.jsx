@@ -42,6 +42,16 @@ export default function WhatsAppSettings() {
   const backendUrl = (import.meta.env.VITE_BACKEND_URL || "");
   const webhookBase = `${backendUrl}/api/whatsapp/webhook`;
 
+  const normalizeBaileysStatus = (status = {}) => {
+    const connected = Boolean(status.connected || status.state === "open" || status.me?.id || status.me?.jid);
+    return {
+      ...status,
+      connected,
+      state: connected ? "open" : status.state,
+      last_error: connected ? null : status.last_error,
+    };
+  };
+
   useEffect(() => { load(); runDiagnostics(); }, []);
 
   // Auto-poll Baileys status/QR when provider is baileys
@@ -64,12 +74,14 @@ export default function WhatsAppSettings() {
   const pollBaileys = async () => {
     try {
       const { data: st } = await api.get("/whatsapp/baileys/status");
-      setBaileysStatus(st);
-      if (!st.connected) {
+      const normalized = normalizeBaileysStatus(st);
+      setBaileysStatus(normalized);
+      if (!normalized.connected) {
         const { data: qr } = await api.get("/whatsapp/baileys/qr");
         setBaileysQr(qr);
       } else {
         setBaileysQr(null);
+        if (cfg?.provider !== "baileys") setCfg((current) => current ? { ...current, provider: "baileys", bot_enabled: true } : current);
       }
     } catch (e) {
       // Sidecar morreu / nao responde. Marca offline e NAO tenta reconectar
@@ -143,6 +155,9 @@ export default function WhatsAppSettings() {
       setTestResult(data);
       if (data.connected) {
         toast.success("WhatsApp conectado!");
+        const { data: st } = await api.get("/whatsapp/baileys/status");
+        setBaileysStatus(normalizeBaileysStatus(st));
+        setCfg((current) => current ? { ...current, provider: "baileys", bot_enabled: true } : current);
       } else if (data.hint) {
         toast.warning(data.hint, { duration: 8000 });
       } else {
