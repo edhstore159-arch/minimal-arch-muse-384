@@ -148,41 +148,66 @@ export default function WhatsAppSettings() {
     }
   };
 
-  const normalizeQr = async (raw) => {
+  // Aceita SOMENTE a imagem real do QR de pareamento do WhatsApp.
+  // Strings arbitrárias (ex.: token/instance) NÃO viram QR aqui, porque
+  // o WhatsApp só pareia com o payload exato emitido pela Z-API/Baileys.
+  const normalizeQrImage = (raw) => {
     if (!raw || typeof raw !== "string") return null;
     const s = raw.trim();
     if (s.startsWith("data:image")) return s;
-    // PNG base64 (starts with iVBOR...)
-    if (/^iVBOR[A-Za-z0-9+/=]+$/.test(s.slice(0, 40))) return `data:image/png;base64,${s}`;
-    // Otherwise treat as connection string and render to QR
-    try {
-      return await QRCode.toDataURL(s, { width: 320, margin: 1 });
-    } catch {
-      return null;
+    // PNG base64 puro (header "iVBOR...")
+    if (/^iVBOR[A-Za-z0-9+/=\s]+$/.test(s.slice(0, 60))) {
+      return `data:image/png;base64,${s.replace(/\s/g, "")}`;
     }
+    // JPEG base64 puro
+    if (/^\/9j\/[A-Za-z0-9+/=\s]+$/.test(s.slice(0, 60))) {
+      return `data:image/jpeg;base64,${s.replace(/\s/g, "")}`;
+    }
+    return null;
+  };
+
+  const pickImageCandidate = (data) => {
+    if (!data) return null;
+    // Procura por TODOS os campos onde a Z-API costuma colocar a imagem
+    const candidates = [
+      data?.data?.value, data?.data?.qrcode, data?.data?.image, data?.data?.base64,
+      data?.value, data?.qrcode, data?.image, data?.base64, data?.qr, data?.png,
+      typeof data === "string" ? data : null,
+    ];
+    for (const c of candidates) {
+      const img = normalizeQrImage(c);
+      if (img) return img;
+    }
+    return null;
   };
 
   const fetchQr = async () => {
     setLoadingQr(true);
     setQrImg(null);
     try {
-      const { data } = await api.get("/whatsapp/qr");
-      const candidate =
-        data?.data?.value ||
-        data?.data?.qrcode ||
-        data?.data?.image ||
-        data?.value ||
-        data?.qrcode ||
-        data?.image ||
-        data?.qr ||
-        (typeof data === "string" ? data : null);
-      const normalized = await normalizeQr(candidate);
-      if (normalized) {
-        setQrImg(normalized);
-      } else if (data?.connected) {
+      // 1) Tenta endpoint dedicado à imagem (Z-API: /qr-code/image)
+      let img = null;
+      try {
+        const { data } = await api.get("/whatsapp/qr/image");
+        img = pickImageCandidate(data);
+      } catch { /* fallback abaixo */ }
+
+      // 2) Fallback ao endpoint genérico
+      let connected = false;
+      if (!img) {
+        const { data } = await api.get("/whatsapp/qr");
+        img = pickImageCandidate(data);
+        connected = !!data?.connected || !!data?.data?.connected;
+      }
+
+      if (img) {
+        setQrImg(img);
+      } else if (connected) {
         toast.info("WhatsApp já está conectado — QR não é necessário.");
       } else {
-        toast.warning("QR não retornado. Verifique credenciais Z-API ou tente novamente em alguns segundos.");
+        toast.warning(
+          "Z-API não retornou a imagem do QR. No painel Z-API verifique se a instância está em status 'aguardando QR' e gere novamente."
+        );
       }
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Erro ao obter QR code");
