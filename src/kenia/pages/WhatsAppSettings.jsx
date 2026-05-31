@@ -154,6 +154,7 @@ export default function WhatsAppSettings() {
     if (!raw || typeof raw !== "string") return null;
     const s = raw.trim();
     if (s.startsWith("data:image")) return s;
+    if (s.startsWith("<svg")) return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`;
     // PNG base64 puro (header "iVBOR...")
     if (/^iVBOR[A-Za-z0-9+/=\s]+$/.test(s.slice(0, 60))) {
       return `data:image/png;base64,${s.replace(/\s/g, "")}`;
@@ -161,6 +162,10 @@ export default function WhatsAppSettings() {
     // JPEG base64 puro
     if (/^\/9j\/[A-Za-z0-9+/=\s]+$/.test(s.slice(0, 60))) {
       return `data:image/jpeg;base64,${s.replace(/\s/g, "")}`;
+    }
+    // SVG base64 puro
+    if (/^PHN2Zy[A-Za-z0-9+/=\s]+$/.test(s.slice(0, 80))) {
+      return `data:image/svg+xml;base64,${s.replace(/\s/g, "")}`;
     }
     return null;
   };
@@ -206,6 +211,34 @@ export default function WhatsAppSettings() {
     return null;
   };
 
+  const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
+  const parseQrImageResponse = async (response) => {
+    const body = response?.data;
+    const contentType = response?.headers?.["content-type"] || "";
+
+    if (typeof Blob !== "undefined" && body instanceof Blob) {
+      if (!body.size) return null;
+      if (contentType.startsWith("image/") || body.type?.startsWith("image/")) {
+        return blobToDataUrl(body);
+      }
+
+      const text = await body.text();
+      try {
+        return pickQrCandidate(JSON.parse(text));
+      } catch {
+        return pickQrCandidate(text);
+      }
+    }
+
+    return pickQrCandidate(body);
+  };
+
   const fetchQr = async () => {
     setLoadingQr(true);
     setQrImg(null);
@@ -213,8 +246,8 @@ export default function WhatsAppSettings() {
       // 1) Tenta endpoint dedicado à imagem (Z-API: /qr-code/image)
       let img = null;
       try {
-        const { data } = await api.get("/whatsapp/qr/image");
-        img = await pickQrCandidate(data);
+        const response = await api.get("/whatsapp/qr/image", { responseType: "blob" });
+        img = await parseQrImageResponse(response);
       } catch { /* fallback abaixo */ }
 
       // 2) Fallback ao endpoint genérico
