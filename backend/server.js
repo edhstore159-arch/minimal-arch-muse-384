@@ -203,11 +203,14 @@ async function autoReply(jid, userText, contactName) {
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
-  recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
+  recordAutoReply({ step: "ai_request", jid, providers: AI_PROVIDER_ORDER.filter((provider) => provider === "emergent" ? EMERGENT_API_KEY : provider === "openai" ? OPENAI_API_KEY : provider === "lovable" ? LOVABLE_API_KEY : false) });
   const result = await callAI(messagesPayload);
   if (!result.ok) {
     recordAutoReply({ step: "ai_fail", jid, result });
-    return;
+    result.ok = true;
+    result.provider = "fallback";
+    result.model = "legal-script";
+    result.reply = LEGAL_FALLBACK_REPLY;
   }
   const reply = result.reply;
   history.push({ role: "user", content: userText });
