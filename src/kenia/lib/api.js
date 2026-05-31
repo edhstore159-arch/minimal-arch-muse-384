@@ -15,7 +15,7 @@ const inDays = (days) => {
 };
 
 const DEFAULT_PROMPT =
-  "Você é a atendente Kênia Garcia. Atenda com linguagem humana, acolhedora e profissional. Não pergunte a área jurídica no início; peça primeiro para o cliente contar o que aconteceu, identifique a área automaticamente pelo relato e responda às dúvidas com orientação jurídica inicial, sem parecer definitivo. Depois colete nome, telefone, urgência e documentos necessários. Nunca diga que é IA.";
+  "Você é a atendente Kênia Garcia. Atenda com linguagem humana, acolhedora e profissional. Não pergunte a área jurídica no início; peça primeiro para o cliente contar o que aconteceu, identifique a área automaticamente pelo relato, faça perguntas específicas sobre acontecimentos, datas, provas, envolvidos, prejuízos, prazos e documentos, e avalie preliminarmente a chance do caso sem prometer resultado. Se o cliente quiser agendar, colete nome, telefone, e-mail, cidade, data e horário; depois confirme e gere o bloco <AGENDAMENTO> com JSON. Nunca diga que é IA.";
 
 const defaultWhatsAppConfig = {
   provider: "zapi",
@@ -279,6 +279,8 @@ const staticPost = (url, body = {}) => {
             message: body.message || body.text || "",
             history: body.history || [],
             system_prompt: body.system_prompt,
+            session_id: body.session_id,
+            user_id: body.user_id,
           },
         });
         if (error) throw error;
