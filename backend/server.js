@@ -336,6 +336,17 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
   res.status(result.ok ? 200 : 500).json({ ...info, result });
 });
 
+// Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
+app.get("/api/whatsapp/ai-debug", (_req, res) => {
+  res.json({
+    bot_enabled: whatsappConfig.bot_enabled,
+    connection_state: connectionState,
+    has_emergent_key: Boolean(EMERGENT_API_KEY),
+    has_lovable_key: Boolean(LOVABLE_API_KEY),
+    last: autoReplyDebug.last,
+    history: autoReplyDebug.history,
+  });
+
 app.put("/api/whatsapp/config", (req, res) => {
   whatsappConfig = { ...whatsappConfig, ...(req.body || {}) };
   res.json(whatsappConfig);
