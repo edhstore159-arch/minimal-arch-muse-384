@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { api } from "@/kenia/lib/api";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
@@ -147,12 +148,18 @@ export default function WhatsAppSettings() {
     }
   };
 
-  const normalizeQr = (raw) => {
+  const normalizeQr = async (raw) => {
     if (!raw || typeof raw !== "string") return null;
-    if (raw.startsWith("data:image")) return raw;
-    // raw base64 → add png prefix
-    if (/^[A-Za-z0-9+/=]+$/.test(raw.slice(0, 80))) return `data:image/png;base64,${raw}`;
-    return raw;
+    const s = raw.trim();
+    if (s.startsWith("data:image")) return s;
+    // PNG base64 (starts with iVBOR...)
+    if (/^iVBOR[A-Za-z0-9+/=]+$/.test(s.slice(0, 40))) return `data:image/png;base64,${s}`;
+    // Otherwise treat as connection string and render to QR
+    try {
+      return await QRCode.toDataURL(s, { width: 320, margin: 1 });
+    } catch {
+      return null;
+    }
   };
 
   const fetchQr = async () => {
@@ -169,7 +176,7 @@ export default function WhatsAppSettings() {
         data?.image ||
         data?.qr ||
         (typeof data === "string" ? data : null);
-      const normalized = normalizeQr(candidate);
+      const normalized = await normalizeQr(candidate);
       if (normalized) {
         setQrImg(normalized);
       } else if (data?.connected) {
