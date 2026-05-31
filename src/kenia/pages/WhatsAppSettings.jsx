@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { api } from "@/kenia/lib/api";
+import { api, HAS_BACKEND } from "@/kenia/lib/api";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Input } from "@/kenia/components/ui/input";
@@ -98,6 +98,10 @@ export default function WhatsAppSettings() {
   };
 
   const baileysReconnect = async () => {
+    if (!HAS_BACKEND || baileysStatus?.state === "static") {
+      toast.warning("O WhatsApp real não roda no site estático. Configure VITE_BACKEND_URL com a URL do backend publicado para gerar o QR.", { duration: 9000 });
+      return;
+    }
     setBaileysLoggingOut(true);
     try {
       const { data } = await api.post("/whatsapp/baileys/reconnect");
@@ -609,7 +613,7 @@ export default function WhatsAppSettings() {
                       <Button variant="outline" size="sm" onClick={pollBaileys} data-testid="baileys-refresh">
                         <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
                       </Button>
-                      {!baileysStatus?.connected && (
+                      {!baileysStatus?.connected && baileysStatus?.state !== "static" && HAS_BACKEND && (
                         <Button
                           variant="outline"
                           size="sm"
