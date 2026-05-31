@@ -351,6 +351,7 @@ async function startSock() {
       starting = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = null;
+      processAutoReplyQueue().catch((e) => recordAutoReply({ step: "queue_process_error", error: e?.message || String(e) }));
     }
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode || new Boom(lastDisconnect?.error)?.output?.statusCode;
@@ -443,6 +444,9 @@ startSock().catch((e) => {
   lastError = e?.message || String(e);
   console.error("startSock error:", e);
 });
+setInterval(() => {
+  processAutoReplyQueue().catch((e) => recordAutoReply({ step: "queue_process_error", error: e?.message || String(e) }));
+}, AUTO_REPLY_RETRY_EVERY_MS);
 
 // ---- Helpers ----
 const ok = (data = {}) => ({ ok: true, ...data });
@@ -523,6 +527,8 @@ app.get("/api/whatsapp/ai-debug", (_req, res) => {
     has_lovable_key: Boolean(LOVABLE_API_KEY),
     last: autoReplyDebug.last,
     history: autoReplyDebug.history,
+    queue_size: pendingAutoReplies.length,
+    queued: pendingAutoReplies.map((m) => ({ jid: m.jid, attempts: m.attempts, created_at: m.created_at, source: m.source, reason: m.reason, last_error: m.last_error })),
   });
 });
 
