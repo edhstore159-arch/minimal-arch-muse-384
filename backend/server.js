@@ -191,6 +191,44 @@ app.post("/api/whatsapp/logout", async (_req, res) => {
   }
 });
 
+app.post("/api/whatsapp/baileys/logout", async (_req, res) => {
+  try {
+    if (sock) await sock.logout();
+    currentQR = null;
+    connectionState = "disconnected";
+    setTimeout(() => startSock().catch(() => {}), 1000);
+    res.json(ok(statusPayload()));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message });
+  }
+});
+
+app.post("/api/whatsapp/baileys/reconnect", async (_req, res) => {
+  try {
+    if (connectionState !== "open") await startSock();
+    res.json(statusPayload());
+  } catch (e) {
+    lastError = e?.message || String(e);
+    res.status(500).json({ ok: false, connected: false, state: connectionState, last_error: lastError });
+  }
+});
+
+app.post("/api/whatsapp/baileys/restart", async (_req, res) => {
+  try {
+    if (sock) {
+      try { sock.end?.(); } catch {}
+    }
+    sock = null;
+    currentQR = null;
+    connectionState = "connecting";
+    await startSock();
+    res.json(statusPayload());
+  } catch (e) {
+    lastError = e?.message || String(e);
+    res.status(500).json({ ok: false, connected: false, state: connectionState, last_error: lastError });
+  }
+});
+
 // ---- Fallback /api/* ----
 app.all("/api/*", (_req, res) => res.json(ok({ fallback: true })));
 
