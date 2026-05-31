@@ -23,7 +23,8 @@ export default function Finance() {
   const load = async () => {
     try {
       const { data } = await api.get("/finance/transactions");
-      setItems(Array.isArray(data) ? data : []);
+      const transactions = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.transactions) ? data.transactions : [];
+      setItems(transactions);
     } catch {
       setItems([]);
     }
@@ -56,11 +57,13 @@ export default function Finance() {
     load();
   };
 
-  const fmt = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const transactions = Array.isArray(items) ? items : [];
+  const amountOf = (t) => Number(t?.amount) || 0;
+  const fmt = (v) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  const receitaPaga = items.filter(t => t.type === "receita" && t.status === "pago").reduce((s, t) => s + t.amount, 0);
-  const receitaPendente = items.filter(t => t.type === "receita" && t.status === "pendente").reduce((s, t) => s + t.amount, 0);
-  const despesaPaga = items.filter(t => t.type === "despesa" && t.status === "pago").reduce((s, t) => s + t.amount, 0);
+  const receitaPaga = transactions.filter(t => t.type === "receita" && t.status === "pago").reduce((s, t) => s + amountOf(t), 0);
+  const receitaPendente = transactions.filter(t => t.type === "receita" && t.status === "pendente").reduce((s, t) => s + amountOf(t), 0);
+  const despesaPaga = transactions.filter(t => t.type === "despesa" && t.status === "pago").reduce((s, t) => s + amountOf(t), 0);
   const lucro = receitaPaga - despesaPaga;
 
   return (
@@ -138,7 +141,7 @@ export default function Finance() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map(t => (
+              {transactions.map(t => (
                 <TableRow key={t.id} data-testid={`tx-row-${t.id}`}>
                   <TableCell>
                     <Badge variant="outline" className={t.type === "receita" ? "border-gold-300 text-gold-700" : "border-rose-300 text-rose-700"}>
@@ -151,7 +154,7 @@ export default function Finance() {
                     {t.due_date ? new Date(t.due_date).toLocaleDateString("pt-BR") : "—"}
                   </TableCell>
                   <TableCell className="text-right font-mono font-medium">
-                    {t.type === "receita" ? "+" : "-"} {fmt(t.amount)}
+                    {t.type === "receita" ? "+" : "-"} {fmt(amountOf(t))}
                   </TableCell>
                   <TableCell>
                     <Badge className={
@@ -174,7 +177,7 @@ export default function Finance() {
                   </TableCell>
                 </TableRow>
               ))}
-              {items.length === 0 && (
+              {transactions.length === 0 && (
                 <TableRow><TableCell colSpan={7} className="text-center text-nude-400 py-12">Nenhum lançamento</TableCell></TableRow>
               )}
             </TableBody>
