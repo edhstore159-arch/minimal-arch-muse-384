@@ -134,13 +134,16 @@ export default function ChatIA() {
     try {
       const starts_at = new Date(`${scheduler.date}T${scheduler.time}:00`).toISOString();
       const title = `Consulta — ${scheduler.area || "Atendimento jurídico"}${name ? " · " + name : ""}`;
+      const meetCode = `${Math.random().toString(36).slice(2, 5)}-${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 5)}`;
+      const meetUrl = `https://meet.google.com/${meetCode}`;
       await api.post("/appointments", {
         title,
         client_name: name || "Cliente",
         starts_at,
         duration_min: Number(scheduler.duration) || 60,
         location: "Google Meet",
-        notes: phone ? `WhatsApp: ${phone}` : "",
+        meet_url: meetUrl,
+        notes: [phone ? `WhatsApp: ${phone}` : "", `Meet: ${meetUrl}`].filter(Boolean).join(" · "),
         status: "confirmado",
       });
       const human = new Date(starts_at).toLocaleString("pt-BR", {
@@ -150,7 +153,7 @@ export default function ChatIA() {
         ...prev,
         {
           role: "assistant",
-          content: `✅ Consulta agendada para ${human} (${scheduler.duration} min) por Google Meet.\n\nVocê receberá o link no WhatsApp ${phone || "informado"}. Se precisar remarcar, é só me avisar por aqui.`,
+          content: `✅ Consulta agendada para ${human} (${scheduler.duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda e você receberá o link no WhatsApp ${phone || "informado"}.`,
           audio_base64: null,
         },
       ]);
