@@ -148,6 +148,28 @@ export default function ChatIA() {
     setScheduler({ date: slot.date, time: slot.time, duration: 60, area: area || analysis?.area || "" });
   };
 
+  const createAppointment = async ({ date, time, duration = 60, area = "" }) => {
+    const starts_at = getAppointmentDateTime(date, time);
+    const clientName = name?.trim() || "Cliente do chat";
+    const meetUrl = getMeetLink();
+    const title = `Consulta — ${area || analysis?.area || "Atendimento jurídico"} · ${clientName}`;
+    await api.post("/appointments", {
+      title,
+      client_name: clientName,
+      starts_at,
+      duration_min: Number(duration) || 60,
+      location: "Google Meet",
+      meet_url: meetUrl,
+      meeting_link: meetUrl,
+      notes: [phone ? `WhatsApp: ${phone}` : "", `Meet: ${meetUrl}`].filter(Boolean).join(" · "),
+      status: "confirmado",
+    });
+    const human = new Date(starts_at).toLocaleString("pt-BR", {
+      weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit",
+    });
+    return { human, meetUrl, duration: Number(duration) || 60 };
+  };
+
   const confirmSchedule = async () => {
     if (!scheduler?.date || !scheduler?.time) {
       toast.error("Escolha data e horário");
@@ -155,29 +177,12 @@ export default function ChatIA() {
     }
     setScheduling(true);
     try {
-      const starts_at = getAppointmentDateTime(scheduler.date, scheduler.time);
-      const clientName = name?.trim() || "Cliente do chat";
-      const meetUrl = getMeetLink();
-      const title = `Consulta — ${scheduler.area || analysis?.area || "Atendimento jurídico"} · ${clientName}`;
-      await api.post("/appointments", {
-        title,
-        client_name: clientName,
-        starts_at,
-        duration_min: Number(scheduler.duration) || 60,
-        location: "Google Meet",
-        meet_url: meetUrl,
-        meeting_link: meetUrl,
-        notes: [phone ? `WhatsApp: ${phone}` : "", `Meet: ${meetUrl}`].filter(Boolean).join(" · "),
-        status: "confirmado",
-      });
-      const human = new Date(starts_at).toLocaleString("pt-BR", {
-        weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit",
-      });
+      const { human, meetUrl, duration } = await createAppointment(scheduler);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: `✅ Consulta agendada para ${human} (${scheduler.duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp cadastrado é ${phone}` : ""}.`,
+          content: `✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp cadastrado é ${phone}` : ""}.`,
           audio_base64: null,
         },
       ]);
