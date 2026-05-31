@@ -263,6 +263,8 @@ async function startSock() {
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
+      currentQR = null;
+      currentQRAt = null;
       if (shouldReconnect && !reconnectTimer) {
         reconnectTimer = setTimeout(() => {
           reconnectTimer = null;
