@@ -55,10 +55,12 @@ export default function Dashboard() {
   useEffect(() => {
     const t = setInterval(() => {
       loadContacts();
+      loadAppointments();
       if (activeContact) loadMessages(activeContact.id);
     }, 3000);
     return () => clearInterval(t);
   }, [activeContact]);
+
 
   const loadContacts = async () => {
     try {
