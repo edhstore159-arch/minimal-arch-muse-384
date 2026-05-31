@@ -424,6 +424,33 @@ export default function Dashboard() {
                   <div className="text-xs text-nude-500 mt-0.5">{activeContact.phone}</div>
                 </div>
 
+                {appointments.length > 0 && (
+                  <div>
+                    <div className="text-xs tracking-widest uppercase font-semibold text-nude-500 mb-2 flex items-center gap-1.5">
+                      <Calendar className="w-3 h-3 text-gold-600" /> Próximas reuniões (Meet)
+                    </div>
+                    <div className="space-y-1.5">
+                      {appointments.slice(0, 4).map((a) => {
+                        const link = a.meeting_link || a.meet_url;
+                        const when = new Date(a.starts_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+                        return (
+                          <div key={a.id} className="p-2 bg-gold-50 border border-gold-200 rounded-md text-xs">
+                            <div className="font-medium text-nude-900 truncate">{a.client_name || a.title || "Reunião"}</div>
+                            <div className="text-nude-600 flex items-center gap-1 mt-0.5">
+                              <Calendar className="w-3 h-3" /> {when} • {a.duration_min || 60} min
+                            </div>
+                            {link && (
+                              <a href={link} target="_blank" rel="noreferrer" className="text-gold-700 hover:underline truncate block mt-1">
+                                🔗 Entrar no Meet
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {metrics?.alerts?.upcoming_hearings?.length > 0 && (
                   <div>
                     <div className="text-xs tracking-widest uppercase font-semibold text-nude-500 mb-2 flex items-center gap-1.5">
