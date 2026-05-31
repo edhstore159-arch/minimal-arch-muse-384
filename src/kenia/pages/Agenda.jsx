@@ -32,8 +32,19 @@ export default function Agenda() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    const { data } = await api.get("/appointments");
-    setItems(data);
+    try {
+      const { data } = await api.get("/appointments");
+      const appointments = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.appointments)
+            ? data.appointments
+            : [];
+      setItems(appointments);
+    } catch {
+      setItems([]);
+    }
   };
 
   const create = async () => {
@@ -71,8 +82,9 @@ export default function Agenda() {
 
   const monthLabel = cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
+  const appointments = Array.isArray(items) ? items : [];
   const itemsByDay = {};
-  items.forEach(i => {
+  appointments.forEach(i => {
     const d = new Date(i.starts_at);
     if (d.getMonth() !== cursor.getMonth() || d.getFullYear() !== cursor.getFullYear()) return;
     const key = d.getDate();
@@ -80,7 +92,7 @@ export default function Agenda() {
     itemsByDay[key].push(i);
   });
 
-  const upcoming = items
+  const upcoming = appointments
     .filter(i => new Date(i.starts_at) >= new Date(today.setHours(0, 0, 0, 0)))
     .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
     .slice(0, 20);
