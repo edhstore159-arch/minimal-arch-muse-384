@@ -153,23 +153,20 @@ export default function ChatIA() {
       toast.error("Escolha data e horário");
       return;
     }
-    if (!name?.trim()) {
-      toast.error("Informe seu nome para confirmar o agendamento");
-      return;
-    }
     setScheduling(true);
     try {
-      const starts_at = new Date(`${scheduler.date}T${scheduler.time}:00`).toISOString();
-      const title = `Consulta — ${scheduler.area || "Atendimento jurídico"}${name ? " · " + name : ""}`;
-      const meetCode = `${Math.random().toString(36).slice(2, 5)}-${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 5)}`;
-      const meetUrl = `https://meet.google.com/${meetCode}`;
+      const starts_at = getAppointmentDateTime(scheduler.date, scheduler.time);
+      const clientName = name?.trim() || "Cliente do chat";
+      const meetUrl = getMeetLink();
+      const title = `Consulta — ${scheduler.area || analysis?.area || "Atendimento jurídico"} · ${clientName}`;
       await api.post("/appointments", {
         title,
-        client_name: name || "Cliente",
+        client_name: clientName,
         starts_at,
         duration_min: Number(scheduler.duration) || 60,
         location: "Google Meet",
         meet_url: meetUrl,
+        meeting_link: meetUrl,
         notes: [phone ? `WhatsApp: ${phone}` : "", `Meet: ${meetUrl}`].filter(Boolean).join(" · "),
         status: "confirmado",
       });
@@ -180,7 +177,7 @@ export default function ChatIA() {
         ...prev,
         {
           role: "assistant",
-          content: `✅ Consulta agendada para ${human} (${scheduler.duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda e você receberá o link no WhatsApp ${phone || "informado"}.`,
+          content: `✅ Consulta agendada para ${human} (${scheduler.duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp cadastrado é ${phone}` : ""}.`,
           audio_base64: null,
         },
       ]);
@@ -555,8 +552,8 @@ export default function ChatIA() {
                   </div>
                 </div>
                 {!name && (
-                  <p className="text-[11px] text-rose-700 mt-2">
-                    Preencha seu nome no topo do chat para confirmar o agendamento.
+                  <p className="text-[11px] text-gold-800 mt-2">
+                    Se o nome não for preenchido, o compromisso será salvo como Cliente do chat.
                   </p>
                 )}
               </div>
