@@ -12,7 +12,23 @@ import { toast } from "sonner";
 import {
   Send, Volume2, VolumeX, Sparkles, Bot, Gauge, ShieldCheck,
   AlertTriangle, BookOpen, Loader2, RefreshCcw, Pause, Play,
+  CalendarPlus, CalendarCheck, X,
 } from "lucide-react";
+
+const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
+
+function nextBusinessSlot() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(10, 0, 0, 0);
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+  if (d.getDay() === 6) d.setDate(d.getDate() + 2);
+  const pad = (n) => String(n).padStart(2, "0");
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: "10:00",
+  };
+}
 
 /**
  * Player de áudio nativo HTML5 que usa Blob URL em vez de data: URL.
