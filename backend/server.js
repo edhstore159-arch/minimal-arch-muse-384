@@ -29,6 +29,9 @@ let currentQR = null;
 let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
 let starting = false;
+let connectionStartedAt = null;
+let lastConnectionUpdateAt = null;
+let reconnectTimer = null;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
 // ---- Armazenamento em memória de contatos e mensagens ----
@@ -120,7 +123,7 @@ function recordAutoReply(entry) {
 
 async function autoReply(jid, userText, contactName) {
   recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
-  if (!sock || connectionState !== "open") {
+  if (!baileysRuntimeStatus().connected) {
     recordAutoReply({ step: "skip_socket", jid, connectionState });
     return;
   }
@@ -153,6 +156,8 @@ async function autoReply(jid, userText, contactName) {
 }
 
 async function closeSock() {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
   try { sock?.end?.(); } catch {}
   try { sock?.ws?.close?.(); } catch {}
   sock = null;
@@ -163,6 +168,8 @@ async function startSock() {
   if (starting) return;
   starting = true;
   connectionState = "connecting";
+  connectionStartedAt = new Date().toISOString();
+  lastConnectionUpdateAt = connectionStartedAt;
   let state;
   let saveCreds;
   let version;
@@ -190,12 +197,14 @@ async function startSock() {
   sock.ev.on("connection.update", async (u) => {
     if (sock !== activeSock) return;
     const { connection, lastDisconnect, qr } = u;
+    lastConnectionUpdateAt = new Date().toISOString();
     if (qr) currentQR = qr;
     if (connection) connectionState = connection === "open" ? "open" : connection;
     if (connection === "open") {
       currentQR = null;
       lastError = null;
       starting = false;
+      connectionStartedAt = null;
     }
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode || new Boom(lastDisconnect?.error)?.output?.statusCode;
@@ -204,7 +213,8 @@ async function startSock() {
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
-      if (shouldReconnect) setTimeout(() => startSock().catch(() => {}), 2000);
+      connectionStartedAt = null;
+      if (shouldReconnect) reconnectTimer = setTimeout(() => startSock().catch(() => {}), 2000);
     }
   });
 
