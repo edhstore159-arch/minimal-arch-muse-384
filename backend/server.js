@@ -67,6 +67,57 @@ const appendMessage = (jid, msg) => {
   messagesStore.set(jid, list);
 };
 
+// ---- Atendente automático com IA (Lovable AI Gateway) ----
+const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY || process.env.VITE_LOVABLE_API_KEY || "";
+const AI_MODEL = process.env.AI_MODEL || "google/gemini-2.5-flash";
+const AI_SYSTEM_PROMPT =
+  process.env.AI_SYSTEM_PROMPT ||
+  "Você é a Kenia, assistente virtual de um escritório de advocacia. Responda em português brasileiro, de forma cordial, objetiva e empática. Faça perguntas para qualificar o lead (área do direito, urgência, descrição do caso, cidade). Nunca prometa resultado jurídico. Mantenha respostas curtas (até 3 frases).";
+const aiHistory = new Map(); // jid -> [{role, content}]
+
+async function autoReply(jid, userText, contactName) {
+  if (!LOVABLE_API_KEY) {
+    console.warn("[autoReply] LOVABLE_API_KEY ausente — atendente automático desativado.");
+    return;
+  }
+  if (!sock || connectionState !== "open") return;
+  const history = aiHistory.get(jid) || [];
+  const messagesPayload = [
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\nNome do contato: ${contactName || "Cliente"}.` },
+    ...history.slice(-10),
+    { role: "user", content: userText },
+  ];
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ model: AI_MODEL, messages: messagesPayload }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error("[autoReply] AI gateway", resp.status, errText.slice(0, 300));
+      return;
+    }
+    const data = await resp.json();
+    const reply = data?.choices?.[0]?.message?.content?.trim();
+    if (!reply) return;
+    history.push({ role: "user", content: userText });
+    history.push({ role: "assistant", content: reply });
+    aiHistory.set(jid, history.slice(-20));
+    try { await sock.sendPresenceUpdate("composing", jid); } catch {}
+    await new Promise((r) => setTimeout(r, 800));
+    const providerResult = await sock.sendMessage(jid, { text: reply });
+    const out = outboundMessage(reply, jid, providerResult);
+    upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
+    appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
+  } catch (e) {
+    console.error("[autoReply] exception:", e?.message || e);
+  }
+}
+
 async function closeSock() {
   try { sock?.end?.(); } catch {}
   try { sock?.ws?.close?.(); } catch {}
