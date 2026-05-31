@@ -123,6 +123,45 @@ async function startSock() {
     }
   });
 
+  // Capturar mensagens recebidas/enviadas para alimentar a lista de contatos
+  sock.ev.on("messages.upsert", ({ messages }) => {
+    if (sock !== activeSock || !Array.isArray(messages)) return;
+    for (const m of messages) {
+      const jid = m?.key?.remoteJid;
+      if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") continue;
+      const text = extractText(m);
+      if (!text) continue;
+      const fromMe = Boolean(m?.key?.fromMe);
+      const created_at = m?.messageTimestamp
+        ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
+        : new Date().toISOString();
+      const name = m?.pushName || jidToPhone(jid);
+      const prev = contactsStore.get(jid);
+      upsertContact(jid, {
+        name: prev?.name && prev.name !== jidToPhone(jid) ? prev.name : name,
+        last_message: text,
+        last_message_at: created_at,
+        unread: fromMe ? prev?.unread || 0 : (prev?.unread || 0) + 1,
+      });
+      appendMessage(jid, {
+        id: m?.key?.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        text,
+        from_me: fromMe,
+        created_at,
+      });
+    }
+  });
+
+  // Atualizar nomes quando o WhatsApp empurra contatos conhecidos
+  sock.ev.on("contacts.update", (updates) => {
+    if (sock !== activeSock || !Array.isArray(updates)) return;
+    for (const u of updates) {
+      if (!u?.id) continue;
+      const name = u.name || u.notify || u.verifiedName;
+      if (name) upsertContact(u.id, { name });
+    }
+  });
+
   starting = false;
 }
 
