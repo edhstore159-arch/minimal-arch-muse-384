@@ -615,21 +615,25 @@ export default function WhatsAppSettings() {
                           <AlertCircle className="w-4 h-4" />
                           Conflito de sessão
                         </div>
-                      ) : baileysStatus?.state === "offline" ? (
+                      ) : baileysStatus?.state === "offline" || baileysStatus?.state === "qr_unavailable" ? (
                         <div className="flex items-center gap-2 text-rose-700 font-medium">
                           <AlertCircle className="w-4 h-4" />
-                          Backend offline
+                          {baileysStatus?.state === "offline" ? "Backend offline" : "QR indisponível"}
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-gold-700 font-medium">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          {baileysStatus?.state === "connecting" ? "Aguardando leitura do QR..." : "Inicializando..."}
+                          {baileysStatus?.state === "reconnecting"
+                            ? "Reconectando serviço..."
+                            : baileysStatus?.state === "connecting"
+                              ? "Aguardando leitura do QR..."
+                              : "Inicializando..."}
                         </div>
                       )}
                       <div className="text-xs text-nude-500 mt-1">
                         Estado: <code className="bg-white px-1.5 py-0.5 rounded text-[11px]">{baileysStatus?.state || "—"}</code>
                       </div>
-                      {baileysStatus?.last_error && (baileysStatus?.state === "conflicted" || baileysStatus?.state === "offline") && (
+                      {baileysStatus?.last_error && ["conflicted", "offline", "qr_unavailable"].includes(baileysStatus?.state) && (
                         <div className="text-xs text-rose-700 mt-2 p-2 bg-rose-50 border border-rose-200 rounded" data-testid="baileys-conflict-msg">
                           ⚠️ {baileysStatus.last_error}
                         </div>
