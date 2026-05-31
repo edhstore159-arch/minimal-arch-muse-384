@@ -176,7 +176,7 @@ export default function WhatsAppSettings() {
         data?.image ||
         data?.qr ||
         (typeof data === "string" ? data : null);
-      const normalized = normalizeQr(candidate);
+      const normalized = await normalizeQr(candidate);
       if (normalized) {
         setQrImg(normalized);
       } else if (data?.connected) {
