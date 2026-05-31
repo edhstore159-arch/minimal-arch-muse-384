@@ -12,8 +12,9 @@ import { toast } from "sonner";
 import {
   Send, Volume2, VolumeX, Sparkles, Bot, Gauge, ShieldCheck,
   AlertTriangle, BookOpen, Loader2, RefreshCcw, Pause, Play,
-  CalendarPlus, CalendarCheck, X,
+  CalendarPlus, CalendarCheck, X, Mic, MicOff,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
@@ -163,6 +164,66 @@ export default function ChatIA() {
   const [leadId, setLeadId] = useState(null);
   const audioRef = useRef(null);
   const scrollRef = useRef(null);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      const mr = new MediaRecorder(stream, { mimeType: mime });
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data);
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mime });
+        await transcribeAndSend(blob, mime);
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch {
+      toast.error("Não consegui acessar o microfone. Verifique as permissões.");
+    }
+  };
+
+  const stopRecording = () => {
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") mr.stop();
+    setRecording(false);
+  };
+
+  const transcribeAndSend = async (blob, mime) => {
+    setTranscribing(true);
+    try {
+      const buf = await blob.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      }
+      const audio_base64 = btoa(binary);
+      const { data, error } = await supabase.functions.invoke("transcribe-audio", {
+        body: { audio_base64, mime_type: mime },
+      });
+      if (error) throw error;
+      const text = (data?.text || "").trim();
+      if (!text) {
+        toast.error("Não entendi o áudio. Tente falar mais perto do microfone.");
+        return;
+      }
+      await send(text);
+    } catch {
+      toast.error("Erro ao transcrever o áudio.");
+    } finally {
+      setTranscribing(false);
+    }
+  };
 
   const upsertLead = async (extra = {}) => {
     const clientName = (name || "").trim();
@@ -671,8 +732,18 @@ export default function ChatIA() {
                 data-testid="chat-input"
               />
               <Button
+                type="button"
+                onClick={recording ? stopRecording : startRecording}
+                disabled={thinking || transcribing}
+                title={recording ? "Parar gravação" : "Gravar mensagem de áudio"}
+                className={`h-12 px-4 ${recording ? "bg-red-600 hover:bg-red-700" : "bg-nude-200 hover:bg-nude-300 text-nude-800"}`}
+                data-testid="chat-mic-btn"
+              >
+                {transcribing ? <Loader2 className="w-4 h-4 animate-spin" /> : recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </Button>
+              <Button
                 onClick={() => send()}
-                disabled={thinking || !input.trim()}
+                disabled={thinking || transcribing || !input.trim()}
                 className="h-12 px-5 bg-gold-600 hover:bg-gold-700 text-white"
                 data-testid="chat-send-btn"
               >
