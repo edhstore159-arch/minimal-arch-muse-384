@@ -10,6 +10,8 @@ const DEFAULT_PROMPT = `Você é a Kênia Garcia, advogada brasileira (OAB). Ate
 REGRAS DE CONVERSA:
 - Responda de forma natural e variada (não repita frases prontas). Mantenha memória do que já foi dito na conversa.
 - No início do atendimento, NÃO pergunte a área jurídica primeiro. A segunda mensagem deve pedir o relato: "Me conta o que aconteceu?". Depois de ouvir os fatos, identifique internamente a área provável e conduza o atendimento.
+- Entre no caso do cliente: depois do primeiro relato, faça perguntas específicas sobre os acontecimentos, datas, provas, envolvidos, prejuízos, testemunhas, documentos, prazos e objetivo do cliente.
+- Avalie preliminarmente a possibilidade de êxito de forma responsável: indique se há indícios favoráveis, pontos fracos, informações faltantes e próximos passos, sem prometer vitória.
 - Faça perguntas conforme o contexto, uma por vez, e pule etapas já respondidas.
 - Só pergunte a área jurídica se, depois do relato, ainda estiver realmente ambíguo. Caso contrário, responda como ChatGPT jurídico: explique possibilidades, faça perguntas úteis e oriente documentos.
 - Nunca dê parecer jurídico definitivo: explique que a análise completa é feita pelo(a) advogado(a) na consulta. Use "geralmente", "a depender do caso", "o entendimento majoritário é".
@@ -25,7 +27,7 @@ REGRAS DE CONVERSA:
 • BANCÁRIO — Contratos, extratos completos, faturas, prints de cobranças, protocolos Procon/Bacen.
 
 COMPORTAMENTO QUANDO O CLIENTE RELATA UM CASO:
-1) Entenda os fatos e classifique internamente a área jurídica provável, sem exigir que o cliente escolha uma área. 2) Responda a pergunta do cliente com orientação inicial clara, como ChatGPT jurídico, sem parecer definitivo. 3) Faça apenas 1 pergunta essencial por vez quando faltar informação. 4) Oriente sobre documentos da área e próximos passos possíveis. 5) Sugira consulta jurídica quando apropriado. Encerre orientações com algo como: "Reúna o que tiver, o que faltar a gente vê junto na consulta. ✨"
+1) Entenda os fatos e classifique internamente a área jurídica provável, sem exigir que o cliente escolha uma área. 2) Responda a pergunta do cliente com orientação inicial clara, como ChatGPT jurídico, sem parecer definitivo. 3) Faça apenas 1 pergunta essencial por vez quando faltar informação. 4) Investigue os pontos que definem chance de êxito: o que aconteceu, quando, onde, quem participou, quais provas existem, qual dano/prejuízo houve e se há prazo correndo. 5) Diga, em linguagem simples, se o caso parece forte, fraco ou precisa de mais documentos, sempre como análise preliminar. 6) Oriente sobre documentos da área e próximos passos possíveis. 7) Sugira consulta jurídica quando apropriado. Encerre orientações com algo como: "Reúna o que tiver, o que faltar a gente vê junto na consulta. ✨"
 
 URGÊNCIA (prioridade máxima — avise que o caso deve ser tratado com urgência e ofereça contato imediato):
 prisão, flagrante, violência doméstica, busca e apreensão, audiência nas próximas 48h, bloqueios judiciais.
@@ -39,6 +41,44 @@ AGENDAMENTO — quando o cliente quiser agendar consulta, colete na ordem (uma p
 Se o cliente disser que já tem advogado, agradeça e encerre cordialmente.
 
 NUNCA invente datas. Use o CONTEXTO TEMPORAL abaixo para calcular "hoje", "amanhã", "próxima sexta" etc.`;
+
+const inferArea = (text: string) => {
+  const t = text.toLowerCase();
+  if (/trabalho|empresa|patr[aã]o|sal[aá]rio|rescis[aã]o|fgts|hora extra|demiss/.test(t)) return "Trabalhista";
+  if (/div[oó]rcio|guarda|pensão|alimentos|invent[aá]rio|heran[cç]a|filh/.test(t)) return "Família/Sucessões";
+  if (/inss|aposentadoria|benef[ií]cio|aux[ií]lio|doen[cç]a|bpc/.test(t)) return "Previdenciário";
+  if (/pris[aã]o|delegacia|boletim|crime|amea[cç]a|audi[eê]ncia criminal|flagrante/.test(t)) return "Criminal";
+  if (/compra|produto|servi[cç]o|cobran[cç]a|banco|cart[aã]o|d[ií]vida|golpe/.test(t)) return "Consumidor/Bancário";
+  if (/im[oó]vel|aluguel|loca[cç][aã]o|despejo|contrato|terreno/.test(t)) return "Imobiliário/Cível";
+  return "Em análise";
+};
+
+const buildAnalysis = (message: string) => {
+  const area = inferArea(message);
+  const t = message.toLowerCase();
+  const hasDate = /\d{1,2}[\/\-]\d{1,2}|hoje|ontem|amanh[aã]|semana|m[eê]s|ano/.test(t);
+  const hasProof = /prova|documento|print|contrato|mensagem|[aá]udio|v[ií]deo|testemunha|boletim|holerite|extrato|laudo/.test(t);
+  const urgent = /pris[aã]o|flagrante|audi[eê]ncia|prazo|intima[cç][aã]o|medida protetiva|bloqueio/.test(t);
+  const filled = [area !== "Em análise", hasDate, hasProof, urgent].filter(Boolean).length;
+  const chance = Math.min(88, 42 + filled * 12 + (message.length > 120 ? 8 : 0));
+  const needsMore = !hasDate || !hasProof || area === "Em análise";
+  return {
+    area,
+    qualificacao: needsMore ? "necessita_mais_info" : "qualificado",
+    acertividade: Math.min(95, chance + 6),
+    chance_exito: chance,
+    resumo: message.slice(0, 220),
+    motivo: needsMore
+      ? "Ainda faltam dados essenciais para estimar melhor a força do caso, principalmente datas, provas e documentos."
+      : "O relato já apresenta área provável, fatos e algum elemento de prova para análise inicial.",
+    fundamentos: area === "Trabalhista" ? ["CLT e verbas trabalhistas conforme o fato narrado"] : area === "Família/Sucessões" ? ["Código Civil e regras de família/sucessões"] : area === "Previdenciário" ? ["Lei 8.213/91 e normas do INSS"] : area === "Consumidor/Bancário" ? ["Código de Defesa do Consumidor"] : ["Análise jurídica depende dos documentos e prazos aplicáveis"],
+    proxima_pergunta: !hasDate
+      ? "Em que data isso aconteceu e existe algum prazo, audiência ou intimação em aberto?"
+      : !hasProof
+        ? "Quais documentos, prints, contratos, mensagens, testemunhas ou comprovantes você tem sobre isso?"
+        : "Qual resultado você quer buscar com esse atendimento: acordo, defesa, indenização, regularização ou medida urgente?",
+  };
+};
 
 
 Deno.serve(async (req) => {
@@ -137,7 +177,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
       JSON.stringify({
         response: reply,
         audio_base64: null,
-        analysis: { acertividade: 90, qualificacao: "ok" },
+        analysis: buildAnalysis(userMessage),
         server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
