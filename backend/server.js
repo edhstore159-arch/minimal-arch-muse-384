@@ -334,8 +334,11 @@ app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
   const info = {
+    has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
+    openai_base_url: OPENAI_BASE_URL,
+    openai_model: OPENAI_MODEL,
     emergent_base_url: EMERGENT_BASE_URL,
     emergent_model: EMERGENT_MODEL,
     lovable_model: AI_MODEL,
