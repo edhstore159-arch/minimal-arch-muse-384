@@ -461,6 +461,78 @@ export default function ChatIA() {
             </div>
           </div>
 
+          {/* scheduler */}
+          {scheduler && (
+            <div className="px-4 py-3 border-t border-gold-200 bg-gold-50" data-testid="scheduler-panel">
+              <div className="max-w-3xl mx-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-gold-800">
+                    <CalendarCheck className="w-4 h-4" /> Vamos agendar sua consulta
+                  </div>
+                  <button
+                    onClick={() => setScheduler(null)}
+                    className="text-nude-600 hover:text-nude-900"
+                    aria-label="Fechar"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-nude-600">Data</label>
+                    <Input
+                      type="date"
+                      value={scheduler.date}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setScheduler({ ...scheduler, date: e.target.value })}
+                      className="h-9"
+                      data-testid="sched-date"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-nude-600">Horário</label>
+                    <Input
+                      type="time"
+                      value={scheduler.time}
+                      onChange={(e) => setScheduler({ ...scheduler, time: e.target.value })}
+                      className="h-9"
+                      data-testid="sched-time"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-nude-600">Duração</label>
+                    <select
+                      value={scheduler.duration}
+                      onChange={(e) => setScheduler({ ...scheduler, duration: Number(e.target.value) })}
+                      className="h-9 w-full rounded-md border border-nude-200 bg-white px-2 text-sm"
+                      data-testid="sched-duration"
+                    >
+                      {[30, 45, 60, 90].map((m) => (
+                        <option key={m} value={m}>{m} min</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={confirmSchedule}
+                      disabled={scheduling}
+                      className="w-full h-9 bg-gold-600 hover:bg-gold-700 text-white gap-1.5"
+                      data-testid="sched-confirm"
+                    >
+                      {scheduling ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-4 h-4" />}
+                      Confirmar
+                    </Button>
+                  </div>
+                </div>
+                {!name && (
+                  <p className="text-[11px] text-rose-700 mt-2">
+                    Preencha seu nome no topo do chat para confirmar o agendamento.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* input */}
           <div className="p-4 border-t border-nude-200 bg-white">
             <div className="max-w-3xl mx-auto flex items-end gap-2">
