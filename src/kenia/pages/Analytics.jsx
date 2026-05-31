@@ -101,10 +101,11 @@ export default function Analytics() {
         <Card className="p-5 border-nude-200">
           <h3 className="font-display font-semibold text-base mb-4">Resumo Geral</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Stat label="Lucro Líquido" value={fmt(m.finance.lucro)} accent={m.finance.lucro >= 0 ? "emerald" : "rose"} />
-            <Stat label="Receita Pendente" value={fmt(m.finance.receita_pendente)} accent="amber" />
-            <Stat label="Total Processos" value={m.processes.total} />
-            <Stat label="Taxa Conversão" value={`${m.leads.conversion_rate}%`} accent="amber" />
+            <Stat label="Lucro Líquido" value={fmt(finance.lucro)} accent={finance.lucro >= 0 ? "emerald" : "rose"} />
+            <Stat label="Receita Pendente" value={fmt(finance.receita_pendente)} accent="amber" />
+            <Stat label="Total Processos" value={processes.total} />
+            <Stat label="Taxa Conversão" value={`${leads.conversion_rate}%`} accent="amber" />
+
           </div>
         </Card>
       </div>
