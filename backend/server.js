@@ -219,14 +219,58 @@ app.post("/api/whatsapp/send", async (req, res) => {
   }
 });
 
+app.post("/api/whatsapp/send-direct", async (req, res) => {
+  try {
+    if (!sock || connectionState !== "open") {
+      return res.status(503).json({ delivered: false, ok: false, error: "NOT_CONNECTED", state: connectionState });
+    }
+    const { phone, to, text, message } = req.body || {};
+    const target = phone || to;
+    if (!target) return res.status(400).json({ delivered: false, ok: false, error: "missing phone" });
+    const jid = String(target).includes("@")
+      ? String(target)
+      : `${String(target).replace(/\D/g, "")}@s.whatsapp.net`;
+    await sock.sendMessage(jid, { text: String(text || message || "") });
+    res.json(ok({ delivered: true, to: jid }));
+  } catch (e) {
+    res.status(500).json({ delivered: false, ok: false, error: e?.message || "send_failed" });
+  }
+});
+
+app.post("/api/whatsapp/baileys/reconnect", async (_req, res) => {
+  try {
+    const status = await restartSock({ resetAuth: false });
+    res.json(ok(status));
+  } catch (e) {
+    res.status(500).json({ ok: false, connected: false, state: connectionState, error: e?.message });
+  }
+});
+
+app.post("/api/whatsapp/baileys/restart", async (_req, res) => {
+  try {
+    const status = await restartSock({ resetAuth: true });
+    res.json(ok(status));
+  } catch (e) {
+    res.status(500).json({ ok: false, connected: false, state: connectionState, error: e?.message });
+  }
+});
+
 // ---- Logout ----
 app.post("/api/whatsapp/logout", async (_req, res) => {
   try {
-    if (sock) await sock.logout();
-    currentQR = null;
-    connectionState = "disconnected";
-    setTimeout(() => startSock().catch(() => {}), 1000);
-    res.json(ok());
+    if (sock && connectionState === "open") await sock.logout();
+    const status = await restartSock({ resetAuth: true });
+    res.json(ok(status));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message });
+  }
+});
+
+app.post("/api/whatsapp/baileys/logout", async (req, res) => {
+  try {
+    if (sock && connectionState === "open") await sock.logout();
+    const status = await restartSock({ resetAuth: true });
+    res.json(ok(status));
   } catch (e) {
     res.status(500).json({ ok: false, error: e?.message });
   }
