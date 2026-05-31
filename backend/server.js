@@ -230,6 +230,9 @@ async function startSock() {
     auth: state,
     printQRInTerminal: false,
     browser: ["Kenia", "Chrome", "1.0"],
+    qrTimeout: QR_TIMEOUT_MS,
+    connectTimeoutMs: CONNECT_TIMEOUT_MS,
+    keepAliveIntervalMs: KEEP_ALIVE_INTERVAL_MS,
   });
   const activeSock = sock;
 
@@ -238,12 +241,18 @@ async function startSock() {
   sock.ev.on("connection.update", async (u) => {
     if (sock !== activeSock) return;
     const { connection, lastDisconnect, qr } = u;
-    if (qr) currentQR = qr;
+    if (qr) {
+      currentQR = qr;
+      currentQRAt = Date.now();
+    }
     if (connection) connectionState = connection === "open" ? "open" : connection;
     if (connection === "open") {
       currentQR = null;
+      currentQRAt = null;
       lastError = null;
       starting = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
     }
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode || new Boom(lastDisconnect?.error)?.output?.statusCode;
@@ -252,7 +261,12 @@ async function startSock() {
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
-      if (shouldReconnect) setTimeout(() => startSock().catch(() => {}), 2000);
+      if (shouldReconnect && !reconnectTimer) {
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          startSock().catch((e) => { lastError = e?.message || String(e); });
+        }, RECONNECT_DELAY_MS);
+      }
     }
   });
 
