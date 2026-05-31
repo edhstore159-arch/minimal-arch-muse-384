@@ -147,22 +147,38 @@ export default function WhatsAppSettings() {
     }
   };
 
+  const normalizeQr = (raw) => {
+    if (!raw || typeof raw !== "string") return null;
+    if (raw.startsWith("data:image")) return raw;
+    // raw base64 → add png prefix
+    if (/^[A-Za-z0-9+/=]+$/.test(raw.slice(0, 80))) return `data:image/png;base64,${raw}`;
+    return raw;
+  };
+
   const fetchQr = async () => {
     setLoadingQr(true);
     setQrImg(null);
     try {
       const { data } = await api.get("/whatsapp/qr");
-      if (data?.data?.value) {
-        setQrImg(data.data.value);
-      } else if (data?.data?.qrcode) {
-        setQrImg(data.data.qrcode);
-      } else if (data?.qr) {
-        setQrImg(data.qr);
+      const candidate =
+        data?.data?.value ||
+        data?.data?.qrcode ||
+        data?.data?.image ||
+        data?.value ||
+        data?.qrcode ||
+        data?.image ||
+        data?.qr ||
+        (typeof data === "string" ? data : null);
+      const normalized = normalizeQr(candidate);
+      if (normalized) {
+        setQrImg(normalized);
+      } else if (data?.connected) {
+        toast.info("WhatsApp já está conectado — QR não é necessário.");
       } else {
-        toast.info("Se o WhatsApp já está conectado, QR não é necessário.");
+        toast.warning("QR não retornado. Verifique credenciais Z-API ou tente novamente em alguns segundos.");
       }
-    } catch {
-      toast.error("Erro ao obter QR code");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Erro ao obter QR code");
     } finally {
       setLoadingQr(false);
     }
