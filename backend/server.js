@@ -122,6 +122,51 @@ const ok = (data = {}) => ({ ok: true, ...data });
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
 app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
 
+// ---- Configurações usadas pelo frontend ----
+app.get("/api/settings", (_req, res) => {
+  const data = readData();
+  res.json({
+    using_default_text: !data.settings?.llm_text_key,
+    using_default_image: !data.settings?.llm_image_key,
+    llm_text_key_masked: maskKey(data.settings?.llm_text_key),
+    llm_image_key_masked: maskKey(data.settings?.llm_image_key),
+  });
+});
+
+app.put("/api/settings", (req, res) => {
+  const data = readData();
+  data.settings = { ...data.settings };
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, "llm_text_key")) {
+    data.settings.llm_text_key = String(req.body.llm_text_key || "");
+  }
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, "llm_image_key")) {
+    data.settings.llm_image_key = String(req.body.llm_image_key || "");
+  }
+  writeData(data);
+  res.json(ok());
+});
+
+app.post("/api/settings/test-text", (_req, res) => {
+  res.json({ ok: true, model: "backend", using_custom_key: Boolean(readData().settings?.llm_text_key) });
+});
+
+app.post("/api/settings/test-image", (_req, res) => {
+  res.json({ ok: true, model: "backend", using_custom_key: Boolean(readData().settings?.llm_image_key) });
+});
+
+app.get("/api/whatsapp/config", (_req, res) => {
+  res.json({ ...defaultWhatsAppConfig, ...(readData().whatsappConfig || {}) });
+});
+
+app.put("/api/whatsapp/config", (req, res) => {
+  const data = readData();
+  data.whatsappConfig = { ...defaultWhatsAppConfig, ...(data.whatsappConfig || {}), ...(req.body || {}) };
+  writeData(data);
+  res.json(data.whatsappConfig);
+});
+
+app.get("/api/whatsapp/default-prompt", (_req, res) => res.json({ prompt: DEFAULT_PROMPT }));
+
 // ---- Diagnostics ----
 app.get("/api/whatsapp/diagnostics", (_req, res) => {
   res.json({
