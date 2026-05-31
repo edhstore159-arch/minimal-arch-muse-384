@@ -431,7 +431,7 @@ export default function WhatsAppSettings() {
           )}
         </Card>
 
-        {webhookResult && (
+        {webhookResult && cfg?.provider !== "baileys" && (
           <Card
             className={`p-4 border-2 ${webhookResult.verified ? "border-gold-200 bg-gold-50" : "border-gold-200 bg-gold-50"}`}
             data-testid="wa-webhook-result"
