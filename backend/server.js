@@ -17,6 +17,10 @@ import {
 
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
+const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
+const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || 60000);
+const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS || 20000);
+const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 2000);
 const logger = pino({ level: "warn" });
 
 const app = express();
@@ -26,9 +30,11 @@ app.use(express.json({ limit: "5mb" }));
 // ---- Estado do socket Baileys ----
 let sock = null;
 let currentQR = null;
+let currentQRAt = null;
 let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
 let starting = false;
+let reconnectTimer = null;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
 // ---- Armazenamento em memória de contatos e mensagens ----
@@ -195,6 +201,8 @@ async function autoReply(jid, userText, contactName) {
 }
 
 async function closeSock() {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
   try { sock?.end?.(); } catch {}
   try { sock?.ws?.close?.(); } catch {}
   sock = null;
@@ -224,6 +232,9 @@ async function startSock() {
     auth: state,
     printQRInTerminal: false,
     browser: ["Kenia", "Chrome", "1.0"],
+    qrTimeout: QR_TIMEOUT_MS,
+    connectTimeoutMs: CONNECT_TIMEOUT_MS,
+    keepAliveIntervalMs: KEEP_ALIVE_INTERVAL_MS,
   });
   const activeSock = sock;
 
@@ -232,12 +243,18 @@ async function startSock() {
   sock.ev.on("connection.update", async (u) => {
     if (sock !== activeSock) return;
     const { connection, lastDisconnect, qr } = u;
-    if (qr) currentQR = qr;
+    if (qr) {
+      currentQR = qr;
+      currentQRAt = Date.now();
+    }
     if (connection) connectionState = connection === "open" ? "open" : connection;
     if (connection === "open") {
       currentQR = null;
+      currentQRAt = null;
       lastError = null;
       starting = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
     }
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode || new Boom(lastDisconnect?.error)?.output?.statusCode;
@@ -246,7 +263,14 @@ async function startSock() {
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
-      if (shouldReconnect) setTimeout(() => startSock().catch(() => {}), 2000);
+      currentQR = null;
+      currentQRAt = null;
+      if (shouldReconnect && !reconnectTimer) {
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          startSock().catch((e) => { lastError = e?.message || String(e); });
+        }, RECONNECT_DELAY_MS);
+      }
     }
   });
 
@@ -304,6 +328,7 @@ async function startSock() {
 async function restartSock({ resetAuth = false } = {}) {
   await closeSock();
   currentQR = null;
+  currentQRAt = null;
   lastError = null;
   connectionState = "connecting";
   if (resetAuth) {
@@ -346,12 +371,17 @@ const outboundMessage = (text, to, providerResult = {}) => ({
 
 const baileysRuntimeStatus = () => {
   const connected = connectionState === "open" || Boolean(sock?.user && connectionState !== "logged_out");
+  const qrAgeMs = currentQRAt ? Date.now() - currentQRAt : null;
   return {
     ok: true,
     connected,
     state: connected ? "open" : connectionState,
     last_error: connected ? null : lastError,
     me: sock?.user || null,
+    qr_available: Boolean(currentQR),
+    qr_age_ms: qrAgeMs,
+    qr_expires_in_s: currentQRAt ? Math.max(0, Math.ceil((QR_TIMEOUT_MS - qrAgeMs) / 1000)) : null,
+    qr_timeout_s: Math.ceil(QR_TIMEOUT_MS / 1000),
   };
 };
 
@@ -383,9 +413,15 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
 
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
+  const status = baileysRuntimeStatus();
   res.json({
     bot_enabled: whatsappConfig.bot_enabled,
-    connection_state: connectionState,
+    connection_state: status.state,
+    connected: status.connected,
+    qr_available: status.qr_available,
+    qr_age_ms: status.qr_age_ms,
+    qr_expires_in_s: status.qr_expires_in_s,
+    qr_timeout_s: status.qr_timeout_s,
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -454,7 +490,8 @@ app.post("/api/whatsapp/test-connection", (_req, res) => {
 // ---- QR Code ----
 app.get("/api/whatsapp/baileys/qr", async (_req, res) => {
   const qr = currentQR ? await QRCode.toDataURL(currentQR, { width: 320, margin: 2 }) : null;
-  res.json({ qr, raw: currentQR, state: connectionState, connected: connectionState === "open" });
+  const status = baileysRuntimeStatus();
+  res.json({ qr, raw: currentQR, ...status });
 });
 
 app.get("/api/whatsapp/qr", async (_req, res) => {
@@ -465,7 +502,8 @@ app.get("/api/whatsapp/qr", async (_req, res) => {
     });
   }
   const dataUrl = await QRCode.toDataURL(currentQR);
-  res.json({ connected: false, qr: dataUrl });
+  const status = baileysRuntimeStatus();
+  res.json({ connected: false, qr: dataUrl, qr_expires_in_s: status.qr_expires_in_s, qr_timeout_s: status.qr_timeout_s });
 });
 
 app.get("/api/whatsapp/qr/image", async (_req, res) => {
