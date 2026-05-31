@@ -253,6 +253,21 @@ app.post("/api/whatsapp/send", async (req, res) => {
   }
 });
 
+app.post("/api/whatsapp/send-direct", async (req, res) => {
+  try {
+    const { phone, text } = req.body || {};
+    if (!phone || !text) return res.status(400).json({ delivered: false, error: "missing_phone_or_text" });
+    if (!sock || connectionState !== "open") {
+      return res.json({ delivered: false, provider_result: { error: "NOT_CONNECTED", state: connectionState } });
+    }
+    const jid = `${String(phone).replace(/\D/g, "")}@s.whatsapp.net`;
+    await sock.sendMessage(jid, { text: String(text) });
+    res.json({ delivered: true, provider_result: { to: jid } });
+  } catch (e) {
+    res.status(500).json({ delivered: false, error: e?.message || "send_failed" });
+  }
+});
+
 // ---- Logout ----
 app.post("/api/whatsapp/logout", async (_req, res) => {
   try {
@@ -264,6 +279,34 @@ app.post("/api/whatsapp/logout", async (_req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e?.message });
   }
+});
+
+app.post("/api/whatsapp/baileys/logout", async (_req, res) => {
+  try {
+    if (sock) await sock.logout();
+    currentQR = null;
+    connectionState = "disconnected";
+    setTimeout(() => startSock().catch(() => {}), 1000);
+    res.json(ok({ connected: false, state: connectionState }));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message });
+  }
+});
+
+app.post("/api/whatsapp/baileys/reconnect", (_req, res) => {
+  startSock().catch((e) => { lastError = e?.message || String(e); });
+  res.json(ok({ connected: connectionState === "open", state: connectionState }));
+});
+
+app.post("/api/whatsapp/baileys/restart", (_req, res) => {
+  currentQR = null;
+  connectionState = "connecting";
+  startSock().catch((e) => { lastError = e?.message || String(e); });
+  res.json(ok({ connected: false, state: connectionState }));
+});
+
+app.post("/api/whatsapp/setup-webhook", (_req, res) => {
+  res.json(ok({ verified: true, provider: "baileys", note: "Baileys não precisa configurar webhook externo." }));
 });
 
 // ---- Fallback /api/* ----
