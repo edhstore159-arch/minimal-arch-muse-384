@@ -66,7 +66,7 @@ export default function Landing() {
       <section className="relative">
         <div className="grid lg:grid-cols-2 min-h-[640px]">
           {/* Lado esquerdo: foto da fachada do escritório */}
-          <div className="relative overflow-hidden bg-nude-900">
+          <div className="relative overflow-hidden bg-nude-900 h-[420px] sm:h-[520px] lg:h-auto lg:min-h-[640px]">
             <img src={HERO_IMG} alt="Escritório Kênia Garcia Advocacia" className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-nude-900/60 via-transparent to-nude-900/30" />
             <div className="absolute inset-0 bg-gradient-to-t from-nude-900/80 via-transparent to-transparent" />
