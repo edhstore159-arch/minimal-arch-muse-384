@@ -11,7 +11,7 @@ import {
   Sparkles, BarChart3, ArrowRight, Check, Bot, Mic, QrCode,
 } from "lucide-react";
 
-const HERO_IMG = "/escritorio-hero.png";
+import HERO_IMG from "@/assets/escritorio-hero.jpg";
 const LOGO_IMG = "https://customer-assets.emergentagent.com/job_nude-gold-dashboard/artifacts/ckw9kwam_IMG-20241228-WA0003.jpg";
 
 export default function Landing() {
