@@ -346,6 +346,9 @@ app.get("/api/whatsapp/ai-debug", (_req, res) => {
     last: autoReplyDebug.last,
     history: autoReplyDebug.history,
   });
+});
+
+
 
 app.put("/api/whatsapp/config", (req, res) => {
   whatsappConfig = { ...whatsappConfig, ...(req.body || {}) };
