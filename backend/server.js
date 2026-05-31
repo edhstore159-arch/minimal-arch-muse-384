@@ -114,6 +114,24 @@ startSock().catch((e) => {
 
 // ---- Helpers ----
 const ok = (data = {}) => ({ ok: true, ...data });
+const normalizeRecipient = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  if (raw.includes("@")) return raw;
+
+  let digits = raw.replace(/\D/g, "");
+  while (digits.startsWith("0")) digits = digits.slice(1);
+  if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
+  return digits ? `${digits}@s.whatsapp.net` : null;
+};
+
+const outboundMessage = (text, to, providerResult = {}) => ({
+  id: providerResult?.key?.id || `msg-${Date.now()}`,
+  text: String(text || ""),
+  from_me: true,
+  created_at: new Date().toISOString(),
+  to,
+});
 
 // ---- Healthcheck ----
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
@@ -209,16 +227,15 @@ app.post("/api/whatsapp/send", async (req, res) => {
         .status(503)
         .json({ ok: false, error: "NOT_CONNECTED", state: connectionState });
     }
-    const { to, message, text } = req.body || {};
-    if (!to) return res.status(400).json({ ok: false, error: "missing 'to'" });
-    const jid = String(to).includes("@")
-      ? String(to)
-      : `${String(to).replace(/\D/g, "")}@s.whatsapp.net`;
+    const { to, phone, contact_phone, message, text } = req.body || {};
+    const jid = normalizeRecipient(to || phone || contact_phone);
+    if (!jid) return res.status(400).json({ ok: false, delivered: false, error: "missing 'to'" });
     const body = message || text || "";
-    await sock.sendMessage(jid, { text: String(body) });
-    res.json(ok({ to: jid }));
+    if (!String(body).trim()) return res.status(400).json({ ok: false, delivered: false, error: "missing message" });
+    const providerResult = await sock.sendMessage(jid, { text: String(body) });
+    res.json(ok({ delivered: true, to: jid, message: outboundMessage(body, jid, providerResult), provider_result: providerResult }));
   } catch (e) {
-    res.status(500).json({ ok: false, error: e?.message || "send_failed" });
+    res.status(500).json({ ok: false, delivered: false, error: e?.message || "send_failed" });
   }
 });
 
@@ -227,14 +244,13 @@ app.post("/api/whatsapp/send-direct", async (req, res) => {
     if (!sock || connectionState !== "open") {
       return res.status(503).json({ delivered: false, ok: false, error: "NOT_CONNECTED", state: connectionState });
     }
-    const { phone, to, text, message } = req.body || {};
-    const target = phone || to;
-    if (!target) return res.status(400).json({ delivered: false, ok: false, error: "missing phone" });
-    const jid = String(target).includes("@")
-      ? String(target)
-      : `${String(target).replace(/\D/g, "")}@s.whatsapp.net`;
-    await sock.sendMessage(jid, { text: String(text || message || "") });
-    res.json(ok({ delivered: true, to: jid }));
+    const { phone, to, contact_phone, text, message } = req.body || {};
+    const jid = normalizeRecipient(phone || to || contact_phone);
+    if (!jid) return res.status(400).json({ delivered: false, ok: false, error: "missing phone" });
+    const body = text || message || "";
+    if (!String(body).trim()) return res.status(400).json({ delivered: false, ok: false, error: "missing message" });
+    const providerResult = await sock.sendMessage(jid, { text: String(body) });
+    res.json(ok({ delivered: true, to: jid, message: outboundMessage(body, jid, providerResult), provider_result: providerResult }));
   } catch (e) {
     res.status(500).json({ delivered: false, ok: false, error: e?.message || "send_failed" });
   }
