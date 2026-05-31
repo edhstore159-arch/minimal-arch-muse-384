@@ -169,8 +169,8 @@ export default function Dashboard() {
   };
 
   const filtered = contacts.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone.includes(search)
+    (c.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (c.phone ?? "").includes(search)
   );
 
   const initials = (name) => name.split(" ").map(s => s[0]).slice(0, 2).join("").toUpperCase();
