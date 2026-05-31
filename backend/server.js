@@ -380,6 +380,26 @@ app.post("/api/whatsapp/baileys/logout", async (req, res) => {
   }
 });
 
+// ---- Contatos e mensagens ----
+app.get("/api/whatsapp/contacts", (_req, res) => {
+  const list = Array.from(contactsStore.values()).sort((a, b) =>
+    String(b.last_message_at || "").localeCompare(String(a.last_message_at || ""))
+  );
+  res.json(list);
+});
+
+app.get("/api/whatsapp/messages/:id", (req, res) => {
+  const raw = req.params.id;
+  const direct = messagesStore.get(raw);
+  if (direct) return res.json(direct);
+  // permite buscar pelo telefone também
+  const digits = String(raw).replace(/\D/g, "");
+  for (const [jid, list] of messagesStore.entries()) {
+    if (jidToPhone(jid).endsWith(digits.slice(-8))) return res.json(list);
+  }
+  res.json([]);
+});
+
 // ---- Fallback /api/* ----
 app.all("/api/*", (_req, res) => res.json(ok({ fallback: true })));
 
