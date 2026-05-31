@@ -21,9 +21,14 @@ export default function Finance() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    const { data } = await api.get("/finance/transactions");
-    setItems(data);
+    try {
+      const { data } = await api.get("/finance/transactions");
+      setItems(Array.isArray(data) ? data : []);
+    } catch {
+      setItems([]);
+    }
   };
+
 
   const create = async () => {
     if (!form.description || !form.amount) {
