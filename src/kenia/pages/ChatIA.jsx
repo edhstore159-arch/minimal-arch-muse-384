@@ -12,8 +12,9 @@ import { toast } from "sonner";
 import {
   Send, Volume2, VolumeX, Sparkles, Bot, Gauge, ShieldCheck,
   AlertTriangle, BookOpen, Loader2, RefreshCcw, Pause, Play,
-  CalendarPlus, CalendarCheck, X,
+  CalendarPlus, CalendarCheck, X, Mic, MicOff,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
