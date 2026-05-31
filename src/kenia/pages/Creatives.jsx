@@ -23,8 +23,13 @@ export default function Creatives() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    const { data } = await api.get("/creatives");
-    setItems(data);
+    try {
+      const { data } = await api.get("/creatives");
+      const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.creatives) ? data.creatives : [];
+      setItems(list);
+    } catch {
+      setItems([]);
+    }
   };
 
   const generate = async () => {
