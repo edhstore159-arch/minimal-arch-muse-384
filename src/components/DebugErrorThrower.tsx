@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+let pendingDebugError: string | null = null;
+
 /**
  * DebugErrorThrower
  *
@@ -10,24 +12,24 @@ import { useEffect, useState } from "react";
  * NÃO REMOVA O THROW — é intencional.
  */
 export const DebugErrorThrower = () => {
-  const [message, setMessage] = useState<string | null>(null);
+  const [, forceRender] = useState(0);
 
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
-        setMessage(detail);
+        pendingDebugError = detail;
+        forceRender((value) => value + 1);
       }
     };
     window.addEventListener("lovable-debug-error", handler as EventListener);
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
 
-  if (message) {
-    const toThrow = message;
-    // Limpa o state para que o erro só dispare uma vez por instrução
-    // e o app possa recuperar após reload sem re-throw infinito.
-    setMessage(null);
+  if (pendingDebugError) {
+    const toThrow = pendingDebugError;
+    // Limpa antes do throw para evitar re-render infinito depois do overlay.
+    pendingDebugError = null;
     throw new Error(toThrow);
   }
 
