@@ -102,7 +102,12 @@ export default function Dashboard() {
   const sendWhatsApp = async () => {
     if (!draft.trim() || !activeContact) return;
     try {
-      const { data } = await api.post("/whatsapp/send", { contact_id: activeContact.id, text: draft });
+      const { data } = await api.post("/whatsapp/send", {
+        contact_id: activeContact.id,
+        contact_phone: activeContact.phone,
+        phone: activeContact.phone,
+        text: draft,
+      });
       // Backend retorna {message, provider_result} — extrai a mensagem pura
       const msg = data?.message || data;
       setMessages((prev) => [...prev, msg]);
@@ -110,8 +115,9 @@ export default function Dashboard() {
       loadContacts();
       // Recarrega mensagens do servidor em 1s para pegar resposta do bot
       setTimeout(() => activeContact && loadMessages(activeContact.id), 1200);
-    } catch {
-      toast.error("Erro ao enviar");
+    } catch (e) {
+      const detail = e?.response?.data?.error || e?.message || "Erro ao enviar";
+      toast.error(detail);
     }
   };
 
