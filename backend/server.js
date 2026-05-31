@@ -131,7 +131,7 @@ function recordAutoReply(entry) {
 }
 
 async function autoReply(jid, userText, contactName) {
-  recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
+  recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasOpenAI: Boolean(OPENAI_API_KEY), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
   if (!sock || connectionState !== "open") {
     recordAutoReply({ step: "skip_socket", jid, connectionState });
     return;
