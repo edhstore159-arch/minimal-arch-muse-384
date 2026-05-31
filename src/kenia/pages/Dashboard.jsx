@@ -90,6 +90,18 @@ export default function Dashboard() {
     } catch {}
   };
 
+  const loadAppointments = async () => {
+    try {
+      const { data } = await api.get("/appointments");
+      const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+      const now = Date.now();
+      const upcoming = list
+        .filter((a) => a?.starts_at && new Date(a.starts_at).getTime() >= now - 60 * 60 * 1000)
+        .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+      setAppointments(upcoming);
+    } catch {}
+  };
+
   const loadLeadForContact = async (phone) => {
     try {
       const { data } = await api.get("/leads");
