@@ -732,8 +732,18 @@ export default function ChatIA() {
                 data-testid="chat-input"
               />
               <Button
+                type="button"
+                onClick={recording ? stopRecording : startRecording}
+                disabled={thinking || transcribing}
+                title={recording ? "Parar gravação" : "Gravar mensagem de áudio"}
+                className={`h-12 px-4 ${recording ? "bg-red-600 hover:bg-red-700" : "bg-nude-200 hover:bg-nude-300 text-nude-800"}`}
+                data-testid="chat-mic-btn"
+              >
+                {transcribing ? <Loader2 className="w-4 h-4 animate-spin" /> : recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </Button>
+              <Button
                 onClick={() => send()}
-                disabled={thinking || !input.trim()}
+                disabled={thinking || transcribing || !input.trim()}
                 className="h-12 px-5 bg-gold-600 hover:bg-gold-700 text-white"
                 data-testid="chat-send-btn"
               >
