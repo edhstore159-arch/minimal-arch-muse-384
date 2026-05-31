@@ -411,9 +411,15 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
 
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
+  const status = baileysRuntimeStatus();
   res.json({
     bot_enabled: whatsappConfig.bot_enabled,
-    connection_state: connectionState,
+    connection_state: status.state,
+    connected: status.connected,
+    qr_available: status.qr_available,
+    qr_age_ms: status.qr_age_ms,
+    qr_expires_in_s: status.qr_expires_in_s,
+    qr_timeout_s: status.qr_timeout_s,
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -482,7 +488,8 @@ app.post("/api/whatsapp/test-connection", (_req, res) => {
 // ---- QR Code ----
 app.get("/api/whatsapp/baileys/qr", async (_req, res) => {
   const qr = currentQR ? await QRCode.toDataURL(currentQR, { width: 320, margin: 2 }) : null;
-  res.json({ qr, raw: currentQR, state: connectionState, connected: connectionState === "open" });
+  const status = baileysRuntimeStatus();
+  res.json({ qr, raw: currentQR, ...status });
 });
 
 app.get("/api/whatsapp/qr", async (_req, res) => {
@@ -493,7 +500,8 @@ app.get("/api/whatsapp/qr", async (_req, res) => {
     });
   }
   const dataUrl = await QRCode.toDataURL(currentQR);
-  res.json({ connected: false, qr: dataUrl });
+  const status = baileysRuntimeStatus();
+  res.json({ connected: false, qr: dataUrl, qr_expires_in_s: status.qr_expires_in_s, qr_timeout_s: status.qr_timeout_s });
 });
 
 app.get("/api/whatsapp/qr/image", async (_req, res) => {
