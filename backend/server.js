@@ -356,6 +356,7 @@ app.get("/api/whatsapp/ai-debug", (_req, res) => {
   res.json({
     bot_enabled: whatsappConfig.bot_enabled,
     connection_state: connectionState,
+    has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
     last: autoReplyDebug.last,
