@@ -157,6 +157,10 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     const data = await aiResp.json();
     const reply: string = data?.choices?.[0]?.message?.content ?? "";
 
+    // Gera áudio (TTS ElevenLabs) se o cliente pediu
+    const wantAudio = body.want_audio !== false; // default true
+    const audio_base64 = wantAudio ? await synthesizeSpeech(reply) : null;
+
     // Salva conversa no banco (não bloqueia resposta se falhar)
     try {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -173,7 +177,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     return new Response(
       JSON.stringify({
         response: reply,
-        audio_base64: null,
+        audio_base64,
         analysis: { acertividade: 90, qualificacao: "ok" },
         server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
       }),
