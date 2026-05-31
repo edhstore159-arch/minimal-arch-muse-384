@@ -111,8 +111,57 @@ export default function ChatIA() {
   const [legDate, setLegDate] = useState("");
   const [legBrief, setLegBrief] = useState("");
   const [playingIdx, setPlayingIdx] = useState(null);
+  const [scheduler, setScheduler] = useState(null); // { date, time, duration, area }
+  const [scheduling, setScheduling] = useState(false);
   const audioRef = useRef(null);
   const scrollRef = useRef(null);
+
+  const openScheduler = (area) => {
+    const slot = nextBusinessSlot();
+    setScheduler({ date: slot.date, time: slot.time, duration: 60, area: area || analysis?.area || "" });
+  };
+
+  const confirmSchedule = async () => {
+    if (!scheduler?.date || !scheduler?.time) {
+      toast.error("Escolha data e horário");
+      return;
+    }
+    if (!name?.trim()) {
+      toast.error("Informe seu nome para confirmar o agendamento");
+      return;
+    }
+    setScheduling(true);
+    try {
+      const starts_at = new Date(`${scheduler.date}T${scheduler.time}:00`).toISOString();
+      const title = `Consulta — ${scheduler.area || "Atendimento jurídico"}${name ? " · " + name : ""}`;
+      await api.post("/appointments", {
+        title,
+        client_name: name || "Cliente",
+        starts_at,
+        duration_min: Number(scheduler.duration) || 60,
+        location: "Google Meet",
+        notes: phone ? `WhatsApp: ${phone}` : "",
+        status: "confirmado",
+      });
+      const human = new Date(starts_at).toLocaleString("pt-BR", {
+        weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit",
+      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `✅ Consulta agendada para ${human} (${scheduler.duration} min) por Google Meet.\n\nVocê receberá o link no WhatsApp ${phone || "informado"}. Se precisar remarcar, é só me avisar por aqui.`,
+          audio_base64: null,
+        },
+      ]);
+      toast.success("Agendamento confirmado");
+      setScheduler(null);
+    } catch (e) {
+      toast.error("Não consegui agendar. Tente novamente.");
+    } finally {
+      setScheduling(false);
+    }
+  };
 
   useEffect(() => {
     // carrega brief diario de legislacao
