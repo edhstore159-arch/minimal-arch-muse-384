@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import { api } from "@/kenia/lib/api";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Textarea } from "@/kenia/components/ui/textarea";
@@ -13,8 +13,6 @@ import {
   Send, Volume2, VolumeX, Sparkles, Bot, Gauge, ShieldCheck,
   AlertTriangle, BookOpen, Loader2, RefreshCcw, Pause, Play,
 } from "lucide-react";
-
-const BACKEND = (import.meta.env.VITE_BACKEND_URL || "");
 
 /**
  * Player de áudio nativo HTML5 que usa Blob URL em vez de data: URL.
@@ -102,8 +100,8 @@ export default function ChatIA() {
 
   useEffect(() => {
     // carrega brief diario de legislacao
-    axios
-      .get(`${BACKEND}/api/legislation/today`)
+    api
+      .get("/legislation/today")
       .then((r) => {
         setLegDate(r.data.date_human);
         setLegBrief(r.data.brief);
@@ -183,7 +181,7 @@ export default function ChatIA() {
     setThinking(true);
     try {
       const { data } = await axios.post(
-        `${BACKEND}/api/chat/message`,
+        "/chat/message",
         {
           message: msg,
           session_id: sessionId,
