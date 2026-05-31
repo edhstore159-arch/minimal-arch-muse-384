@@ -304,6 +304,11 @@ export default function WhatsAppSettings() {
   };
 
   const autoSetupWebhook = async () => {
+    if (cfg?.provider === "baileys") {
+      setWebhookResult(null);
+      toast.info("Baileys não usa webhook. Para conectar, use o QR Code da aba Baileys.", { duration: 7000 });
+      return;
+    }
     setSettingWebhook(true);
     setWebhookResult(null);
     try {
@@ -408,7 +413,7 @@ export default function WhatsAppSettings() {
                   </div>
                 </div>
               ))}
-              {!diag.ok && cfg?.provider === "zapi" && (
+              {!diag.ok && cfg?.provider !== "baileys" && (
                 <div className="pt-2 flex justify-end">
                   <Button
                     onClick={autoSetupWebhook}
