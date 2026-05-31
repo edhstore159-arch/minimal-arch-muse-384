@@ -124,7 +124,7 @@ async function startSock() {
   });
 
   // Capturar mensagens recebidas/enviadas para alimentar a lista de contatos
-  sock.ev.on("messages.upsert", ({ messages }) => {
+  sock.ev.on("messages.upsert", async ({ messages }) => {
     if (sock !== activeSock || !Array.isArray(messages)) return;
     for (const m of messages) {
       const jid = m?.key?.remoteJid;
@@ -149,6 +149,11 @@ async function startSock() {
         from_me: fromMe,
         created_at,
       });
+
+      // Atendente automatico: responde com IA quando bot_enabled estiver ativo
+      if (!fromMe && whatsappConfig.bot_enabled) {
+        autoReply(jid, text, name).catch((e) => console.error("autoReply error:", e?.message || e));
+      }
     }
   });
 
