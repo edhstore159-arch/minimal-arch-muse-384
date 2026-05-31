@@ -90,51 +90,69 @@ const AI_SYSTEM_PROMPT =
 const aiHistory = new Map(); // jid -> [{role, content}]
 
 async function callAI(messagesPayload) {
-  let provider, endpoint, apiKey, model, headers;
-  if (OPENAI_API_KEY) {
-    provider = "openai";
-    endpoint = `${OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`;
-    apiKey = OPENAI_API_KEY;
-    model = OPENAI_MODEL;
-    headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-  } else if (EMERGENT_API_KEY) {
-    provider = "emergent";
-    endpoint = `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`;
-    apiKey = EMERGENT_API_KEY;
-    model = EMERGENT_MODEL;
-    headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-  } else if (LOVABLE_API_KEY) {
-    provider = "lovable";
-    endpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
-    apiKey = LOVABLE_API_KEY;
-    model = AI_MODEL;
-    headers = { "Lovable-API-Key": apiKey, "Content-Type": "application/json" };
-  } else {
+  const providers = [
+    OPENAI_API_KEY && {
+      provider: "openai",
+      endpoint: `${OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`,
+      model: OPENAI_MODEL,
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    },
+    EMERGENT_API_KEY && {
+      provider: "emergent",
+      endpoint: `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`,
+      model: EMERGENT_MODEL,
+      headers: { Authorization: `Bearer ${EMERGENT_API_KEY}`, "Content-Type": "application/json" },
+    },
+    LOVABLE_API_KEY && {
+      provider: "lovable",
+      endpoint: "https://ai.gateway.lovable.dev/v1/chat/completions",
+      model: AI_MODEL,
+      headers: { "Lovable-API-Key": LOVABLE_API_KEY, "Content-Type": "application/json" },
+    },
+  ].filter(Boolean);
+
+  if (!providers.length) {
     return { ok: false, error: "Nenhuma chave de IA configurada (OPENAI_API_KEY, EMERGENT_API_KEY ou LOVABLE_API_KEY)." };
   }
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-  try {
-    const resp = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      signal: controller.signal,
-      body: JSON.stringify({ model, messages: messagesPayload }),
-    });
-    if (!resp.ok) {
-      const errText = await resp.text();
-      return { ok: false, provider, endpoint, model, status: resp.status, error: errText.slice(0, 500) };
+
+  const attempts = [];
+  for (const cfg of providers) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+    try {
+      const resp = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers: cfg.headers,
+        signal: controller.signal,
+        body: JSON.stringify({ model: cfg.model, messages: messagesPayload }),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        const failed = { ok: false, provider: cfg.provider, endpoint: cfg.endpoint, model: cfg.model, status: resp.status, error: errText.slice(0, 500) };
+        attempts.push(failed);
+        recordAutoReply({ step: "ai_provider_fail", provider: cfg.provider, status: resp.status, error: failed.error });
+        continue;
+      }
+      const data = await resp.json();
+      const reply = data?.choices?.[0]?.message?.content?.trim();
+      if (!reply) {
+        const failed = { ok: false, provider: cfg.provider, endpoint: cfg.endpoint, model: cfg.model, error: "Resposta vazia da IA.", raw: data };
+        attempts.push(failed);
+        recordAutoReply({ step: "ai_provider_fail", provider: cfg.provider, error: failed.error });
+        continue;
+      }
+      return { ok: true, provider: cfg.provider, endpoint: cfg.endpoint, model: cfg.model, reply, attempts };
+    } catch (e) {
+      const timedOut = e?.name === "AbortError";
+      const failed = { ok: false, provider: cfg.provider, endpoint: cfg.endpoint, model: cfg.model, error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta da IA.` : e?.message || String(e) };
+      attempts.push(failed);
+      recordAutoReply({ step: "ai_provider_fail", provider: cfg.provider, error: failed.error });
+    } finally {
+      clearTimeout(timeout);
     }
-    const data = await resp.json();
-    const reply = data?.choices?.[0]?.message?.content?.trim();
-    if (!reply) return { ok: false, provider, endpoint, model, error: "Resposta vazia da IA.", raw: data };
-    return { ok: true, provider, endpoint, model, reply };
-  } catch (e) {
-    const timedOut = e?.name === "AbortError";
-    return { ok: false, provider, endpoint, model, error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta da IA.` : e?.message || String(e) };
-  } finally {
-    clearTimeout(timeout);
   }
+
+  return { ok: false, error: "Todos os provedores de IA configurados falharam.", attempts, ...attempts[attempts.length - 1] };
 }
 
 const autoReplyDebug = { last: null, history: [] };
@@ -158,7 +176,7 @@ async function autoReply(jid, userText, contactName) {
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
-  recordAutoReply({ step: "ai_request", jid, provider: OPENAI_API_KEY ? "openai" : EMERGENT_API_KEY ? "emergent" : LOVABLE_API_KEY ? "lovable" : "none" });
+  recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
   const result = await callAI(messagesPayload);
   if (!result.ok) {
     recordAutoReply({ step: "ai_fail", jid, result });
