@@ -139,14 +139,15 @@ export default function Landing() {
           <div className="grid lg:grid-cols-12 gap-8 mb-16">
             <div className="lg:col-span-5">
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-3">Plataforma completa</div>
-              <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight text-nude-900">
+              <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight text-nude-50">
                 Da captação ao recebimento, tudo conectado.
               </h2>
             </div>
             <div className="lg:col-span-7 lg:pt-4">
-              <p className="text-lg text-gold-200/60 leading-relaxed">
-                Pare de pular entre 5 ferramentas diferentes. <strong className="text-gold-100">Espírito Santo</strong> concentra
+              <p className="text-lg text-nude-200 leading-relaxed">
+                Pare de pular entre 5 ferramentas diferentes. <strong className="text-gold-300">Espírito Santo</strong> concentra
                 todo o ciclo do cliente — do primeiro contato no WhatsApp (texto ou áudio) ao último pagamento —
+
                 com IA integrada e auto-hospedagem via Baileys.
               </p>
             </div>
