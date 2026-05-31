@@ -34,11 +34,20 @@ function Protected({ children }) {
 }
 
 function App() {
+  const debugToolsEnabled =
+    typeof window !== "undefined" &&
+    (window.location.pathname === "/admin/debug" ||
+      window.location.pathname === "/app/debug" ||
+      new URLSearchParams(window.location.search).get("debug") === "1");
+
   return (
     <div className="App">
-      {/* DebugErrorThrower DEVE ficar fora de qualquer ErrorBoundary/Suspense */}
-      <DebugErrorThrower />
-      <ErrorDebugPopup />
+      {debugToolsEnabled && (
+        <>
+          <DebugErrorThrower />
+          <ErrorDebugPopup />
+        </>
+      )}
       <AuthProvider>
         <BrowserRouter>
 
