@@ -12,9 +12,11 @@ Este projeto está configurado para rodar no Render como **Static Site**. Nesse 
 
 1. Acesse o Render.
 2. Clique em **New +**.
-3. Escolha **Static Site**.
+3. Escolha **Static Site** — não escolha **Web Service** para este deploy estático.
 4. Conecte o repositório deste projeto.
 5. Selecione a branch principal.
+
+> Se você já criou como **Web Service**, o Render pode tentar executar `node server.js` e gerar o erro `Cannot find module '/opt/render/project/src/server.js'`. Este projeto não tem `server.js` porque é um frontend Vite estático. A correção recomendada é apagar esse serviço e criar novamente como **Static Site** ou usar **New + → Blueprint**.
 
 ## 3. Configurações do Render
 
@@ -26,6 +28,7 @@ Use exatamente estas configurações:
 | Build Command | `npm install --legacy-peer-deps && npm run build` |
 | Publish Directory | `dist` |
 | Auto-Deploy | Ativado, se quiser publicar a cada push |
+| Start Command | deixe vazio; Static Site não usa start command |
 
 > ⚠️ ATENÇÃO ao colar o Build Command: não inclua aspas (`'` ou `"`) nem crase (`` ` ``) em volta do comando. Cole apenas o texto puro:
 > `npm install --legacy-peer-deps && npm run build`
@@ -35,6 +38,17 @@ Use exatamente estas configurações:
 > Melhor ainda: use **New + → Blueprint** apontando para o repositório. O Render lê o `render.yaml` automaticamente e evita erros de digitação.
 
 O arquivo `render.yaml` já define essas opções automaticamente quando o Render usa Blueprint.
+
+### Erro: `Cannot find module '/opt/render/project/src/server.js'`
+
+Esse erro significa que o serviço foi configurado como backend Node/Web Service, não como Static Site. Para corrigir:
+
+1. No Render, crie um novo serviço usando **New + → Static Site** ou **New + → Blueprint**.
+2. Não use `node server.js` em nenhum campo.
+3. Se houver campo **Start Command**, deixe em branco no Static Site.
+4. Use somente o **Build Command** `npm install --legacy-peer-deps && npm run build` e **Publish Directory** `dist`.
+
+Alternativa emergencial se você insistir em manter como **Web Service**: use **Build Command** `npm install --legacy-peer-deps && npm run build` e **Start Command** `npm start`. O `npm start` deste projeto apenas serve o `dist/` com Vite Preview; ele não cria backend real nem habilita Baileys.
 
 ## 4. Variáveis de ambiente
 
