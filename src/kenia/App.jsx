@@ -34,11 +34,13 @@ function Protected({ children }) {
 }
 
 function App() {
+  const debugEnabled = window.location.pathname === "/admin/debug" || window.location.pathname === "/app/debug";
+
   return (
     <div className="App">
       {/* DebugErrorThrower DEVE ficar fora de qualquer ErrorBoundary/Suspense */}
-      <DebugErrorThrower />
-      <ErrorDebugPopup />
+      {debugEnabled && <DebugErrorThrower />}
+      {debugEnabled && <ErrorDebugPopup />}
       <AuthProvider>
         <BrowserRouter>
 
