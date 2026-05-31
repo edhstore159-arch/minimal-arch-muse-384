@@ -21,10 +21,11 @@ export const DebugErrorThrower = () => {
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
 
-  if (message) {
+  useEffect(() => {
+    if (!message) return;
     console.info("Instrução de debug recebida:", message);
     setMessage(null);
-  }
+  }, [message]);
 
   return null;
 };
