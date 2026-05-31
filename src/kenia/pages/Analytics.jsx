@@ -20,24 +20,31 @@ export default function Analytics() {
   const [m, setM] = useState(null);
 
   useEffect(() => {
-    api.get("/dashboard/metrics").then(r => setM(r.data)).catch(() => {});
+    api.get("/dashboard/metrics").then(r => setM(r.data)).catch(() => setM({}));
   }, []);
 
   if (!m) {
     return <div className="p-12 text-nude-400">Carregando métricas...</div>;
   }
 
-  const fmt = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  // Defaults para evitar crash quando o backend não retorna dados
+  const leads = m.leads || { total: 0, conversion_rate: 0, by_stage: {} };
+  const finance = m.finance || { receita_paga: 0, receita_pendente: 0, despesas: 0, lucro: 0 };
+  const processes = m.processes || { ativos: 0, total: 0 };
 
-  const stageData = Object.entries(m.leads.by_stage).map(([k, v]) => ({
+
+  const fmt = v => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const stageData = Object.entries(leads.by_stage || {}).map(([k, v]) => ({
     name: STAGE_LABELS[k] || k, value: v, color: STAGE_COLORS[k] || "#64748B",
   }));
 
   const financeData = [
-    { name: "Receita Paga", value: m.finance.receita_paga, color: "#059669" },
-    { name: "A Receber", value: m.finance.receita_pendente, color: "#D97706" },
-    { name: "Despesas", value: m.finance.despesas, color: "#DC2626" },
+    { name: "Receita Paga", value: finance.receita_paga, color: "#059669" },
+    { name: "A Receber", value: finance.receita_pendente, color: "#D97706" },
+    { name: "Despesas", value: finance.despesas, color: "#DC2626" },
   ];
+
 
   return (
     <div className="h-screen flex flex-col bg-nude-50 overflow-hidden">
@@ -48,10 +55,11 @@ export default function Analytics() {
 
       <div className="flex-1 overflow-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <KPI label="Total de Leads" value={m.leads.total} Icon={Users} color="bg-nude-900 text-white" />
-          <KPI label="Conversão" value={`${m.leads.conversion_rate}%`} Icon={Target} color="bg-gold-500 text-white" />
-          <KPI label="Faturamento" value={fmt(m.finance.receita_paga)} Icon={Wallet} color="bg-gold-600 text-white" />
-          <KPI label="Processos Ativos" value={m.processes.ativos} Icon={Scale} color="bg-blue-600 text-white" />
+          <KPI label="Total de Leads" value={leads.total} Icon={Users} color="bg-nude-900 text-white" />
+          <KPI label="Conversão" value={`${leads.conversion_rate}%`} Icon={Target} color="bg-gold-500 text-white" />
+          <KPI label="Faturamento" value={fmt(finance.receita_paga)} Icon={Wallet} color="bg-gold-600 text-white" />
+          <KPI label="Processos Ativos" value={processes.ativos} Icon={Scale} color="bg-blue-600 text-white" />
+
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
@@ -93,10 +101,11 @@ export default function Analytics() {
         <Card className="p-5 border-nude-200">
           <h3 className="font-display font-semibold text-base mb-4">Resumo Geral</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Stat label="Lucro Líquido" value={fmt(m.finance.lucro)} accent={m.finance.lucro >= 0 ? "emerald" : "rose"} />
-            <Stat label="Receita Pendente" value={fmt(m.finance.receita_pendente)} accent="amber" />
-            <Stat label="Total Processos" value={m.processes.total} />
-            <Stat label="Taxa Conversão" value={`${m.leads.conversion_rate}%`} accent="amber" />
+            <Stat label="Lucro Líquido" value={fmt(finance.lucro)} accent={finance.lucro >= 0 ? "emerald" : "rose"} />
+            <Stat label="Receita Pendente" value={fmt(finance.receita_pendente)} accent="amber" />
+            <Stat label="Total Processos" value={processes.total} />
+            <Stat label="Taxa Conversão" value={`${leads.conversion_rate}%`} accent="amber" />
+
           </div>
         </Card>
       </div>
