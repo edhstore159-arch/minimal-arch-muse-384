@@ -77,35 +77,42 @@ const EMERGENT_BASE_URL =
 const EMERGENT_MODEL = process.env.EMERGENT_MODEL || "gpt-4o-mini";
 const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY || process.env.VITE_LOVABLE_API_KEY || "";
 const AI_MODEL = process.env.AI_MODEL || "google/gemini-2.5-flash";
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 20000);
 const AI_SYSTEM_PROMPT =
   process.env.AI_SYSTEM_PROMPT ||
   "Você é a Kenia, assistente virtual de um escritório de advocacia. Responda em português brasileiro, de forma cordial, objetiva e empática. Faça perguntas para qualificar o lead (área do direito, urgência, descrição do caso, cidade). Nunca prometa resultado jurídico. Mantenha respostas curtas (até 3 frases).";
 const aiHistory = new Map(); // jid -> [{role, content}]
 
 async function callAI(messagesPayload) {
-  let provider, endpoint, apiKey, model;
+  let provider, endpoint, apiKey, model, headers;
   if (OPENAI_API_KEY) {
     provider = "openai";
     endpoint = `${OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`;
     apiKey = OPENAI_API_KEY;
     model = OPENAI_MODEL;
+    headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
   } else if (EMERGENT_API_KEY) {
     provider = "emergent";
     endpoint = `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`;
     apiKey = EMERGENT_API_KEY;
     model = EMERGENT_MODEL;
+    headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
   } else if (LOVABLE_API_KEY) {
     provider = "lovable";
     endpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
     apiKey = LOVABLE_API_KEY;
     model = AI_MODEL;
+    headers = { "Lovable-API-Key": apiKey, "Content-Type": "application/json" };
   } else {
     return { ok: false, error: "Nenhuma chave de IA configurada (OPENAI_API_KEY, EMERGENT_API_KEY ou LOVABLE_API_KEY)." };
   }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
   try {
     const resp = await fetch(endpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers,
+      signal: controller.signal,
       body: JSON.stringify({ model, messages: messagesPayload }),
     });
     if (!resp.ok) {
@@ -117,7 +124,10 @@ async function callAI(messagesPayload) {
     if (!reply) return { ok: false, provider, endpoint, model, error: "Resposta vazia da IA.", raw: data };
     return { ok: true, provider, endpoint, model, reply };
   } catch (e) {
-    return { ok: false, provider, endpoint, model, error: e?.message || String(e) };
+    const timedOut = e?.name === "AbortError";
+    return { ok: false, provider, endpoint, model, error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta da IA.` : e?.message || String(e) };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -142,6 +152,7 @@ async function autoReply(jid, userText, contactName) {
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
+  recordAutoReply({ step: "ai_request", jid, provider: OPENAI_API_KEY ? "openai" : EMERGENT_API_KEY ? "emergent" : LOVABLE_API_KEY ? "lovable" : "none" });
   const result = await callAI(messagesPayload);
   if (!result.ok) {
     recordAutoReply({ step: "ai_fail", jid, result });
@@ -154,6 +165,7 @@ async function autoReply(jid, userText, contactName) {
   try { await sock.sendPresenceUpdate("composing", jid); } catch {}
   await new Promise((r) => setTimeout(r, 600));
   try {
+    recordAutoReply({ step: "send_attempt", jid, reply: reply.slice(0, 200) });
     const providerResult = await sock.sendMessage(jid, { text: reply });
     const out = outboundMessage(reply, jid, providerResult);
     upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
