@@ -116,6 +116,13 @@ const ok = (data = {}) => ({ ok: true, ...data });
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
 app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
 
+app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
+
+app.put("/api/whatsapp/config", (req, res) => {
+  whatsappConfig = { ...whatsappConfig, ...(req.body || {}) };
+  res.json(whatsappConfig);
+});
+
 // ---- Diagnostics ----
 app.get("/api/whatsapp/diagnostics", (_req, res) => {
   res.json({
@@ -147,6 +154,7 @@ app.get("/api/whatsapp/baileys/status", (_req, res) => {
     connected: connectionState === "open",
     state: connectionState,
     last_error: lastError,
+    me: sock?.user || null,
   });
 });
 
@@ -158,9 +166,18 @@ app.get("/api/whatsapp/test-connection", (_req, res) => {
   });
 });
 
+app.post("/api/whatsapp/test-connection", (_req, res) => {
+  res.json({
+    connected: connectionState === "open",
+    provider: "baileys",
+    error: connectionState === "open" ? null : lastError || "Aguardando leitura do QR Code.",
+  });
+});
+
 // ---- QR Code ----
 app.get("/api/whatsapp/baileys/qr", async (_req, res) => {
-  res.json({ qr: currentQR, state: connectionState });
+  const qr = currentQR ? await QRCode.toDataURL(currentQR, { width: 320, margin: 2 }) : null;
+  res.json({ qr, raw: currentQR, state: connectionState, connected: connectionState === "open" });
 });
 
 app.get("/api/whatsapp/qr", async (_req, res) => {
