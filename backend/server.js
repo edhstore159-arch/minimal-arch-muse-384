@@ -209,14 +209,16 @@ async function startSock() {
   });
 
   // Capturar mensagens recebidas/enviadas para alimentar a lista de contatos
-  sock.ev.on("messages.upsert", async ({ messages }) => {
+  sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (sock !== activeSock || !Array.isArray(messages)) return;
     for (const m of messages) {
       const jid = m?.key?.remoteJid;
-      if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") continue;
-      const text = extractText(m);
-      if (!text) continue;
+      if (!jid) continue;
       const fromMe = Boolean(m?.key?.fromMe);
+      const text = extractText(m);
+      recordAutoReply({ step: "incoming", type, jid, fromMe, hasText: Boolean(text), preview: String(text || "").slice(0, 80) });
+      if (jid.endsWith("@g.us") || jid === "status@broadcast") continue;
+      if (!text) continue;
       const created_at = m?.messageTimestamp
         ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
         : new Date().toISOString();
@@ -235,9 +237,11 @@ async function startSock() {
         created_at,
       });
 
-      // Atendente automatico: responde com IA quando bot_enabled estiver ativo
-      if (!fromMe && whatsappConfig.bot_enabled) {
-        autoReply(jid, text, name).catch((e) => console.error("autoReply error:", e?.message || e));
+      // Atendente automático: só responde em mensagens novas (notify), não em histórico (append)
+      if (!fromMe && whatsappConfig.bot_enabled && type === "notify") {
+        autoReply(jid, text, name).catch((e) => recordAutoReply({ step: "autoreply_throw", jid, error: e?.message || String(e) }));
+      } else if (!fromMe && whatsappConfig.bot_enabled) {
+        recordAutoReply({ step: "skip_type", jid, type });
       }
     }
   });
