@@ -72,11 +72,14 @@ export default function WhatsAppSettings() {
         setBaileysQr(null);
       }
     } catch (e) {
-      // Sidecar morreu / nao responde. Tenta reconectar automaticamente.
-      setBaileysStatus({ ok: false, connected: false, state: "offline" });
-      try {
-        await api.post("/whatsapp/baileys/reconnect");
-      } catch {}
+      // Sidecar morreu / nao responde. Marca offline e NAO tenta reconectar
+      // automaticamente para evitar loop infinito quando o backend nao existe.
+      const msg =
+        e?.response?.status
+          ? `Backend respondeu ${e.response.status} em /whatsapp/baileys/status`
+          : "Não foi possível contatar o backend (sidecar Baileys offline).";
+      setBaileysStatus({ ok: false, connected: false, state: "offline", last_error: msg });
+      setBaileysQr(null);
     }
   };
 
