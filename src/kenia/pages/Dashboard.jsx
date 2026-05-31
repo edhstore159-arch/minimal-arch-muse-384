@@ -37,6 +37,7 @@ export default function Dashboard() {
   useEffect(() => {
     loadContacts();
     loadMetrics();
+    loadAppointments();
   }, []);
 
   useEffect(() => {
