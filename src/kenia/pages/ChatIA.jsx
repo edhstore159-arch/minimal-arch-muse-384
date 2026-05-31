@@ -636,7 +636,7 @@ export default function ChatIA() {
                         <Sparkles className="w-3 h-3" /> Ana · secretária
                       </div>
                     )}
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</div>
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap">{renderMessageContent(m.content)}</div>
                     {m.role === "assistant" && m.audio_base64 && (
                       <div className="mt-3 space-y-1.5" data-testid={`audio-block-${i}`}>
                         <button
