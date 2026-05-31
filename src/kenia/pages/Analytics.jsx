@@ -20,12 +20,18 @@ export default function Analytics() {
   const [m, setM] = useState(null);
 
   useEffect(() => {
-    api.get("/dashboard/metrics").then(r => setM(r.data)).catch(() => {});
+    api.get("/dashboard/metrics").then(r => setM(r.data)).catch(() => setM({}));
   }, []);
 
   if (!m) {
     return <div className="p-12 text-nude-400">Carregando métricas...</div>;
   }
+
+  // Defaults para evitar crash quando o backend não retorna dados
+  const leads = m.leads || { total: 0, conversion_rate: 0, by_stage: {} };
+  const finance = m.finance || { receita_paga: 0, receita_pendente: 0, despesas: 0, lucro: 0 };
+  const processes = m.processes || { ativos: 0, total: 0 };
+
 
   const fmt = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
