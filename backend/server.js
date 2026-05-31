@@ -76,7 +76,7 @@ const appendMessage = (jid, msg) => {
   messagesStore.set(jid, list);
 };
 
-// ---- Atendente automático com IA (OpenAI, Emergent ou Lovable AI Gateway) ----
+// ---- Atendente automático com IA (Gemini via Lovable AI Gateway primeiro; outras chaves como fallback) ----
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -85,7 +85,7 @@ const EMERGENT_BASE_URL =
   process.env.EMERGENT_BASE_URL || "https://integrations.emergentagent.com/llm/v1";
 const EMERGENT_MODEL = process.env.EMERGENT_MODEL || "gpt-4o-mini";
 const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY || process.env.VITE_LOVABLE_API_KEY || "";
-const AI_MODEL = process.env.AI_MODEL || "google/gemini-2.5-flash";
+const AI_MODEL = process.env.AI_MODEL || "google/gemini-3-flash-preview";
 const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 20000);
 const AUTO_REPLY_SEND_TIMEOUT_MS = Number(process.env.AUTO_REPLY_SEND_TIMEOUT_MS || 20000);
 const AUTO_REPLY_RETRY_EVERY_MS = Number(process.env.AUTO_REPLY_RETRY_EVERY_MS || 10000);
@@ -117,6 +117,12 @@ const aiHistory = new Map(); // jid -> [{role, content}]
 
 async function callAI(messagesPayload) {
   const providers = [
+    LOVABLE_API_KEY && {
+      provider: "lovable-gemini",
+      endpoint: "https://ai.gateway.lovable.dev/v1/chat/completions",
+      model: AI_MODEL,
+      headers: { "Lovable-API-Key": LOVABLE_API_KEY, "Content-Type": "application/json" },
+    },
     OPENAI_API_KEY && {
       provider: "openai",
       endpoint: `${OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`,
@@ -128,12 +134,6 @@ async function callAI(messagesPayload) {
       endpoint: `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`,
       model: EMERGENT_MODEL,
       headers: { Authorization: `Bearer ${EMERGENT_API_KEY}`, "Content-Type": "application/json" },
-    },
-    LOVABLE_API_KEY && {
-      provider: "lovable",
-      endpoint: "https://ai.gateway.lovable.dev/v1/chat/completions",
-      model: AI_MODEL,
-      headers: { "Lovable-API-Key": LOVABLE_API_KEY, "Content-Type": "application/json" },
     },
   ].filter(Boolean);
 
