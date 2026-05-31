@@ -109,10 +109,19 @@ async function callAI(messagesPayload) {
   }
 }
 
+const autoReplyDebug = { last: null, history: [] };
+function recordAutoReply(entry) {
+  const stamped = { at: new Date().toISOString(), ...entry };
+  autoReplyDebug.last = stamped;
+  autoReplyDebug.history.unshift(stamped);
+  autoReplyDebug.history = autoReplyDebug.history.slice(0, 30);
+  console.log("[autoReply]", JSON.stringify(stamped));
+}
+
 async function autoReply(jid, userText, contactName) {
-  console.log("[autoReply] trigger", { jid, hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled });
+  recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
   if (!sock || connectionState !== "open") {
-    console.warn("[autoReply] socket não conectado", connectionState);
+    recordAutoReply({ step: "skip_socket", jid, connectionState });
     return;
   }
   const history = aiHistory.get(jid) || [];
@@ -123,7 +132,7 @@ async function autoReply(jid, userText, contactName) {
   ];
   const result = await callAI(messagesPayload);
   if (!result.ok) {
-    console.error("[autoReply] falha IA:", result);
+    recordAutoReply({ step: "ai_fail", jid, result });
     return;
   }
   const reply = result.reply;
@@ -131,15 +140,15 @@ async function autoReply(jid, userText, contactName) {
   history.push({ role: "assistant", content: reply });
   aiHistory.set(jid, history.slice(-20));
   try { await sock.sendPresenceUpdate("composing", jid); } catch {}
-  await new Promise((r) => setTimeout(r, 800));
+  await new Promise((r) => setTimeout(r, 600));
   try {
     const providerResult = await sock.sendMessage(jid, { text: reply });
     const out = outboundMessage(reply, jid, providerResult);
     upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
     appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
-    console.log("[autoReply] resposta enviada para", jid);
+    recordAutoReply({ step: "sent", jid, provider: result.provider, model: result.model, reply: reply.slice(0, 200) });
   } catch (e) {
-    console.error("[autoReply] erro ao enviar:", e?.message || e);
+    recordAutoReply({ step: "send_error", jid, error: e?.message || String(e) });
   }
 }
 
