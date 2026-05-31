@@ -55,10 +55,11 @@ export default function Analytics() {
 
       <div className="flex-1 overflow-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <KPI label="Total de Leads" value={m.leads.total} Icon={Users} color="bg-nude-900 text-white" />
-          <KPI label="Conversão" value={`${m.leads.conversion_rate}%`} Icon={Target} color="bg-gold-500 text-white" />
-          <KPI label="Faturamento" value={fmt(m.finance.receita_paga)} Icon={Wallet} color="bg-gold-600 text-white" />
-          <KPI label="Processos Ativos" value={m.processes.ativos} Icon={Scale} color="bg-blue-600 text-white" />
+          <KPI label="Total de Leads" value={leads.total} Icon={Users} color="bg-nude-900 text-white" />
+          <KPI label="Conversão" value={`${leads.conversion_rate}%`} Icon={Target} color="bg-gold-500 text-white" />
+          <KPI label="Faturamento" value={fmt(finance.receita_paga)} Icon={Wallet} color="bg-gold-600 text-white" />
+          <KPI label="Processos Ativos" value={processes.ativos} Icon={Scale} color="bg-blue-600 text-white" />
+
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
