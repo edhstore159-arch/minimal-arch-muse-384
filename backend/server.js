@@ -201,6 +201,8 @@ async function autoReply(jid, userText, contactName) {
 }
 
 async function closeSock() {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
   try { sock?.end?.(); } catch {}
   try { sock?.ws?.close?.(); } catch {}
   sock = null;
@@ -324,6 +326,7 @@ async function startSock() {
 async function restartSock({ resetAuth = false } = {}) {
   await closeSock();
   currentQR = null;
+  currentQRAt = null;
   lastError = null;
   connectionState = "connecting";
   if (resetAuth) {
@@ -366,12 +369,17 @@ const outboundMessage = (text, to, providerResult = {}) => ({
 
 const baileysRuntimeStatus = () => {
   const connected = connectionState === "open" || Boolean(sock?.user && connectionState !== "logged_out");
+  const qrAgeMs = currentQRAt ? Date.now() - currentQRAt : null;
   return {
     ok: true,
     connected,
     state: connected ? "open" : connectionState,
     last_error: connected ? null : lastError,
     me: sock?.user || null,
+    qr_available: Boolean(currentQR),
+    qr_age_ms: qrAgeMs,
+    qr_expires_in_s: currentQRAt ? Math.max(0, Math.ceil((QR_TIMEOUT_MS - qrAgeMs) / 1000)) : null,
+    qr_timeout_s: Math.ceil(QR_TIMEOUT_MS / 1000),
   };
 };
 
