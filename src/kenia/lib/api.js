@@ -230,7 +230,9 @@ const staticGet = (url, config = {}) => {
   if (path === "/appointments") return response(read("appointments", seedAppointments));
   if (path === "/creatives") return response(read("creatives", seedCreatives));
   if (path === "/settings") return response({ using_default_text: true, using_default_image: true, llm_text_key_masked: "Emergent padrão", llm_image_key_masked: "Emergent padrão" });
-  if (path === "/whatsapp/diagnostics") return response({ ok: false, checks: [{ id: "static-site", ok: false, label: "Modo site estático", msg: "Backend externo não configurado; integrações reais ficam desativadas.", hint: "Configure VITE_BACKEND_URL apenas quando houver um servidor API disponível." }] });
+  if (path === "/whatsapp/diagnostics") return response({ ok: true, static_mode: true, checks: [
+    { id: "static-site", ok: true, label: "Modo demonstração ativo", msg: "Painel rodando sem backend externo — as funções de WhatsApp em tempo real ficam desativadas até você publicar um backend (Render/VPS) e definir VITE_BACKEND_URL.", hint: "Você pode continuar usando CRM, Agenda, ChatIA e Finance normalmente. Quando publicar o backend Baileys, esta tela passa a exibir o QR Code real." },
+  ] });
   if (path === "/whatsapp/default-prompt") return response({ prompt: DEFAULT_PROMPT });
   if (path === "/whatsapp/qr" || path === "/whatsapp/qr/image") return response({ connected: false, error: "STATIC_MODE", fallback: true });
   if (path === "/whatsapp/baileys/status") return response({ ok: true, connected: false, state: "static", last_error: "Modo site estático ativo. Para conectar WhatsApp real, publique também um backend e configure VITE_BACKEND_URL." });
