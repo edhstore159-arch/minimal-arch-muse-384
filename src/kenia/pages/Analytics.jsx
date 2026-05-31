@@ -35,15 +35,16 @@ export default function Analytics() {
 
   const fmt = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  const stageData = Object.entries(m.leads.by_stage).map(([k, v]) => ({
+  const stageData = Object.entries(leads.by_stage || {}).map(([k, v]) => ({
     name: STAGE_LABELS[k] || k, value: v, color: STAGE_COLORS[k] || "#64748B",
   }));
 
   const financeData = [
-    { name: "Receita Paga", value: m.finance.receita_paga, color: "#059669" },
-    { name: "A Receber", value: m.finance.receita_pendente, color: "#D97706" },
-    { name: "Despesas", value: m.finance.despesas, color: "#DC2626" },
+    { name: "Receita Paga", value: finance.receita_paga, color: "#059669" },
+    { name: "A Receber", value: finance.receita_pendente, color: "#D97706" },
+    { name: "Despesas", value: finance.despesas, color: "#DC2626" },
   ];
+
 
   return (
     <div className="h-screen flex flex-col bg-nude-50 overflow-hidden">
