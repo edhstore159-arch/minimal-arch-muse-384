@@ -29,6 +29,7 @@ let currentQR = null;
 let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
 let starting = false;
+let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
 async function closeSock() {
   try { sock?.end?.(); } catch {}
@@ -40,8 +41,18 @@ async function startSock() {
   if (starting) return;
   starting = true;
   connectionState = "connecting";
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-  const { version } = await fetchLatestBaileysVersion();
+  let state;
+  let saveCreds;
+  let version;
+  try {
+    ({ state, saveCreds } = await useMultiFileAuthState(AUTH_DIR));
+    ({ version } = await fetchLatestBaileysVersion());
+  } catch (e) {
+    starting = false;
+    connectionState = "disconnected";
+    lastError = e?.message || String(e);
+    throw e;
+  }
 
   sock = makeWASocket({
     version,
