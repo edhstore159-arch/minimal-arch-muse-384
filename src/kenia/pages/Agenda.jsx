@@ -202,7 +202,7 @@ export default function Agenda() {
                     <div className="mt-1 space-y-0.5">
                       {dayItems.slice(0, 3).map(it => (
                         <div key={it.id} className="truncate text-[10px] bg-nude-900 text-white px-1 py-0.5 rounded">
-                          {new Date(it.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} {it.title}
+                          {parseAppointmentDate(it.starts_at)?.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} {it.title}
                         </div>
                       ))}
                       {dayItems.length > 3 && (
@@ -223,7 +223,7 @@ export default function Agenda() {
                 Nenhuma reunião agendada. Clique em "Nova reunião" para começar.
               </Card>
             ) : upcoming.map(it => {
-              const d = new Date(it.starts_at);
+              const d = parseAppointmentDate(it.starts_at);
               const dateLabel = d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
               const timeLabel = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
               const meetingLink = it.meeting_link || it.meet_url;
