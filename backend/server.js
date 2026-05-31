@@ -189,25 +189,34 @@ function recordAutoReply(entry) {
   console.log("[autoReply]", JSON.stringify(stamped));
 }
 
-function rememberProcessedMessage(id) {
-  if (!id) return false;
-  if (processedAutoReplyMessageIds.has(id)) return true;
+function hasProcessedMessage(id) {
+  return Boolean(id && processedAutoReplyMessageIds.has(id));
+}
+
+function markProcessedMessage(id) {
+  if (!id) return;
   processedAutoReplyMessageIds.add(id);
   if (processedAutoReplyMessageIds.size > 500) {
     const first = processedAutoReplyMessageIds.values().next().value;
     processedAutoReplyMessageIds.delete(first);
   }
-  return false;
 }
 
 function shouldAutoReplyToMessage({ type, fromMe, text, jid, messageId, createdAtMs }) {
   if (fromMe || !whatsappConfig.bot_enabled) return { ok: false, reason: fromMe ? "from_me" : "bot_disabled" };
   if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") return { ok: false, reason: "ignored_jid" };
   if (!String(text || "").trim()) return { ok: false, reason: "empty_text" };
-  if (rememberProcessedMessage(messageId)) return { ok: false, reason: "duplicate" };
-  if (type === "notify") return { ok: true, reason: "notify" };
+  if (hasProcessedMessage(messageId)) return { ok: false, reason: "duplicate" };
+  if (type === "notify") {
+    markProcessedMessage(messageId);
+    return { ok: true, reason: "notify" };
+  }
   const recentEnough = createdAtMs && createdAtMs >= SERVER_STARTED_AT - AUTO_REPLY_RECENT_WINDOW_MS;
-  return recentEnough ? { ok: true, reason: `recent_${type || "unknown"}` } : { ok: false, reason: `old_${type || "unknown"}` };
+  if (recentEnough) {
+    markProcessedMessage(messageId);
+    return { ok: true, reason: `recent_${type || "unknown"}` };
+  }
+  return { ok: false, reason: `old_${type || "unknown"}` };
 }
 
 const pendingAutoReplies = [];
