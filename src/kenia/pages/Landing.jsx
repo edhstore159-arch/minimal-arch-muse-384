@@ -165,13 +165,14 @@ export default function Landing() {
               { icon: BarChart3, title: "Dashboard de Métricas", desc: "Conversão, faturamento e produtividade em tempo real." },
               { icon: Bot, title: "Agendamento automático", desc: "Cliente confirma horário no chat → agenda + link Meet criados." },
             ].map((f, i) => (
-              <div key={i} className="bg-background p-8 hover:bg-[#2a1d12] transition-colors" data-testid={`feature-${i}`}>
-                <div className="w-10 h-10 rounded-md bg-gradient-to-br from-gold-500/20 to-gold-700/20 border border-gold-500/30 grid place-items-center mb-5">
-                  <f.icon className="w-5 h-5 text-gold-300" />
+              <div key={i} className="bg-[#2a1d12] p-8 hover:bg-[#3a2616] transition-colors" data-testid={`feature-${i}`}>
+                <div className="w-10 h-10 rounded-md bg-gradient-to-br from-gold-500/30 to-gold-700/30 border border-gold-500/40 grid place-items-center mb-5">
+                  <f.icon className="w-5 h-5 text-gold-200" />
                 </div>
-                <h3 className="font-display font-semibold text-xl mb-2 text-gold-100">{f.title}</h3>
-                <p className="text-sm text-gold-200/55 leading-relaxed">{f.desc}</p>
+                <h3 className="font-display font-semibold text-xl mb-2 text-nude-50">{f.title}</h3>
+                <p className="text-sm text-nude-200 leading-relaxed">{f.desc}</p>
               </div>
+
             ))}
           </div>
         </div>
