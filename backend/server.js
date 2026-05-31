@@ -109,10 +109,19 @@ async function callAI(messagesPayload) {
   }
 }
 
+const autoReplyDebug = { last: null, history: [] };
+function recordAutoReply(entry) {
+  const stamped = { at: new Date().toISOString(), ...entry };
+  autoReplyDebug.last = stamped;
+  autoReplyDebug.history.unshift(stamped);
+  autoReplyDebug.history = autoReplyDebug.history.slice(0, 30);
+  console.log("[autoReply]", JSON.stringify(stamped));
+}
+
 async function autoReply(jid, userText, contactName) {
-  console.log("[autoReply] trigger", { jid, hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled });
+  recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
   if (!sock || connectionState !== "open") {
-    console.warn("[autoReply] socket não conectado", connectionState);
+    recordAutoReply({ step: "skip_socket", jid, connectionState });
     return;
   }
   const history = aiHistory.get(jid) || [];
@@ -123,7 +132,7 @@ async function autoReply(jid, userText, contactName) {
   ];
   const result = await callAI(messagesPayload);
   if (!result.ok) {
-    console.error("[autoReply] falha IA:", result);
+    recordAutoReply({ step: "ai_fail", jid, result });
     return;
   }
   const reply = result.reply;
@@ -131,15 +140,15 @@ async function autoReply(jid, userText, contactName) {
   history.push({ role: "assistant", content: reply });
   aiHistory.set(jid, history.slice(-20));
   try { await sock.sendPresenceUpdate("composing", jid); } catch {}
-  await new Promise((r) => setTimeout(r, 800));
+  await new Promise((r) => setTimeout(r, 600));
   try {
     const providerResult = await sock.sendMessage(jid, { text: reply });
     const out = outboundMessage(reply, jid, providerResult);
     upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
     appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
-    console.log("[autoReply] resposta enviada para", jid);
+    recordAutoReply({ step: "sent", jid, provider: result.provider, model: result.model, reply: reply.slice(0, 200) });
   } catch (e) {
-    console.error("[autoReply] erro ao enviar:", e?.message || e);
+    recordAutoReply({ step: "send_error", jid, error: e?.message || String(e) });
   }
 }
 
@@ -200,14 +209,16 @@ async function startSock() {
   });
 
   // Capturar mensagens recebidas/enviadas para alimentar a lista de contatos
-  sock.ev.on("messages.upsert", async ({ messages }) => {
+  sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (sock !== activeSock || !Array.isArray(messages)) return;
     for (const m of messages) {
       const jid = m?.key?.remoteJid;
-      if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") continue;
-      const text = extractText(m);
-      if (!text) continue;
+      if (!jid) continue;
       const fromMe = Boolean(m?.key?.fromMe);
+      const text = extractText(m);
+      recordAutoReply({ step: "incoming", type, jid, fromMe, hasText: Boolean(text), preview: String(text || "").slice(0, 80) });
+      if (jid.endsWith("@g.us") || jid === "status@broadcast") continue;
+      if (!text) continue;
       const created_at = m?.messageTimestamp
         ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
         : new Date().toISOString();
@@ -226,9 +237,11 @@ async function startSock() {
         created_at,
       });
 
-      // Atendente automatico: responde com IA quando bot_enabled estiver ativo
-      if (!fromMe && whatsappConfig.bot_enabled) {
-        autoReply(jid, text, name).catch((e) => console.error("autoReply error:", e?.message || e));
+      // Atendente automático: só responde em mensagens novas (notify), não em histórico (append)
+      if (!fromMe && whatsappConfig.bot_enabled && type === "notify") {
+        autoReply(jid, text, name).catch((e) => recordAutoReply({ step: "autoreply_throw", jid, error: e?.message || String(e) }));
+      } else if (!fromMe && whatsappConfig.bot_enabled) {
+        recordAutoReply({ step: "skip_type", jid, type });
       }
     }
   });
@@ -322,6 +335,20 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
   ]);
   res.status(result.ok ? 200 : 500).json({ ...info, result });
 });
+
+// Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
+app.get("/api/whatsapp/ai-debug", (_req, res) => {
+  res.json({
+    bot_enabled: whatsappConfig.bot_enabled,
+    connection_state: connectionState,
+    has_emergent_key: Boolean(EMERGENT_API_KEY),
+    has_lovable_key: Boolean(LOVABLE_API_KEY),
+    last: autoReplyDebug.last,
+    history: autoReplyDebug.history,
+  });
+});
+
+
 
 app.put("/api/whatsapp/config", (req, res) => {
   whatsappConfig = { ...whatsappConfig, ...(req.body || {}) };
