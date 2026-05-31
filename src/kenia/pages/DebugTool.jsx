@@ -187,7 +187,46 @@ export default function DebugTool() {
                 placeholder="Descreva a instrução técnica..."
                 data-testid="dbg-instruction"
               />
-              <div className="flex justify-end mt-3">
+              {attachments.length > 0 && (
+                <ul className="mt-3 space-y-1 max-h-40 overflow-y-auto text-xs">
+                  {attachments.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 bg-nude-50 border border-nude-200 px-2 py-1.5 rounded">
+                      <div className="flex items-center gap-2 truncate">
+                        {f.type?.startsWith("image/") ? (
+                          <img src={f.url} alt={f.name} className="w-8 h-8 object-cover rounded" />
+                        ) : (
+                          <Paperclip className="w-4 h-4 text-nude-500" />
+                        )}
+                        <span className="truncate">{f.name}</span>
+                        <span className="text-nude-400">({Math.round(f.size / 1024)} KB)</span>
+                      </div>
+                      <button onClick={() => removeAttachment(i)} className="text-rose-600 hover:text-rose-800">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="flex items-center justify-between mt-3 gap-2">
+                <div>
+                  <input
+                    ref={attachInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf,.txt,.json,.csv"
+                    className="hidden"
+                    id="dbg-attach-input"
+                    onChange={(e) => handleAttachUpload(e.target.files)}
+                  />
+                  <label
+                    htmlFor="dbg-attach-input"
+                    className={`inline-flex items-center px-3 py-2 text-xs border border-nude-300 rounded cursor-pointer hover:bg-nude-50 ${uploadingAttach ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <ImagePlus className="w-4 h-4 mr-2" />
+                    {uploadingAttach ? "Enviando..." : "Anexar imagem/arquivo"}
+                  </label>
+                </div>
                 <Button onClick={sendInstruction} className="bg-rose-600 hover:bg-rose-700 text-white" data-testid="dbg-fire">
                   <AlertTriangle className="w-4 h-4 mr-2" /> Registrar Instrução
                 </Button>
