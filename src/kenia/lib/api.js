@@ -342,7 +342,7 @@ const staticDelete = (url) => {
   return response({ ok: true, fallback: true });
 };
 
-const liveApi = axios.create({ baseURL: API });
+const liveApi = axios.create({ baseURL: API, timeout: 15000 });
 
 liveApi.interceptors.request.use((cfg) => {
   const token = localStorage.getItem("lf_token");
@@ -364,12 +364,35 @@ liveApi.interceptors.response.use(
   }
 );
 
+const staticApi = {
+  get: staticGet,
+  post: staticPost,
+  put: staticPut,
+  patch: staticPatch,
+  delete: staticDelete,
+};
+
+const withStaticFallback = (method, fallback) => async (...args) => {
+  try {
+    const result = await liveApi[method](...args);
+    if (result?.data?.fallback === true) return fallback(...args);
+    return result;
+  } catch (err) {
+    const path = String(args[0] || "");
+    if (path.startsWith("/whatsapp/baileys") || path === "/whatsapp/qr" || path === "/whatsapp/qr/image") {
+      throw err;
+    }
+    console.warn(`Backend indisponível para ${path}; usando dados locais temporários.`, err);
+    return fallback(...args);
+  }
+};
+
 export const api = HAS_BACKEND
-  ? liveApi
-  : {
-      get: staticGet,
-      post: staticPost,
-      put: staticPut,
-      patch: staticPatch,
-      delete: staticDelete,
-    };
+  ? {
+      get: withStaticFallback("get", staticGet),
+      post: withStaticFallback("post", staticPost),
+      put: withStaticFallback("put", staticPut),
+      patch: withStaticFallback("patch", staticPatch),
+      delete: withStaticFallback("delete", staticDelete),
+    }
+  : staticApi;
