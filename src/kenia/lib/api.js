@@ -387,6 +387,26 @@ const staticDelete = (url) => {
 
 const liveApi = axios.create({ baseURL: API });
 
+const pathOf = (url) => String(url).split("?")[0];
+const isLocalAppRoute = (url) => {
+  const path = pathOf(url);
+  return (
+    path === "/chat/message" ||
+    path === "/dashboard/metrics" ||
+    path === "/crm/stages" ||
+    path === "/settings" ||
+    path === "/public/consulta" ||
+    path === "/public/leads" ||
+    path.startsWith("/leads") ||
+    path.startsWith("/appointments") ||
+    path.startsWith("/processes") ||
+    path.startsWith("/finance/transactions") ||
+    path.startsWith("/creatives") ||
+    path.startsWith("/admin/case-analyses") ||
+    path.startsWith("/legislation")
+  );
+};
+
 liveApi.interceptors.request.use((cfg) => {
   const token = localStorage.getItem("lf_token");
   if (token) cfg.headers.Authorization = `Bearer ${token}`;
@@ -407,12 +427,20 @@ liveApi.interceptors.response.use(
   }
 );
 
+const staticApi = {
+  get: staticGet,
+  post: staticPost,
+  put: staticPut,
+  patch: staticPatch,
+  delete: staticDelete,
+};
+
 export const api = HAS_BACKEND
-  ? liveApi
-  : {
-      get: staticGet,
-      post: staticPost,
-      put: staticPut,
-      patch: staticPatch,
-      delete: staticDelete,
-    };
+  ? {
+      get: (url, config) => (isLocalAppRoute(url) ? staticGet(url, config) : liveApi.get(url, config)),
+      post: (url, body, config) => (isLocalAppRoute(url) ? staticPost(url, body) : liveApi.post(url, body, config)),
+      put: (url, body, config) => (isLocalAppRoute(url) ? staticPut(url, body) : liveApi.put(url, body, config)),
+      patch: (url, body, config) => (isLocalAppRoute(url) ? staticPatch(url, body) : liveApi.patch(url, body, config)),
+      delete: (url, config) => (isLocalAppRoute(url) ? staticDelete(url) : liveApi.delete(url, config)),
+    }
+  : staticApi;
