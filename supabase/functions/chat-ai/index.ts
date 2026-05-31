@@ -107,6 +107,19 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     const data = await aiResp.json();
     const reply: string = data?.choices?.[0]?.message?.content ?? "";
 
+    // Salva conversa no banco (não bloqueia resposta se falhar)
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.from("conversations").insert({
+        user_id: userId,
+        session_id: sessionId,
+        message: userMessage,
+        response: reply,
+      });
+    } catch (err) {
+      console.error("Erro ao salvar conversa:", err);
+    }
+
     return new Response(
       JSON.stringify({
         response: reply,
