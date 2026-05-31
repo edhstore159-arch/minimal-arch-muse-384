@@ -79,13 +79,42 @@ const AI_SYSTEM_PROMPT =
   "Você é a Kenia, assistente virtual de um escritório de advocacia. Responda em português brasileiro, de forma cordial, objetiva e empática. Faça perguntas para qualificar o lead (área do direito, urgência, descrição do caso, cidade). Nunca prometa resultado jurídico. Mantenha respostas curtas (até 3 frases).";
 const aiHistory = new Map(); // jid -> [{role, content}]
 
-async function autoReply(jid, userText, contactName) {
+async function callAI(messagesPayload) {
   const useEmergent = Boolean(EMERGENT_API_KEY);
   if (!useEmergent && !LOVABLE_API_KEY) {
-    console.warn("[autoReply] Nenhuma chave de IA configurada (EMERGENT_API_KEY ou LOVABLE_API_KEY).");
+    return { ok: false, error: "Nenhuma chave de IA configurada (EMERGENT_API_KEY ou LOVABLE_API_KEY)." };
+  }
+  const endpoint = useEmergent
+    ? `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`
+    : "https://ai.gateway.lovable.dev/v1/chat/completions";
+  const apiKey = useEmergent ? EMERGENT_API_KEY : LOVABLE_API_KEY;
+  const model = useEmergent ? EMERGENT_MODEL : AI_MODEL;
+  const provider = useEmergent ? "emergent" : "lovable";
+  try {
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model, messages: messagesPayload }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      return { ok: false, provider, endpoint, model, status: resp.status, error: errText.slice(0, 500) };
+    }
+    const data = await resp.json();
+    const reply = data?.choices?.[0]?.message?.content?.trim();
+    if (!reply) return { ok: false, provider, endpoint, model, error: "Resposta vazia da IA.", raw: data };
+    return { ok: true, provider, endpoint, model, reply };
+  } catch (e) {
+    return { ok: false, provider, endpoint, model, error: e?.message || String(e) };
+  }
+}
+
+async function autoReply(jid, userText, contactName) {
+  console.log("[autoReply] trigger", { jid, hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled });
+  if (!sock || connectionState !== "open") {
+    console.warn("[autoReply] socket não conectado", connectionState);
     return;
   }
-  if (!sock || connectionState !== "open") return;
   const history = aiHistory.get(jid) || [];
   const messagesPayload = [
     { role: "system", content: `${AI_SYSTEM_PROMPT}\nNome do contato: ${contactName || "Cliente"}.` },
