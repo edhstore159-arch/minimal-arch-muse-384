@@ -25,15 +25,60 @@ const getMeetLink = () => {
 
 const pad2 = (n) => String(n).padStart(2, "0");
 const formatLocalDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const getLocalDateTimeValue = (date, time) => `${date}T${time}`;
+const parseLocalDateTime = (value) => {
+  if (!value) return null;
+  const [datePart, timePart = "00:00"] = String(value).split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [hh, mm] = timePart.split(":").map(Number);
+  if (![y, m, d, hh, mm].every(Number.isFinite)) return null;
+  return new Date(y, m - 1, d, hh, mm, 0, 0);
+};
+const formatStoredDateTime = (date, time) => {
+  const dt = parseLocalDateTime(getLocalDateTimeValue(date, time));
+  return dt ? getLocalDateTimeValue(formatLocalDate(dt), `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`) : getLocalDateTimeValue(date, time);
+};
 
 // Mantém a hora local digitada pelo usuário (sem conversão UTC quebrada).
 const getAppointmentDateTime = (date, time) => {
-  const [y, m, d] = date.split("-").map(Number);
-  const [hh, mm] = time.split(":").map(Number);
-  return new Date(y, m - 1, d, hh, mm, 0, 0).toISOString();
+  return formatStoredDateTime(date, time);
 };
 
 const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+const WEEKDAY_INDEX = {
+  domingo: 0,
+  segunda: 1,
+  "segunda-feira": 1,
+  terca: 2,
+  "terca-feira": 2,
+  terça: 2,
+  "terça-feira": 2,
+  quarta: 3,
+  "quarta-feira": 3,
+  quinta: 4,
+  "quinta-feira": 4,
+  sexta: 5,
+  "sexta-feira": 5,
+  sabado: 6,
+  "sábado": 6,
+};
+
+const getNextWeekdayDate = (weekday) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(today);
+  let diff = (weekday - today.getDay() + 7) % 7;
+  if (diff === 0) diff = 7;
+  target.setDate(today.getDate() + diff);
+  return formatLocalDate(target);
+};
+
+const isValidBusinessDate = (date, time) => {
+  const dt = parseLocalDateTime(getLocalDateTimeValue(date, time));
+  if (!dt) return false;
+  const now = new Date();
+  return dt.getTime() > now.getTime() && dt.getDay() !== 0 && dt.getDay() !== 6;
+};
 
 // Próximo dia útil (seg-sex) às 10:00 — usado como padrão do agendador
 const nextBusinessSlot = () => {
@@ -51,6 +96,7 @@ const extractScheduleIntent = (text) => {
 
   let date = null;
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  const weekdayMatch = lower.match(/\b(domingo|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado)\b/i);
 
   if (/\bhoje\b/i.test(lower)) {
     date = formatLocalDate(today);
@@ -62,6 +108,9 @@ const extractScheduleIntent = (text) => {
     const t = new Date(today);
     t.setDate(t.getDate() + 2);
     date = formatLocalDate(t);
+  } else if (weekdayMatch) {
+    const key = weekdayMatch[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    date = getNextWeekdayDate(WEEKDAY_INDEX[key]);
   } else if (dateMatch) {
     const day = pad2(dateMatch[1]);
     const month = pad2(dateMatch[2]);
@@ -81,6 +130,12 @@ const extractScheduleIntent = (text) => {
   const time = timeMatch
     ? `${pad2(timeMatch[1])}:${pad2(timeMatch[2] || "00")}`
     : "10:00";
+
+  if (!isValidBusinessDate(date, time)) {
+    const slot = nextBusinessSlot();
+    date = slot.date;
+    return { date, time: slot.time, duration: 60 };
+  }
 
   return { date, time, duration: 60 };
 };
