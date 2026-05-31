@@ -25,8 +25,11 @@ Use exatamente estas configurações:
 | Runtime | `Static Site` |
 | Build Command | `npm install --legacy-peer-deps && npm run build` |
 | Publish Directory | `dist` |
+| Root Directory | deixe em branco |
 | Auto-Deploy | Ativado, se quiser publicar a cada push |
 
+> Se o log mostrar `Root directory "backend" does not exist`, apague `backend` do campo **Root Directory**. Este repositório não tem pasta `backend`; o `package.json`, o `render.yaml` e o app Vite estão na raiz.
+>
 > ⚠️ ATENÇÃO ao colar o Build Command: não inclua aspas (`'` ou `"`) nem crase (`` ` ``) em volta do comando. Cole apenas o texto puro:
 > `npm install --legacy-peer-deps && npm run build`
 >
