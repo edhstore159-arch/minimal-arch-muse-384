@@ -21,8 +21,13 @@ export default function Processes() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    const { data } = await api.get("/processes");
-    setItems(data);
+    try {
+      const { data } = await api.get("/processes");
+      const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : Array.isArray(data?.processes) ? data.processes : [];
+      setItems(list);
+    } catch {
+      setItems([]);
+    }
   };
 
   const create = async () => {
