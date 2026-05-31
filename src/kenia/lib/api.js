@@ -1,4 +1,5 @@
 import axios from "axios";
+import { supabase } from "@/integrations/supabase/client";
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
 export const HAS_BACKEND = Boolean(BACKEND_URL);
@@ -199,6 +200,12 @@ const write = (key, value) => localStorage.setItem(`static_api_${key}`, JSON.str
 const response = (data, status = 200, headers = {}) => Promise.resolve({ data: clone(data), status, statusText: "OK", headers, config: {} });
 const nextId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+const invokeChatAI = async (body = {}) => {
+  const { data, error } = await supabase.functions.invoke("chat-ai", { body });
+  if (error) throw error;
+  return response(data);
+};
+
 const getMetrics = () => {
   const leads = read("leads", seedLeads);
   const processes = read("processes", seedProcesses);
@@ -269,7 +276,7 @@ const staticPost = (url, body = {}) => {
     write("messages", messages);
     return response({ message: msg, provider_result: { static: true } });
   }
-  if (path === "/chat/message") return response({ session_id: body.session_id || nextId("session"), response: "Modo estático ativo: sem backend de IA. Use esta resposta como rascunho e ajuste antes de enviar.", audio_base64: null, analysis: { acertividade: 70, qualificacao: "necessita_mais_info" } });
+  if (path === "/chat/message") return invokeChatAI(body);
   if (path === "/finance/transactions") return insertItem("transactions", seedTransactions, "tx", body);
   if (path === "/appointments") return insertItem("appointments", seedAppointments, "appt", body);
   if (path === "/processes") return insertItem("processes", seedProcesses, "proc", body);
@@ -367,7 +374,14 @@ liveApi.interceptors.response.use(
 );
 
 export const api = HAS_BACKEND
-  ? liveApi
+  ? {
+      ...liveApi,
+      get: liveApi.get.bind(liveApi),
+      post: (url, body = {}, config = {}) => (String(url).split("?")[0] === "/chat/message" ? invokeChatAI(body) : liveApi.post(url, body, config)),
+      put: liveApi.put.bind(liveApi),
+      patch: liveApi.patch.bind(liveApi),
+      delete: liveApi.delete.bind(liveApi),
+    }
   : {
       get: staticGet,
       post: staticPost,
