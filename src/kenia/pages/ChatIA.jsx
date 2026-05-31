@@ -17,6 +17,33 @@ import {
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
+const getMeetLink = () => {
+  const meetCode = `${Math.random().toString(36).slice(2, 5)}-${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 5)}`;
+  return `https://meet.google.com/${meetCode}`;
+};
+
+const getAppointmentDateTime = (date, time) => new Date(`${date}T${time}:00`).toISOString();
+
+const extractScheduleIntent = (text) => {
+  const lower = text.toLowerCase();
+  if (!SCHEDULE_REGEX.test(lower)) return null;
+  const slot = nextBusinessSlot();
+  const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  const timeMatch = lower.match(/(?:às|as|para|por volta de)?\s*(\d{1,2})(?::|h)(\d{2})?/i);
+  let date = slot.date;
+  if (/amanh[ãa]/i.test(lower)) {
+    date = slot.date;
+  } else if (dateMatch) {
+    const day = dateMatch[1].padStart(2, "0");
+    const month = dateMatch[2].padStart(2, "0");
+    const rawYear = dateMatch[3] || String(new Date().getFullYear());
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    date = `${year}-${month}-${day}`;
+  }
+  const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${(timeMatch[2] || "00").padStart(2, "0")}` : slot.time;
+  return { date, time, duration: 60 };
+};
+
 function nextBusinessSlot() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
