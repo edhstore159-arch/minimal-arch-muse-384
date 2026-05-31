@@ -27,6 +27,10 @@ export default function DebugTool() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingAttach, setUploadingAttach] = useState(false);
+  const attachInputRef = useRef(null);
+
   useEffect(() => { loadHistory(); }, []);
 
   const loadHistory = async () => {
@@ -47,18 +51,63 @@ export default function DebugTool() {
     }
   };
 
+  const handleAttachUpload = async (list) => {
+    if (!list || list.length === 0) return;
+    setUploadingAttach(true);
+    const out = [];
+    try {
+      for (const file of Array.from(list)) {
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+        const { error } = await supabase.storage.from(DEBUG_BUCKET).upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || "application/octet-stream",
+        });
+        if (error) throw error;
+        const { data } = supabase.storage.from(DEBUG_BUCKET).getPublicUrl(path);
+        out.push({ name: file.name, url: data.publicUrl, type: file.type, size: file.size });
+      }
+      setAttachments((prev) => [...prev, ...out]);
+      toast.success(`${out.length} arquivo(s) anexado(s)`);
+    } catch (e) {
+      toast.error(`Falha no upload: ${e?.message || e}`);
+    } finally {
+      setUploadingAttach(false);
+      if (attachInputRef.current) attachInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (i) => setAttachments((p) => p.filter((_, idx) => idx !== i));
+
+  const buildInstructionMessage = (txt) => {
+    const lines = [DEBUG_PREFIX, "", txt];
+    if (attachments.length > 0) {
+      lines.push("", "---", "INSTRUÇÕES PARA ARQUIVOS ANEXADOS:");
+      lines.push("- URLs públicas (Lovable Cloud Storage). Para imagens use imagegen--edit_image; para outros, baixe via curl/fetch.");
+      lines.push("", `ARQUIVOS ANEXADOS (${attachments.length}):`);
+      attachments.forEach((f, i) => {
+        lines.push("", `[Arquivo ${i + 1}: ${f.name} (${f.type || "binário"})]`, f.url);
+      });
+    }
+    return lines.join("\n");
+  };
+
   const sendInstruction = async () => {
     const txt = instruction.trim();
-    if (!txt) { toast.error("Digite uma instrução"); return; }
+    if (!txt && attachments.length === 0) { toast.error("Digite uma instrução ou anexe um arquivo"); return; }
+    const message = buildInstructionMessage(txt);
     try {
-      await api.post("/debug/instruction", { instruction: txt });
+      await api.post("/debug/instruction", { instruction: message });
       toast.success("Instrução registrada");
       setInstruction("");
+      setAttachments([]);
       loadHistory();
-      // also mimic Lovable error dispatch
-      window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: txt }));
+      window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
     } catch {
-      toast.error("Erro ao registrar");
+      // still dispatch even if api fails
+      window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
+      toast.error("Erro ao registrar (evento disparado mesmo assim)");
     }
   };
 
