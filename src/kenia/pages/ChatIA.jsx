@@ -244,6 +244,9 @@ export default function ChatIA() {
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setThinking(true);
+    if (SCHEDULE_REGEX.test(msg) && !scheduler) {
+      openScheduler();
+    }
     try {
       const { data } = await api.post(
         "/chat/message",
