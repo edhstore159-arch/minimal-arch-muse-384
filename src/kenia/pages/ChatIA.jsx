@@ -15,7 +15,7 @@ import {
   CalendarPlus, CalendarCheck, X,
 } from "lucide-react";
 
-const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
+const SCHEDULE_REGEX = /\b(agendar|agendamento|agenda|agende|agend[aã]o|marcar|marca[cç][aã]o|marque|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
 const getMeetLink = () => {
   const meetCode = `${Math.random().toString(36).slice(2, 5)}-${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 5)}`;
@@ -29,10 +29,19 @@ const extractScheduleIntent = (text) => {
   if (!SCHEDULE_REGEX.test(lower)) return null;
   const slot = nextBusinessSlot();
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-  const timeMatch = lower.match(/(?:às|as|para|por volta de)?\s*(\d{1,2})(?::|h)(\d{2})?/i);
+  const timeMatch = lower.match(/(?:às|as|para|por volta de|hor[aá]rio)?\s*(\d{1,2})(?::|h)(\d{2})?/i);
   let date = slot.date;
-  if (/amanh[ãa]/i.test(lower)) {
+  if (/hoje/i.test(lower)) {
+    const today = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    date = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  } else if (/amanh[ãa]/i.test(lower)) {
     date = slot.date;
+  } else if (/depois de amanh[ãa]/i.test(lower)) {
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    const pad = (n) => String(n).padStart(2, "0");
+    date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   } else if (dateMatch) {
     const day = dateMatch[1].padStart(2, "0");
     const month = dateMatch[2].padStart(2, "0");
