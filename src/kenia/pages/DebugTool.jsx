@@ -211,6 +211,7 @@ export default function DebugTool() {
                 <div className="text-[11px] text-nude-400 mt-0.5">Imagens, PDF, TXT, JSON, CSV — múltiplos arquivos</div>
               </div>
 
+              {attachments.length > 0 && (
                 <ul className="mt-3 space-y-1 max-h-40 overflow-y-auto text-xs">
                   {attachments.map((f, i) => (
                     <li key={i} className="flex items-center justify-between gap-2 bg-nude-50 border border-nude-200 px-2 py-1.5 rounded">
