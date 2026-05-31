@@ -121,39 +121,25 @@ async function autoReply(jid, userText, contactName) {
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
+  const result = await callAI(messagesPayload);
+  if (!result.ok) {
+    console.error("[autoReply] falha IA:", result);
+    return;
+  }
+  const reply = result.reply;
+  history.push({ role: "user", content: userText });
+  history.push({ role: "assistant", content: reply });
+  aiHistory.set(jid, history.slice(-20));
+  try { await sock.sendPresenceUpdate("composing", jid); } catch {}
+  await new Promise((r) => setTimeout(r, 800));
   try {
-    const endpoint = useEmergent
-      ? `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`
-      : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const apiKey = useEmergent ? EMERGENT_API_KEY : LOVABLE_API_KEY;
-    const model = useEmergent ? EMERGENT_MODEL : AI_MODEL;
-    const resp = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model, messages: messagesPayload }),
-    });
-    if (!resp.ok) {
-      const errText = await resp.text();
-      console.error("[autoReply]", useEmergent ? "Emergent" : "Lovable", resp.status, errText.slice(0, 300));
-      return;
-    }
-    const data = await resp.json();
-    const reply = data?.choices?.[0]?.message?.content?.trim();
-    if (!reply) return;
-    history.push({ role: "user", content: userText });
-    history.push({ role: "assistant", content: reply });
-    aiHistory.set(jid, history.slice(-20));
-    try { await sock.sendPresenceUpdate("composing", jid); } catch {}
-    await new Promise((r) => setTimeout(r, 800));
     const providerResult = await sock.sendMessage(jid, { text: reply });
     const out = outboundMessage(reply, jid, providerResult);
     upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
     appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
+    console.log("[autoReply] resposta enviada para", jid);
   } catch (e) {
-    console.error("[autoReply] exception:", e?.message || e);
+    console.error("[autoReply] erro ao enviar:", e?.message || e);
   }
 }
 
