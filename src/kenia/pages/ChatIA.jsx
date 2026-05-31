@@ -435,6 +435,7 @@ export default function ChatIA() {
         "/chat/message",
         {
           message: msg,
+          history: messages.slice(-20).map((m) => ({ role: m.role, content: m.content })),
           session_id: sessionId,
           visitor_name: name || null,
           visitor_phone: phone || null,
