@@ -708,6 +708,10 @@ export default function WhatsAppSettings() {
                           variant="outline"
                           className="ml-auto h-7 text-xs"
                           onClick={async () => {
+                            if (!HAS_BACKEND || baileysStatus?.state === "static") {
+                              toast.warning("Resetar sessão só funciona depois que VITE_BACKEND_URL apontar para o backend publicado.", { duration: 9000 });
+                              return;
+                            }
                             try {
                               const { data } = await api.post("/whatsapp/baileys/restart");
                               if (data?.ok) {
