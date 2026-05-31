@@ -7,6 +7,7 @@ import cors from "cors";
 import pino from "pino";
 import QRCode from "qrcode";
 import { Boom } from "@hapi/boom";
+import { rm, mkdir } from "node:fs/promises";
 import {
   default as makeWASocket,
   useMultiFileAuthState,
@@ -27,8 +28,18 @@ let sock = null;
 let currentQR = null;
 let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
+let starting = false;
+
+async function closeSock() {
+  try { sock?.end?.(); } catch {}
+  try { sock?.ws?.close?.(); } catch {}
+  sock = null;
+}
 
 async function startSock() {
+  if (starting) return;
+  starting = true;
+  connectionState = "connecting";
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
 
@@ -49,14 +60,37 @@ async function startSock() {
     if (connection === "open") {
       currentQR = null;
       lastError = null;
+      starting = false;
     }
     if (connection === "close") {
       const code = new Boom(lastDisconnect?.error)?.output?.statusCode;
       lastError = lastDisconnect?.error?.message || null;
       const shouldReconnect = code !== DisconnectReason.loggedOut;
+      await closeSock();
+      starting = false;
+      connectionState = shouldReconnect ? "disconnected" : "logged_out";
       if (shouldReconnect) setTimeout(() => startSock().catch(() => {}), 2000);
     }
   });
+
+  starting = false;
+}
+
+async function restartSock({ resetAuth = false } = {}) {
+  await closeSock();
+  currentQR = null;
+  lastError = null;
+  connectionState = "connecting";
+  if (resetAuth) {
+    await rm(AUTH_DIR, { recursive: true, force: true });
+    await mkdir(AUTH_DIR, { recursive: true });
+  }
+  await startSock();
+  return {
+    connected: connectionState === "open",
+    state: connectionState,
+    last_error: lastError,
+  };
 }
 
 startSock().catch((e) => {
