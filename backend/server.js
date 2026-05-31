@@ -133,6 +133,17 @@ const outboundMessage = (text, to, providerResult = {}) => ({
   to,
 });
 
+const baileysRuntimeStatus = () => {
+  const connected = connectionState === "open" || Boolean(sock?.user && connectionState !== "logged_out");
+  return {
+    ok: true,
+    connected,
+    state: connected ? "open" : connectionState,
+    last_error: connected ? null : lastError,
+    me: sock?.user || null,
+  };
+};
+
 // ---- Healthcheck ----
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
 app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
@@ -146,8 +157,9 @@ app.put("/api/whatsapp/config", (req, res) => {
 
 // ---- Diagnostics ----
 app.get("/api/whatsapp/diagnostics", (_req, res) => {
+  const status = baileysRuntimeStatus();
   res.json({
-    ok: connectionState === "open",
+    ok: status.connected,
     checks: [
       {
         id: "backend",
@@ -157,10 +169,10 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
       },
       {
         id: "session",
-        ok: connectionState === "open",
+        ok: status.connected,
         label: "Sessão WhatsApp",
         msg:
-          connectionState === "open"
+          status.connected
             ? "Conectado."
             : "Aguardando leitura do QR Code.",
       },
@@ -170,28 +182,26 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
 
 // ---- Status ----
 app.get("/api/whatsapp/baileys/status", (_req, res) => {
-  res.json({
-    ok: true,
-    connected: connectionState === "open",
-    state: connectionState,
-    last_error: lastError,
-    me: sock?.user || null,
-  });
+  res.json(baileysRuntimeStatus());
 });
 
 app.get("/api/whatsapp/test-connection", (_req, res) => {
+  const status = baileysRuntimeStatus();
   res.json({
-    connected: connectionState === "open",
+    connected: status.connected,
     provider: "baileys",
-    error: connectionState === "open" ? null : lastError,
+    error: status.connected ? null : lastError,
+    state: status.state,
   });
 });
 
 app.post("/api/whatsapp/test-connection", (_req, res) => {
+  const status = baileysRuntimeStatus();
   res.json({
-    connected: connectionState === "open",
+    connected: status.connected,
     provider: "baileys",
-    error: connectionState === "open" ? null : lastError || "Aguardando leitura do QR Code.",
+    error: status.connected ? null : lastError || "Aguardando leitura do QR Code.",
+    state: status.state,
   });
 });
 
