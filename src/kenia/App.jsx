@@ -3,8 +3,6 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/kenia/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/kenia/contexts/AuthContext";
-import { DebugErrorThrower } from "@/components/DebugErrorThrower";
-import { ErrorDebugPopup } from "@/components/ErrorDebugPopup";
 
 import Landing from "@/kenia/pages/Landing";
 import Login from "@/kenia/pages/Login";
@@ -36,9 +34,6 @@ function Protected({ children }) {
 function App() {
   return (
     <div className="App">
-      {/* DebugErrorThrower DEVE ficar fora de qualquer ErrorBoundary/Suspense */}
-      <DebugErrorThrower />
-      <ErrorDebugPopup />
       <AuthProvider>
         <BrowserRouter>
 
