@@ -276,8 +276,38 @@ export default function ChatIA() {
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setThinking(true);
-    if (SCHEDULE_REGEX.test(msg) && !scheduler) {
-      openScheduler();
+    const scheduleIntent = extractScheduleIntent(msg);
+    if (scheduleIntent) {
+      try {
+        const { human, meetUrl, duration } = await createAppointment({
+          ...scheduleIntent,
+          area: analysis?.area || "Atendimento jurídico",
+        });
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp cadastrado é ${phone}` : ""}.`,
+            audio_base64: null,
+          },
+        ]);
+        toast.success("Agendamento criado no painel da Agenda");
+        setScheduler(null);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Não consegui salvar automaticamente agora. Abra o botão Agendar consulta e confirme o horário manualmente.",
+            audio_base64: null,
+          },
+        ]);
+        openScheduler(analysis?.area || "Atendimento jurídico");
+        toast.error("Não consegui criar o agendamento automaticamente");
+      } finally {
+        setThinking(false);
+      }
+      return;
     }
     try {
       const { data } = await api.post(
