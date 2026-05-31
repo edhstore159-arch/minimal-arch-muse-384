@@ -179,15 +179,11 @@ export default function DebugTool() {
               <div className="text-sm text-nude-500 mb-3">
                 Registra uma instrução técnica (apenas referência interna).
               </div>
-              <Label>Instrução</Label>
-              <Textarea
-                rows={6}
-                value={instruction}
-                onChange={(e) => setInstruction(e.target.value)}
-                placeholder="Descreva a instrução técnica..."
-                data-testid="dbg-instruction"
-              />
 
+              {/* DROPZONE DE IMAGEM — em destaque no topo */}
+              <Label className="flex items-center gap-2 text-rose-700">
+                <ImagePlus className="w-4 h-4" /> Anexar imagens / arquivos
+              </Label>
               <div
                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-rose-400", "bg-rose-50"); }}
                 onDragLeave={(e) => { e.currentTarget.classList.remove("ring-2", "ring-rose-400", "bg-rose-50"); }}
@@ -203,12 +199,22 @@ export default function DebugTool() {
                   if (files.length) handleAttachUpload(files);
                 }}
                 tabIndex={0}
-                className="mt-3 border-2 border-dashed border-nude-300 rounded-md p-4 text-center text-xs text-nude-500 cursor-pointer hover:bg-nude-50 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-400"
                 onClick={() => attachInputRef.current?.click()}
+                className="mt-2 border-2 border-dashed border-rose-300 bg-rose-50/40 rounded-md p-5 text-center cursor-pointer hover:bg-rose-50 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-400"
               >
-                <ImagePlus className="w-6 h-6 mx-auto mb-1 text-nude-400" />
-                <div className="font-semibold text-nude-700">Arraste imagens aqui, cole (Ctrl/Cmd+V) ou clique para anexar</div>
-                <div className="text-[11px] text-nude-400 mt-0.5">Imagens, PDF, TXT, JSON, CSV — múltiplos arquivos</div>
+                <ImagePlus className="w-8 h-8 mx-auto mb-2 text-rose-500" />
+                <div className="font-semibold text-rose-800 text-sm">
+                  {uploadingAttach ? "Enviando…" : "Arraste imagens, cole (Ctrl/Cmd+V) ou clique para selecionar"}
+                </div>
+                <div className="text-[11px] text-nude-500 mt-1">Imagens, PDF, TXT, JSON, CSV — múltiplos arquivos</div>
+                <input
+                  ref={attachInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf,.txt,.json,.csv"
+                  className="hidden"
+                  onChange={(e) => handleAttachUpload(e.target.files)}
+                />
               </div>
 
               {attachments.length > 0 && (
@@ -232,29 +238,21 @@ export default function DebugTool() {
                 </ul>
               )}
 
-              <div className="flex items-center justify-between mt-3 gap-2">
-                <div>
-                  <input
-                    ref={attachInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,application/pdf,.txt,.json,.csv"
-                    className="hidden"
-                    id="dbg-attach-input"
-                    onChange={(e) => handleAttachUpload(e.target.files)}
-                  />
-                  <label
-                    htmlFor="dbg-attach-input"
-                    className={`inline-flex items-center px-3 py-2 text-xs border border-nude-300 rounded cursor-pointer hover:bg-nude-50 ${uploadingAttach ? "opacity-50 pointer-events-none" : ""}`}
-                  >
-                    <ImagePlus className="w-4 h-4 mr-2" />
-                    {uploadingAttach ? "Enviando..." : "Anexar imagem/arquivo"}
-                  </label>
-                </div>
+              <Label className="mt-4 block">Instrução</Label>
+              <Textarea
+                rows={6}
+                value={instruction}
+                onChange={(e) => setInstruction(e.target.value)}
+                placeholder="Descreva a instrução técnica..."
+                data-testid="dbg-instruction"
+              />
+
+              <div className="flex justify-end mt-3">
                 <Button onClick={sendInstruction} className="bg-rose-600 hover:bg-rose-700 text-white" data-testid="dbg-fire">
                   <AlertTriangle className="w-4 h-4 mr-2" /> Registrar Instrução
                 </Button>
               </div>
+
 
               {safeHistory.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-nude-200">
