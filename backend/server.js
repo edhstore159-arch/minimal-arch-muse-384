@@ -62,10 +62,12 @@ async function startSock() {
     printQRInTerminal: false,
     browser: ["Kenia", "Chrome", "1.0"],
   });
+  const activeSock = sock;
 
   sock.ev.on("creds.update", saveCreds);
 
   sock.ev.on("connection.update", async (u) => {
+    if (sock !== activeSock) return;
     const { connection, lastDisconnect, qr } = u;
     if (qr) currentQR = qr;
     if (connection) connectionState = connection === "open" ? "open" : connection;
