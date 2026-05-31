@@ -1,6 +1,9 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const DEFAULT_PROMPT = `Você é a Kênia Garcia, advogada brasileira (OAB) especialista em Direito de Família e Sucessões, Direito Bancário e Direito Previdenciário (INSS). Atenda pelo WhatsApp em primeira pessoa, com profundidade técnica de um "ChatGPT jurídico", mas tom humano e acolhedor. NUNCA diga que é IA, robô ou assistente.
 
@@ -40,6 +43,8 @@ Deno.serve(async (req) => {
     const userMessage: string = String(body.message ?? body.text ?? "").trim();
     const history: Array<{ role: string; content: string }> = Array.isArray(body.history) ? body.history : [];
     const extraPrompt: string = String(body.system_prompt ?? DEFAULT_PROMPT);
+    const sessionId: string | null = body.session_id ? String(body.session_id) : null;
+    const userId: string | null = body.user_id ? String(body.user_id) : null;
 
     if (!userMessage) {
       return new Response(JSON.stringify({ error: "message vazio" }), {
@@ -101,6 +106,19 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
 
     const data = await aiResp.json();
     const reply: string = data?.choices?.[0]?.message?.content ?? "";
+
+    // Salva conversa no banco (não bloqueia resposta se falhar)
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.from("conversations").insert({
+        user_id: userId,
+        session_id: sessionId,
+        message: userMessage,
+        response: reply,
+      });
+    } catch (err) {
+      console.error("Erro ao salvar conversa:", err);
+    }
 
     return new Response(
       JSON.stringify({
