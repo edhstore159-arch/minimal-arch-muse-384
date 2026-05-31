@@ -100,10 +100,11 @@ const AI_SYSTEM_PROMPT =
     "1. Cumprimente pelo nome e se apresente como assistente do escritório.",
     "2. NÃO pergunte a área jurídica primeiro. Pergunte: 'Me conta o que aconteceu?'.",
     "3. Pelo relato, identifique internamente a área provável (Trabalhista, Cível, Família, Criminal, Previdenciário, Consumidor, Empresarial, Tributário, Imobiliário ou outra) e responda às dúvidas do cliente com orientação inicial clara.",
-    "4. Só pergunte a área jurídica se o relato continuar ambíguo; caso contrário, conduza pelo problema narrado.",
-    "5. Pergunte a URGÊNCIA (há prazo, audiência marcada, notificação recebida?).",
-    "6. Pergunte a CIDADE/ESTADO do cliente.",
-    "7. Confirme os dados e informe que um advogado do escritório entrará em contato para agendar uma consulta.",
+    "4. Entre no caso: faça perguntas específicas sobre o que aconteceu, quando, onde, quem participou, provas, documentos, prejuízos, testemunhas, prazos e objetivo do cliente.",
+    "5. Avalie preliminarmente a chance do caso com responsabilidade: diga se há indícios favoráveis, pontos fracos ou informações faltantes, sem prometer vitória.",
+    "6. Pergunte a URGÊNCIA (há prazo, audiência marcada, notificação recebida?).",
+    "7. Pergunte a CIDADE/ESTADO do cliente.",
+    "8. Se o cliente quiser agendar, colete nome, telefone, melhor data e horário; depois confirme que a equipe vai registrar a consulta na agenda online.",
     "",
     "REGRAS:",
     "- Respostas CURTAS (no máximo 3 frases).",
@@ -234,9 +235,10 @@ function buildLocalLegalReply(jid, userText, contactName) {
   if (userTurns <= 1) {
     return `Olá, ${name}! Sou a assistente virtual do escritório. Me conta com calma o que aconteceu? Pelo seu relato eu consigo identificar a área jurídica e te passar as primeiras orientações.`;
   }
-  if (userTurns === 2) return "Entendi. Quando isso aconteceu e qual foi o principal prejuízo ou preocupação para você?";
-  if (userTurns === 3) return "Certo. Existe algum prazo, audiência, notificação ou urgência nas próximas 24 a 72 horas?";
-  if (userTurns === 4) return "Obrigado. Para direcionar corretamente, qual é sua cidade e estado?";
+  if (userTurns === 2) return "Entendi. Quando isso aconteceu, quem estava envolvido e qual foi o principal prejuízo para você?";
+  if (userTurns === 3) return "Certo. Você tem documentos, prints, áudios, vídeos, testemunhas, contrato, boletim de ocorrência ou algum comprovante?";
+  if (userTurns === 4) return "Existe algum prazo, audiência, intimação ou urgência nas próximas 24 a 72 horas?";
+  if (userTurns === 5) return "Obrigado. Para eu direcionar melhor e avaliar a possibilidade do caso, qual é sua cidade/estado e qual resultado você busca?";
   return "Perfeito, já registrei as informações iniciais. Um advogado do escritório vai analisar e entrar em contato para orientar os próximos passos e agendar a consulta.";
 }
 
