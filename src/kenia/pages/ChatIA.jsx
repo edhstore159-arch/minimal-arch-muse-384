@@ -35,6 +35,14 @@ const getAppointmentDateTime = (date, time) => {
 
 const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
+// Próximo dia útil (seg-sex) às 10:00 — usado como padrão do agendador
+const nextBusinessSlot = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  return { date: formatLocalDate(d), time: "10:00" };
+};
+
 const extractScheduleIntent = (text) => {
   const lower = text.toLowerCase();
   if (!SCHEDULE_REGEX.test(lower)) return null;
