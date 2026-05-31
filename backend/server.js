@@ -21,6 +21,8 @@ const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
 const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || 60000);
 const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS || 20000);
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 2000);
+const SERVER_STARTED_AT = Date.now();
+const AUTO_REPLY_RECENT_WINDOW_MS = Number(process.env.AUTO_REPLY_RECENT_WINDOW_MS || 180000);
 const logger = pino({ level: "warn" });
 
 const app = express();
@@ -40,6 +42,7 @@ let whatsappConfig = { provider: "baileys", bot_enabled: true };
 // ---- Armazenamento em memória de contatos e mensagens ----
 const contactsStore = new Map(); // jid -> contato
 const messagesStore = new Map(); // jid -> Array<mensagens>
+const processedAutoReplyMessageIds = new Set();
 
 const jidToPhone = (jid) => String(jid || "").split("@")[0].replace(/\D/g, "");
 const extractText = (m) =>
