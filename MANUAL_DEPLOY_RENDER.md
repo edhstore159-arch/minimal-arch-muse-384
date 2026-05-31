@@ -27,6 +27,13 @@ Use exatamente estas configurações:
 | Publish Directory | `dist` |
 | Auto-Deploy | Ativado, se quiser publicar a cada push |
 
+> ⚠️ ATENÇÃO ao colar o Build Command: não inclua aspas (`'` ou `"`) nem crase (`` ` ``) em volta do comando. Cole apenas o texto puro:
+> `npm install --legacy-peer-deps && npm run build`
+>
+> Se aparecer no log `bash: -c: line 1: unexpected EOF while looking for matching \`\`'`, significa que sobrou uma crase ou aspa no campo. Apague tudo e cole novamente sem nenhum caractere extra.
+>
+> Melhor ainda: use **New + → Blueprint** apontando para o repositório. O Render lê o `render.yaml` automaticamente e evita erros de digitação.
+
 O arquivo `render.yaml` já define essas opções automaticamente quando o Render usa Blueprint.
 
 ## 4. Variáveis de ambiente
