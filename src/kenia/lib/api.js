@@ -15,7 +15,7 @@ const inDays = (days) => {
 };
 
 const DEFAULT_PROMPT =
-  "Você é a atendente Kênia Garcia. Atenda com linguagem humana, acolhedora e profissional. Não pergunte a área jurídica no início; peça primeiro para o cliente contar o que aconteceu, identifique a área automaticamente pelo relato, faça perguntas específicas sobre acontecimentos, datas, provas, envolvidos, prejuízos, prazos e documentos, e avalie preliminarmente a chance do caso sem prometer resultado. Se o cliente quiser agendar, colete nome, telefone, e-mail, cidade, data e horário; depois confirme e gere o bloco <AGENDAMENTO> com JSON. Nunca diga que é IA.";
+  "Você é a atendente Kênia Garcia. Atenda com linguagem humana, acolhedora e profissional. Não pergunte a área jurídica no início; peça primeiro para o cliente contar o que aconteceu, identifique a área automaticamente pelo relato e responda às dúvidas com orientação jurídica inicial, sem parecer definitivo. Depois colete nome, telefone, urgência e documentos necessários. Nunca diga que é IA.";
 
 const defaultWhatsAppConfig = {
   provider: "zapi",
@@ -279,8 +279,6 @@ const staticPost = (url, body = {}) => {
             message: body.message || body.text || "",
             history: body.history || [],
             system_prompt: body.system_prompt,
-            session_id: body.session_id,
-            user_id: body.user_id,
           },
         });
         if (error) throw error;
@@ -289,7 +287,7 @@ const staticPost = (url, body = {}) => {
             session_id: body.session_id || nextId("session"),
             response: data?.response || "Sem resposta da IA.",
             audio_base64: data?.audio_base64 || null,
-            analysis: data?.analysis || { acertividade: 80, chance_exito: 60, qualificacao: "necessita_mais_info", area: "Em análise" },
+            analysis: data?.analysis || { acertividade: 80, qualificacao: "ok" },
             server_time: data?.server_time,
           },
           status: 200,
@@ -303,7 +301,7 @@ const staticPost = (url, body = {}) => {
             session_id: body.session_id || nextId("session"),
             response: `Erro ao consultar IA: ${e?.message || e}. Verifique se a edge function chat-ai está publicada.`,
             audio_base64: null,
-            analysis: { acertividade: 0, chance_exito: 0, qualificacao: "necessita_mais_info", area: "Erro" },
+            analysis: { acertividade: 0, qualificacao: "erro" },
           },
           status: 200, statusText: "OK", headers: {}, config: {},
         };
@@ -387,26 +385,6 @@ const staticDelete = (url) => {
 
 const liveApi = axios.create({ baseURL: API });
 
-const pathOf = (url) => String(url).split("?")[0];
-const isLocalAppRoute = (url) => {
-  const path = pathOf(url);
-  return (
-    path === "/chat/message" ||
-    path === "/dashboard/metrics" ||
-    path === "/crm/stages" ||
-    path === "/settings" ||
-    path === "/public/consulta" ||
-    path === "/public/leads" ||
-    path.startsWith("/leads") ||
-    path.startsWith("/appointments") ||
-    path.startsWith("/processes") ||
-    path.startsWith("/finance/transactions") ||
-    path.startsWith("/creatives") ||
-    path.startsWith("/admin/case-analyses") ||
-    path.startsWith("/legislation")
-  );
-};
-
 liveApi.interceptors.request.use((cfg) => {
   const token = localStorage.getItem("lf_token");
   if (token) cfg.headers.Authorization = `Bearer ${token}`;
@@ -427,20 +405,12 @@ liveApi.interceptors.response.use(
   }
 );
 
-const staticApi = {
-  get: staticGet,
-  post: staticPost,
-  put: staticPut,
-  patch: staticPatch,
-  delete: staticDelete,
-};
-
 export const api = HAS_BACKEND
-  ? {
-      get: (url, config) => (isLocalAppRoute(url) ? staticGet(url, config) : liveApi.get(url, config)),
-      post: (url, body, config) => (isLocalAppRoute(url) ? staticPost(url, body) : liveApi.post(url, body, config)),
-      put: (url, body, config) => (isLocalAppRoute(url) ? staticPut(url, body) : liveApi.put(url, body, config)),
-      patch: (url, body, config) => (isLocalAppRoute(url) ? staticPatch(url, body) : liveApi.patch(url, body, config)),
-      delete: (url, config) => (isLocalAppRoute(url) ? staticDelete(url) : liveApi.delete(url, config)),
-    }
-  : staticApi;
+  ? liveApi
+  : {
+      get: staticGet,
+      post: staticPost,
+      put: staticPut,
+      patch: staticPatch,
+      delete: staticDelete,
+    };

@@ -73,9 +73,6 @@ const extractScheduleIntent = (text) => {
 
   let date = null;
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-  const hasConcreteDate = /\bhoje\b|amanh[ãa]|\bdepois de amanh[ãa]\b/i.test(lower) || Boolean(dateMatch);
-  const hasConcreteTime = /(\d{1,2})(?::|h)(\d{2})?/i.test(lower);
-  if (!hasConcreteDate && !hasConcreteTime) return null;
 
   if (/\bhoje\b/i.test(lower)) {
     date = formatLocalDate(today);
@@ -109,33 +106,6 @@ const extractScheduleIntent = (text) => {
 
   return { date, time, duration: 60 };
 };
-
-const extractAiAppointment = (text) => {
-  const match = String(text || "").match(/<AGENDAMENTO>\s*([\s\S]*?)\s*<\/AGENDAMENTO>/i);
-  if (!match) return null;
-  try {
-    const data = JSON.parse(match[1]);
-    const date = String(data.data_agendamento || "").trim();
-    const time = String(data.horario_agendamento || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null;
-    return {
-      date,
-      time,
-      duration: 60,
-      area: data.area_juridica || "Atendimento jurídico",
-      clientName: data.nome || "Cliente do chat",
-      phone: data.telefone || "",
-      email: data.email || "",
-      city: data.cidade || "",
-      summary: data.resumo_caso || "",
-    };
-  } catch {
-    return null;
-  }
-};
-
-const stripAppointmentBlock = (text) =>
-  String(text || "").replace(/\s*<AGENDAMENTO>[\s\S]*?<\/AGENDAMENTO>\s*/gi, "").trim();
 
 
 /**
@@ -326,10 +296,9 @@ export default function ChatIA() {
     setScheduler({ date: slot.date, time: slot.time, duration: 60, area: area || analysis?.area || "" });
   };
 
-  const createAppointment = async ({ date, time, duration = 60, area = "", clientName: appointmentName, phone: appointmentPhone, email, city, summary }) => {
+  const createAppointment = async ({ date, time, duration = 60, area = "" }) => {
     const starts_at = getAppointmentDateTime(date, time);
-    const clientName = appointmentName?.trim() || name?.trim() || "Cliente do chat";
-    const contactPhone = appointmentPhone?.trim() || phone?.trim();
+    const clientName = name?.trim() || "Cliente do chat";
     const meetUrl = getMeetLink();
     const title = `Consulta — ${area || analysis?.area || "Atendimento jurídico"} · ${clientName}`;
     await api.post("/appointments", {
@@ -337,10 +306,10 @@ export default function ChatIA() {
       client_name: clientName,
       starts_at,
       duration_min: Number(duration) || 60,
-      location: "Sala de vídeo",
+      location: "Google Meet",
       meet_url: meetUrl,
       meeting_link: meetUrl,
-      notes: [contactPhone ? `WhatsApp: ${contactPhone}` : "", email ? `E-mail: ${email}` : "", city ? `Cidade: ${city}` : "", summary ? `Caso: ${summary}` : "", `Link: ${meetUrl}`].filter(Boolean).join(" · "),
+      notes: [phone ? `WhatsApp: ${phone}` : "", `Meet: ${meetUrl}`].filter(Boolean).join(" · "),
       status: "confirmado",
     });
     const human = new Date(starts_at).toLocaleString("pt-BR", {
@@ -507,23 +476,9 @@ export default function ChatIA() {
         { timeout: 90000 }
       );
       setSessionId(data.session_id);
-      const appointmentFromAi = extractAiAppointment(data.response);
-      let assistantText = stripAppointmentBlock(data.response);
-      if (appointmentFromAi) {
-        try {
-          const { human, meetUrl, duration } = await createAppointment(appointmentFromAi);
-          assistantText = `${assistantText}\n\n✅ Consulta agendada para ${human} (${duration} min) por vídeo.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda.`.trim();
-          toast.success("Agendamento criado no painel da Agenda");
-          upsertLead({ stage: "em_negociacao", urgency: "alta", area: appointmentFromAi.area, description: appointmentFromAi.summary });
-        } catch {
-          assistantText = `${assistantText}\n\nNão consegui salvar o agendamento automaticamente. Use o botão Agendar consulta para confirmar o horário.`.trim();
-          openScheduler(appointmentFromAi.area);
-          toast.error("Não consegui criar o agendamento automaticamente");
-        }
-      }
       const newMsg = {
         role: "assistant",
-        content: assistantText || data.response,
+        content: data.response,
         audio_base64: data.audio_base64,
       };
       setMessages((prev) => [...prev, newMsg]);
