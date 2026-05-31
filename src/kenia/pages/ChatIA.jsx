@@ -22,40 +22,60 @@ const getMeetLink = () => {
   return `https://meet.google.com/${meetCode}`;
 };
 
-const getAppointmentDateTime = (date, time) => new Date(`${date}T${time}:00`).toISOString();
+const pad2 = (n) => String(n).padStart(2, "0");
+const formatLocalDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+// Mantém a hora local digitada pelo usuário (sem conversão UTC quebrada).
+const getAppointmentDateTime = (date, time) => {
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  return new Date(y, m - 1, d, hh, mm, 0, 0).toISOString();
+};
+
+const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
 const extractScheduleIntent = (text) => {
   const lower = text.toLowerCase();
   if (!SCHEDULE_REGEX.test(lower)) return null;
-  const slot = nextBusinessSlot();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let date = null;
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-  const timeMatch = lower.match(/(?:às|as|para|por volta de)?\s*(\d{1,2})(?::|h)(\d{2})?/i);
-  let date = slot.date;
-  if (/amanh[ãa]/i.test(lower)) {
-    date = slot.date;
+
+  if (/\bhoje\b/i.test(lower)) {
+    date = formatLocalDate(today);
+  } else if (/amanh[ãa]/i.test(lower)) {
+    const t = new Date(today);
+    t.setDate(t.getDate() + 1);
+    date = formatLocalDate(t);
+  } else if (/\bdepois de amanh[ãa]\b/i.test(lower)) {
+    const t = new Date(today);
+    t.setDate(t.getDate() + 2);
+    date = formatLocalDate(t);
   } else if (dateMatch) {
-    const day = dateMatch[1].padStart(2, "0");
-    const month = dateMatch[2].padStart(2, "0");
-    const rawYear = dateMatch[3] || String(new Date().getFullYear());
+    const day = pad2(dateMatch[1]);
+    const month = pad2(dateMatch[2]);
+    const rawYear = dateMatch[3] || String(today.getFullYear());
     const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
     date = `${year}-${month}-${day}`;
+  } else {
+    // próximo dia útil às 10h por padrão
+    const t = new Date(today);
+    t.setDate(t.getDate() + 1);
+    if (t.getDay() === 0) t.setDate(t.getDate() + 1);
+    if (t.getDay() === 6) t.setDate(t.getDate() + 2);
+    date = formatLocalDate(t);
   }
-  const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${(timeMatch[2] || "00").padStart(2, "0")}` : slot.time;
+
+  const timeMatch = lower.match(/(\d{1,2})(?::|h)(\d{2})?/i);
+  const time = timeMatch
+    ? `${pad2(timeMatch[1])}:${pad2(timeMatch[2] || "00")}`
+    : "10:00";
+
   return { date, time, duration: 60 };
 };
 
-function nextBusinessSlot() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  d.setHours(10, 0, 0, 0);
-  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
-  if (d.getDay() === 6) d.setDate(d.getDate() + 2);
-  const pad = (n) => String(n).padStart(2, "0");
-  return {
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    time: "10:00",
-  };
-}
 
 /**
  * Player de áudio nativo HTML5 que usa Blob URL em vez de data: URL.
