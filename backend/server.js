@@ -418,10 +418,12 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
 
 // ---- Status ----
 app.get("/api/whatsapp/baileys/status", (_req, res) => {
+  kickStaleConnection();
   res.json(baileysRuntimeStatus());
 });
 
 app.get("/api/whatsapp/test-connection", (_req, res) => {
+  kickStaleConnection();
   const status = baileysRuntimeStatus();
   res.json({
     connected: status.connected,
@@ -432,6 +434,7 @@ app.get("/api/whatsapp/test-connection", (_req, res) => {
 });
 
 app.post("/api/whatsapp/test-connection", (_req, res) => {
+  kickStaleConnection();
   const status = baileysRuntimeStatus();
   res.json({
     connected: status.connected,
@@ -443,6 +446,7 @@ app.post("/api/whatsapp/test-connection", (_req, res) => {
 
 // ---- QR Code ----
 app.get("/api/whatsapp/baileys/qr", async (_req, res) => {
+  kickStaleConnection();
   const qr = currentQR ? await QRCode.toDataURL(currentQR, { width: 320, margin: 2 }) : null;
   res.json({ qr, raw: currentQR, state: connectionState, connected: connectionState === "open" });
 });
