@@ -409,6 +409,7 @@ async function startSock() {
       const created_at = m?.messageTimestamp
         ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
         : new Date().toISOString();
+      const createdAtMs = new Date(created_at).getTime();
       const name = m?.pushName || jidToPhone(jid);
       const prev = contactsStore.get(jid);
       upsertContact(jid, {
@@ -424,11 +425,19 @@ async function startSock() {
         created_at,
       });
 
-      // Atendente automático: só responde em mensagens novas (notify), não em histórico (append)
-      if (!fromMe && whatsappConfig.bot_enabled && type === "notify") {
+      const autoDecision = shouldAutoReplyToMessage({
+        type,
+        fromMe,
+        text,
+        jid,
+        messageId: m?.key?.id,
+        createdAtMs,
+      });
+      if (autoDecision.ok) {
+        recordAutoReply({ step: "auto_allowed", jid, type, reason: autoDecision.reason });
         autoReply(jid, text, name).catch((e) => recordAutoReply({ step: "autoreply_throw", jid, error: e?.message || String(e) }));
       } else if (!fromMe && whatsappConfig.bot_enabled) {
-        recordAutoReply({ step: "skip_type", jid, type });
+        recordAutoReply({ step: "auto_skipped", jid, type, reason: autoDecision.reason });
       }
     }
   });
