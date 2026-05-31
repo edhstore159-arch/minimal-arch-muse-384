@@ -351,6 +351,7 @@ export default function ChatIA() {
           },
         ]);
         toast.success("Agendamento criado no painel da Agenda");
+        upsertLead({ stage: "em_negociacao", urgency: "alta" });
         setScheduler(null);
       } catch {
         setMessages((prev) => [
