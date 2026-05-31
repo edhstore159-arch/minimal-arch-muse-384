@@ -5,6 +5,7 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
+    "build": "node -e \"console.log('Backend Express não precisa de build; pronto para iniciar.')\"",
     "start": "node server.js"
   },
   "engines": {
