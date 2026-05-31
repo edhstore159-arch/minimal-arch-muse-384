@@ -306,6 +306,23 @@ app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
 
 app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 
+// Teste rapido da chave de IA configurada no servidor
+app.get("/api/whatsapp/ai-test", async (_req, res) => {
+  const info = {
+    has_emergent_key: Boolean(EMERGENT_API_KEY),
+    has_lovable_key: Boolean(LOVABLE_API_KEY),
+    emergent_base_url: EMERGENT_BASE_URL,
+    emergent_model: EMERGENT_MODEL,
+    lovable_model: AI_MODEL,
+    bot_enabled: whatsappConfig.bot_enabled,
+  };
+  const result = await callAI([
+    { role: "system", content: "Responda apenas com a palavra OK." },
+    { role: "user", content: "ping" },
+  ]);
+  res.status(result.ok ? 200 : 500).json({ ...info, result });
+});
+
 app.put("/api/whatsapp/config", (req, res) => {
   whatsappConfig = { ...whatsappConfig, ...(req.body || {}) };
   res.json(whatsappConfig);
