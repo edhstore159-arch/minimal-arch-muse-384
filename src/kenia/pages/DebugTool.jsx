@@ -51,7 +51,7 @@ export default function DebugTool() {
       toast.success("Instrução registrada");
       setInstruction("");
       loadHistory();
-      // Registra a instrução no console sem causar tela branca.
+      // also mimic Lovable error dispatch
       window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: txt }));
     } catch {
       toast.error("Erro ao registrar");
