@@ -5,6 +5,7 @@ const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
 export const HAS_BACKEND = Boolean(BACKEND_URL);
 export const API = HAS_BACKEND ? `${BACKEND_URL}/api` : "";
 
+
 const nowIso = () => new Date().toISOString();
 const inDays = (days) => {
   const d = new Date();
@@ -200,12 +201,6 @@ const write = (key, value) => localStorage.setItem(`static_api_${key}`, JSON.str
 const response = (data, status = 200, headers = {}) => Promise.resolve({ data: clone(data), status, statusText: "OK", headers, config: {} });
 const nextId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-const invokeChatAI = async (body = {}) => {
-  const { data, error } = await supabase.functions.invoke("chat-ai", { body });
-  if (error) throw error;
-  return response(data);
-};
-
 const getMetrics = () => {
   const leads = read("leads", seedLeads);
   const processes = read("processes", seedProcesses);
@@ -276,7 +271,44 @@ const staticPost = (url, body = {}) => {
     write("messages", messages);
     return response({ message: msg, provider_result: { static: true } });
   }
-  if (path === "/chat/message") return invokeChatAI(body);
+  if (path === "/chat/message") {
+    return (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("chat-ai", {
+          body: {
+            message: body.message || body.text || "",
+            history: body.history || [],
+            system_prompt: body.system_prompt,
+          },
+        });
+        if (error) throw error;
+        return {
+          data: {
+            session_id: body.session_id || nextId("session"),
+            response: data?.response || "Sem resposta da IA.",
+            audio_base64: data?.audio_base64 || null,
+            analysis: data?.analysis || { acertividade: 80, qualificacao: "ok" },
+            server_time: data?.server_time,
+          },
+          status: 200,
+          statusText: "OK",
+          headers: {},
+          config: {},
+        };
+      } catch (e) {
+        return {
+          data: {
+            session_id: body.session_id || nextId("session"),
+            response: `Erro ao consultar IA: ${e?.message || e}. Verifique se a edge function chat-ai está publicada.`,
+            audio_base64: null,
+            analysis: { acertividade: 0, qualificacao: "erro" },
+          },
+          status: 200, statusText: "OK", headers: {}, config: {},
+        };
+      }
+    })();
+  }
+
   if (path === "/finance/transactions") return insertItem("transactions", seedTransactions, "tx", body);
   if (path === "/appointments") return insertItem("appointments", seedAppointments, "appt", body);
   if (path === "/processes") return insertItem("processes", seedProcesses, "proc", body);
@@ -374,14 +406,7 @@ liveApi.interceptors.response.use(
 );
 
 export const api = HAS_BACKEND
-  ? {
-      ...liveApi,
-      get: liveApi.get.bind(liveApi),
-      post: (url, body = {}, config = {}) => (String(url).split("?")[0] === "/chat/message" ? invokeChatAI(body) : liveApi.post(url, body, config)),
-      put: liveApi.put.bind(liveApi),
-      patch: liveApi.patch.bind(liveApi),
-      delete: liveApi.delete.bind(liveApi),
-    }
+  ? liveApi
   : {
       get: staticGet,
       post: staticPost,

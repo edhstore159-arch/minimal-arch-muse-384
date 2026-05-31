@@ -114,29 +114,13 @@ const AI_SYSTEM_PROMPT =
   ].join("\n");
 const aiHistory = new Map(); // jid -> [{role, content}]
 
-function currentSaoPauloTimeContext() {
-  const now = new Date();
-  const saoPaulo = new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(now);
-  return `Data e hora atuais oficiais do servidor: ${saoPaulo} (America/Sao_Paulo). Use esta data/hora para responder perguntas sobre hoje, amanhã, horários e agendamentos. Não adivinhe a data pelo modelo.`;
-}
-
 async function callAI(messagesPayload) {
   const providers = [
-    LOVABLE_API_KEY && {
-      provider: "lovable",
-      endpoint: "https://ai.gateway.lovable.dev/v1/chat/completions",
-      model: AI_MODEL,
-      headers: { "Lovable-API-Key": LOVABLE_API_KEY, "X-Lovable-AIG-SDK": "fetch-node-backend", "Content-Type": "application/json" },
+    OPENAI_API_KEY && {
+      provider: "openai",
+      endpoint: `${OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`,
+      model: OPENAI_MODEL,
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
     },
     EMERGENT_API_KEY && {
       provider: "emergent",
@@ -144,11 +128,11 @@ async function callAI(messagesPayload) {
       model: EMERGENT_MODEL,
       headers: { Authorization: `Bearer ${EMERGENT_API_KEY}`, "Content-Type": "application/json" },
     },
-    OPENAI_API_KEY && {
-      provider: "openai",
-      endpoint: `${OPENAI_BASE_URL.replace(/\/$/, "")}/chat/completions`,
-      model: OPENAI_MODEL,
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    LOVABLE_API_KEY && {
+      provider: "lovable",
+      endpoint: "https://ai.gateway.lovable.dev/v1/chat/completions",
+      model: AI_MODEL,
+      headers: { "Lovable-API-Key": LOVABLE_API_KEY, "Content-Type": "application/json" },
     },
   ].filter(Boolean);
 
@@ -327,11 +311,11 @@ async function autoReply(jid, userText, contactName) {
   }
   const history = aiHistory.get(jid) || [];
   const messagesPayload = [
-    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${currentSaoPauloTimeContext()}\nNome do contato: ${contactName || "Cliente"}.` },
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\nNome do contato: ${contactName || "Cliente"}.` },
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
-  recordAutoReply({ step: "ai_request", jid, providers: [LOVABLE_API_KEY && "lovable", EMERGENT_API_KEY && "emergent", OPENAI_API_KEY && "openai"].filter(Boolean) });
+  recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
   const result = await callAI(messagesPayload);
   const usedFallback = !result.ok;
   const reply = usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply;

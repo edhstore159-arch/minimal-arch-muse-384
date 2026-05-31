@@ -1,151 +1,100 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const SAO_PAULO_TZ = "America/Sao_Paulo";
-const LOVABLE_MODEL = "google/gemini-3-flash-preview";
-const EMERGENT_MODEL = Deno.env.get("EMERGENT_MODEL") || "gpt-4o-mini";
-const EMERGENT_BASE_URL = (Deno.env.get("EMERGENT_BASE_URL") || "https://integrations.emergentagent.com/llm/v1").replace(/\/$/, "");
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
-
-const json = (body: Record<string, unknown>, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-
-const nowContext = () => {
-  const now = new Date();
-  return {
-    iso: now.toISOString(),
-    sao_paulo: new Intl.DateTimeFormat("pt-BR", {
-      timeZone: SAO_PAULO_TZ,
-      weekday: "long",
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    }).format(now),
-  };
-};
-
-const normalizeMessages = (messages: unknown, fallbackMessage: string): ChatMessage[] => {
-  if (!Array.isArray(messages)) return [{ role: "user", content: fallbackMessage }];
-  return messages
-    .filter((m) => m && typeof m === "object")
-    .map((m) => {
-      const item = m as { role?: string; content?: unknown };
-      const role = item.role === "assistant" || item.role === "system" || item.role === "user" ? item.role : "user";
-      return { role, content: String(item.content || "").slice(0, 8000) };
-    })
-    .filter((m) => m.content.trim().length > 0)
-    .slice(-16);
-};
-
-async function callProvider(cfg: { provider: string; endpoint: string; model: string; headers: HeadersInit }, messages: ChatMessage[]) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
-  try {
-    const resp = await fetch(cfg.endpoint, {
-      method: "POST",
-      headers: cfg.headers,
-      signal: controller.signal,
-      body: JSON.stringify({ model: cfg.model, messages, temperature: 0.45 }),
-    });
-    const raw = await resp.text();
-    if (!resp.ok) {
-      return { ok: false, provider: cfg.provider, status: resp.status, error: raw.slice(0, 600) };
-    }
-    const data = JSON.parse(raw);
-    const text = data?.choices?.[0]?.message?.content?.trim();
-    if (!text) return { ok: false, provider: cfg.provider, status: 502, error: "Resposta vazia da IA" };
-    return { ok: true, provider: cfg.provider, model: cfg.model, text };
-  } catch (error) {
-    return {
-      ok: false,
-      provider: cfg.provider,
-      status: 500,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-const buildLocalFallback = (message: string, dateHuman: string) =>
-  `Estou com uma instabilidade temporária na IA, mas sigo com você. Hoje é ${dateHuman} em São Paulo.\n\nPara eu organizar seu atendimento, me diga: qual é a área do caso, o que aconteceu, se existe prazo/audiência e em qual cidade você está?`;
+const DEFAULT_PROMPT =
+  "Você é a atendente Kênia Garcia, assistente jurídica humana, acolhedora e profissional. Identifique nome, telefone, área do caso, urgência e próximos documentos. Nunca diga que é IA. Quando o cliente quiser agendar uma consulta, confirme data e horário em formato dd/mm/yyyy HH:MM e responda em português do Brasil.";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const body = await req.json().catch(() => ({}));
-    const userMessage = String(body?.message || "").trim();
-    if (!userMessage) return json({ error: "Mensagem obrigatória" }, 400);
-
-    const current = nowContext();
-    const system: ChatMessage = {
-      role: "system",
-      content: [
-        "Você é Ana, secretária jurídica virtual da Dra. Kênia Garcia. Responda em português brasileiro, com tom humano, acolhedor e profissional.",
-        "Nunca diga que é IA. Não dê promessa de resultado, valores definitivos ou parecer jurídico fechado.",
-        `Data e hora atuais oficiais fornecidas pelo servidor: ${current.sao_paulo} (${SAO_PAULO_TZ}). Use esta informação sempre que o usuário perguntar data, hora, hoje, amanhã ou agendamento. Não invente datas pelo modelo.`,
-        "Ao final, quando útil, faça uma pergunta objetiva para qualificar: área, resumo do caso, urgência/prazo, cidade e documentos.",
-      ].join("\n"),
-    };
-
-    const messages = [system, ...normalizeMessages(body?.messages, userMessage), { role: "user", content: userMessage } as ChatMessage];
-    const providers = [
-      Deno.env.get("LOVABLE_API_KEY") && {
-        provider: "lovable",
-        endpoint: "https://ai.gateway.lovable.dev/v1/chat/completions",
-        model: LOVABLE_MODEL,
-        headers: {
-          "Lovable-API-Key": Deno.env.get("LOVABLE_API_KEY")!,
-          "X-Lovable-AIG-SDK": "fetch-edge-function",
-          "Content-Type": "application/json",
-        },
-      },
-      Deno.env.get("EMERGENT_API_KEY") && {
-        provider: "emergent",
-        endpoint: `${EMERGENT_BASE_URL}/chat/completions`,
-        model: EMERGENT_MODEL,
-        headers: { Authorization: `Bearer ${Deno.env.get("EMERGENT_API_KEY")}`, "Content-Type": "application/json" },
-      },
-    ].filter(Boolean) as Array<{ provider: string; endpoint: string; model: string; headers: HeadersInit }>;
-
-    const attempts = [];
-    for (const provider of providers) {
-      const result = await callProvider(provider, messages);
-      attempts.push(result);
-      if (result.ok) {
-        return json({
-          session_id: body?.session_id || crypto.randomUUID(),
-          response: result.text,
-          audio_base64: null,
-          provider: result.provider,
-          model: result.model,
-          current_datetime: current,
-          analysis: { acertividade: 72, chance_exito: 60, qualificacao: "necessita_mais_info", area: "Em análise", proxima_pergunta: "Você possui algum prazo, audiência ou notificação relacionada a esse caso?" },
-        });
-      }
+    if (!LOVABLE_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "LOVABLE_API_KEY ausente" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    return json({
-      session_id: body?.session_id || crypto.randomUUID(),
-      response: buildLocalFallback(userMessage, current.sao_paulo),
-      audio_base64: null,
-      provider: "local_fallback",
-      current_datetime: current,
-      attempts,
-      analysis: { acertividade: 45, chance_exito: 45, qualificacao: "necessita_mais_info", area: "Em análise", proxima_pergunta: "Qual é a área do seu caso e existe algum prazo próximo?" },
+    const body = await req.json().catch(() => ({}));
+    const userMessage: string = String(body.message ?? body.text ?? "").trim();
+    const history: Array<{ role: string; content: string }> = Array.isArray(body.history) ? body.history : [];
+    const extraPrompt: string = String(body.system_prompt ?? DEFAULT_PROMPT);
+
+    if (!userMessage) {
+      return new Response(JSON.stringify({ error: "message vazio" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const now = new Date();
+    const fmtDate = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      weekday: "long",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now);
+    const fmtTime = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(now);
+    const isoSp = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).toISOString();
+
+    const systemContent = `${extraPrompt}
+
+CONTEXTO TEMPORAL (use sempre como referência, NUNCA invente datas):
+- Hoje é ${fmtDate}
+- Hora atual: ${fmtTime} (America/Sao_Paulo)
+- ISO local: ${isoSp}
+
+Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir da data acima.`;
+
+    const messages = [
+      { role: "system", content: systemContent },
+      ...history.slice(-20).map((m) => ({ role: m.role, content: String(m.content || "") })),
+      { role: "user", content: userMessage },
+    ];
+
+    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": LOVABLE_API_KEY,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages,
+      }),
     });
-  } catch (error) {
-    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
+
+    if (!aiResp.ok) {
+      const errText = await aiResp.text();
+      const status = aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 502;
+      return new Response(
+        JSON.stringify({ error: "AI Gateway error", status: aiResp.status, detail: errText }),
+        { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const data = await aiResp.json();
+    const reply: string = data?.choices?.[0]?.message?.content ?? "";
+
+    return new Response(
+      JSON.stringify({
+        response: reply,
+        audio_base64: null,
+        analysis: { acertividade: 90, qualificacao: "ok" },
+        server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e?.message || e) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
