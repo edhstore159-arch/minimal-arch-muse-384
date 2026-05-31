@@ -703,11 +703,11 @@ export default function WhatsAppSettings() {
                   <Card className="p-5 border-nude-200 flex flex-col md:flex-row gap-5 items-center md:items-start">
                     <div className="p-3 bg-white border border-nude-200 rounded-md shrink-0 relative">
                       <img src={baileysQr.qr} alt="QR Code" className="w-56 h-56" data-testid="baileys-qr-image" />
-                      {/* Timer de expiração — QR vive 60s, depois Baileys gera outro */}
+                      {/* Timer de expiração — o backend mantém o QR ativo por mais tempo e renova automaticamente */}
                       {typeof baileysQr.qr_expires_in_s === "number" && (
                         <div
                           className={`absolute bottom-1 right-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            baileysQr.qr_expires_in_s > 15
+                            baileysQr.qr_expires_in_s > 45
                               ? "bg-green-100 text-green-800 border border-green-300"
                               : "bg-red-100 text-red-800 border border-red-300 animate-pulse"
                           }`}
@@ -750,12 +750,12 @@ export default function WhatsAppSettings() {
                         <li>Abra o WhatsApp no seu celular</li>
                         <li>Toque em <strong>Configurações → Aparelhos conectados</strong></li>
                         <li>Toque em <strong>Conectar um aparelho</strong></li>
-                        <li>Aponte para o QR Code ao lado <strong className="text-red-700">antes do timer chegar a 0</strong></li>
+                        <li>Aponte para o QR Code ao lado; se ele expirar, o servidor renova sozinho</li>
                         <li>Depois de conectar, clique em "Usar Baileys como provedor principal"</li>
                       </ol>
                       <div className="text-[11px] text-gold-700 bg-gold-50 border border-gold-200 p-2 rounded">
-                        💡 <strong>Se o QR expirar antes de escanear</strong>, clique em "Obter QR" de novo
-                        (acima) ou em "Resetar sessão" se travar.
+                        💡 O QR agora fica disponível por mais tempo e a tela atualiza automaticamente.
+                        Use "Reconectar serviço" ou "Resetar sessão" somente se o QR parar de renovar.
                       </div>
                       <div className="text-[11px] text-nude-500 bg-nude-50 border border-nude-200 p-2 rounded">
                         ⚠️ Esta conexão é não-oficial (uso pessoal). Para alto volume comercial,
