@@ -73,6 +73,9 @@ const extractScheduleIntent = (text) => {
 
   let date = null;
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  const hasConcreteDate = /\bhoje\b|amanh[ãa]|\bdepois de amanh[ãa]\b/i.test(lower) || Boolean(dateMatch);
+  const hasConcreteTime = /(\d{1,2})(?::|h)(\d{2})?/i.test(lower);
+  if (!hasConcreteDate && !hasConcreteTime) return null;
 
   if (/\bhoje\b/i.test(lower)) {
     date = formatLocalDate(today);
