@@ -12,7 +12,23 @@ import { toast } from "sonner";
 import {
   Send, Volume2, VolumeX, Sparkles, Bot, Gauge, ShieldCheck,
   AlertTriangle, BookOpen, Loader2, RefreshCcw, Pause, Play,
+  CalendarPlus, CalendarCheck, X,
 } from "lucide-react";
+
+const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
+
+function nextBusinessSlot() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(10, 0, 0, 0);
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+  if (d.getDay() === 6) d.setDate(d.getDate() + 2);
+  const pad = (n) => String(n).padStart(2, "0");
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: "10:00",
+  };
+}
 
 /**
  * Player de áudio nativo HTML5 que usa Blob URL em vez de data: URL.
@@ -95,8 +111,57 @@ export default function ChatIA() {
   const [legDate, setLegDate] = useState("");
   const [legBrief, setLegBrief] = useState("");
   const [playingIdx, setPlayingIdx] = useState(null);
+  const [scheduler, setScheduler] = useState(null); // { date, time, duration, area }
+  const [scheduling, setScheduling] = useState(false);
   const audioRef = useRef(null);
   const scrollRef = useRef(null);
+
+  const openScheduler = (area) => {
+    const slot = nextBusinessSlot();
+    setScheduler({ date: slot.date, time: slot.time, duration: 60, area: area || analysis?.area || "" });
+  };
+
+  const confirmSchedule = async () => {
+    if (!scheduler?.date || !scheduler?.time) {
+      toast.error("Escolha data e horário");
+      return;
+    }
+    if (!name?.trim()) {
+      toast.error("Informe seu nome para confirmar o agendamento");
+      return;
+    }
+    setScheduling(true);
+    try {
+      const starts_at = new Date(`${scheduler.date}T${scheduler.time}:00`).toISOString();
+      const title = `Consulta — ${scheduler.area || "Atendimento jurídico"}${name ? " · " + name : ""}`;
+      await api.post("/appointments", {
+        title,
+        client_name: name || "Cliente",
+        starts_at,
+        duration_min: Number(scheduler.duration) || 60,
+        location: "Google Meet",
+        notes: phone ? `WhatsApp: ${phone}` : "",
+        status: "confirmado",
+      });
+      const human = new Date(starts_at).toLocaleString("pt-BR", {
+        weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit",
+      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `✅ Consulta agendada para ${human} (${scheduler.duration} min) por Google Meet.\n\nVocê receberá o link no WhatsApp ${phone || "informado"}. Se precisar remarcar, é só me avisar por aqui.`,
+          audio_base64: null,
+        },
+      ]);
+      toast.success("Agendamento confirmado");
+      setScheduler(null);
+    } catch (e) {
+      toast.error("Não consegui agendar. Tente novamente.");
+    } finally {
+      setScheduling(false);
+    }
+  };
 
   useEffect(() => {
     // carrega brief diario de legislacao
@@ -179,6 +244,9 @@ export default function ChatIA() {
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setThinking(true);
+    if (SCHEDULE_REGEX.test(msg) && !scheduler) {
+      openScheduler();
+    }
     try {
       const { data } = await api.post(
         "/chat/message",
@@ -260,6 +328,14 @@ export default function ChatIA() {
           >
             <BookOpen className="w-3 h-3" /> Legislação · {legDate || "atualizando..."}
           </Badge>
+          <Button
+            size="sm"
+            onClick={() => openScheduler()}
+            className="gap-1.5 bg-gold-600 hover:bg-gold-700 text-white"
+            data-testid="open-scheduler-btn"
+          >
+            <CalendarPlus className="w-3.5 h-3.5" /> Agendar consulta
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -384,6 +460,78 @@ export default function ChatIA() {
               )}
             </div>
           </div>
+
+          {/* scheduler */}
+          {scheduler && (
+            <div className="px-4 py-3 border-t border-gold-200 bg-gold-50" data-testid="scheduler-panel">
+              <div className="max-w-3xl mx-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-gold-800">
+                    <CalendarCheck className="w-4 h-4" /> Vamos agendar sua consulta
+                  </div>
+                  <button
+                    onClick={() => setScheduler(null)}
+                    className="text-nude-600 hover:text-nude-900"
+                    aria-label="Fechar"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-nude-600">Data</label>
+                    <Input
+                      type="date"
+                      value={scheduler.date}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setScheduler({ ...scheduler, date: e.target.value })}
+                      className="h-9"
+                      data-testid="sched-date"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-nude-600">Horário</label>
+                    <Input
+                      type="time"
+                      value={scheduler.time}
+                      onChange={(e) => setScheduler({ ...scheduler, time: e.target.value })}
+                      className="h-9"
+                      data-testid="sched-time"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-nude-600">Duração</label>
+                    <select
+                      value={scheduler.duration}
+                      onChange={(e) => setScheduler({ ...scheduler, duration: Number(e.target.value) })}
+                      className="h-9 w-full rounded-md border border-nude-200 bg-white px-2 text-sm"
+                      data-testid="sched-duration"
+                    >
+                      {[30, 45, 60, 90].map((m) => (
+                        <option key={m} value={m}>{m} min</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={confirmSchedule}
+                      disabled={scheduling}
+                      className="w-full h-9 bg-gold-600 hover:bg-gold-700 text-white gap-1.5"
+                      data-testid="sched-confirm"
+                    >
+                      {scheduling ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-4 h-4" />}
+                      Confirmar
+                    </Button>
+                  </div>
+                </div>
+                {!name && (
+                  <p className="text-[11px] text-rose-700 mt-2">
+                    Preencha seu nome no topo do chat para confirmar o agendamento.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* input */}
           <div className="p-4 border-t border-nude-200 bg-white">
