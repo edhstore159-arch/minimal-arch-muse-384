@@ -28,8 +28,19 @@ export default function DebugTool() {
   const loadHistory = async () => {
     try {
       const { data } = await api.get("/debug/instructions");
-      setHistory(data);
-    } catch {}
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.instructions)
+            ? data.instructions
+            : Array.isArray(data?.history)
+              ? data.history
+              : [];
+      setHistory(list);
+    } catch {
+      setHistory([]);
+    }
   };
 
   const sendInstruction = async () => {
@@ -94,6 +105,8 @@ export default function DebugTool() {
     a.click();
   };
 
+  const safeHistory = Array.isArray(history) ? history : [];
+
   return (
     <div className="h-screen flex flex-col bg-nude-50 overflow-hidden">
       <div className="px-6 py-4 bg-white border-b border-nude-200">
@@ -127,11 +140,11 @@ export default function DebugTool() {
                 </Button>
               </div>
 
-              {history.length > 0 && (
+              {safeHistory.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-nude-200">
                   <div className="text-xs tracking-widest uppercase font-semibold text-nude-500 mb-2">Histórico</div>
                   <div className="space-y-2">
-                    {history.slice(0, 8).map((h) => (
+                    {safeHistory.slice(0, 8).map((h) => (
                       <div key={h.id} className="text-sm bg-nude-50 border border-nude-200 rounded-md px-3 py-2">
                         <div className="text-xs text-nude-400">{new Date(h.created_at).toLocaleString("pt-BR")}</div>
                         <div className="mt-1 whitespace-pre-wrap">{h.instruction}</div>
