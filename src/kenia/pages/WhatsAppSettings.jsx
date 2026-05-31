@@ -42,25 +42,6 @@ export default function WhatsAppSettings() {
   const backendUrl = (import.meta.env.VITE_BACKEND_URL || "");
   const webhookBase = `${backendUrl}/api/whatsapp/webhook`;
 
-  const getApiErrorMessage = (e, fallback = "Erro inesperado") => {
-    const detail = e?.response?.data?.detail || e?.response?.data?.error || e?.message;
-    return typeof detail === "string" && detail.trim() ? detail : fallback;
-  };
-
-  const normalizeBaileysStatus = (data, fallbackState = "connecting") => ({
-    ok: data?.ok ?? !data?.error,
-    connected: !!data?.connected,
-    state: data?.state || (data?.connected ? "connected" : fallbackState),
-    last_error: data?.last_error || data?.error || data?.detail || null,
-    me: data?.me || null,
-  });
-
-  const normalizeBaileysQr = async (data) => {
-    const raw = data?.qr || data?.qrcode || data?.qrCode || data?.image || data?.base64 || data?.data?.qr || data?.data?.qrcode || data?.data?.image;
-    const img = await normalizeQrPayload(raw);
-    return img ? { ...data, qr: img } : null;
-  };
-
   useEffect(() => { load(); runDiagnostics(); }, []);
 
   // Auto-poll Baileys status/QR when provider is baileys
@@ -83,20 +64,10 @@ export default function WhatsAppSettings() {
   const pollBaileys = async () => {
     try {
       const { data: st } = await api.get("/whatsapp/baileys/status");
-      const normalizedStatus = normalizeBaileysStatus(st);
-      setBaileysStatus(normalizedStatus);
-      if (!normalizedStatus.connected) {
-        try {
-          const { data: qr } = await api.get("/whatsapp/baileys/qr");
-          setBaileysQr(await normalizeBaileysQr(qr));
-        } catch (qrError) {
-          setBaileysQr(null);
-          setBaileysStatus((prev) => ({
-            ...normalizeBaileysStatus(prev),
-            state: prev?.state === "offline" ? "offline" : "qr_unavailable",
-            last_error: getApiErrorMessage(qrError, "Não foi possível gerar o QR Code do Baileys."),
-          }));
-        }
+      setBaileysStatus(st);
+      if (!st.connected) {
+        const { data: qr } = await api.get("/whatsapp/baileys/qr");
+        setBaileysQr(qr);
       } else {
         setBaileysQr(null);
       }
@@ -128,23 +99,17 @@ export default function WhatsAppSettings() {
 
   const baileysReconnect = async () => {
     setBaileysLoggingOut(true);
-    setBaileysQr(null);
-    setBaileysStatus({ ok: true, connected: false, state: "reconnecting", last_error: null });
     try {
       const { data } = await api.post("/whatsapp/baileys/reconnect");
-      const normalizedStatus = normalizeBaileysStatus(data, "connecting");
-      if (normalizedStatus.connected) {
+      if (data?.connected) {
         toast.success("Baileys reconectado!");
       } else {
-        toast.info("Serviço reiniciado — aguardando QR...");
+        toast.info("Sidecar reiniciado — aguardando QR...");
       }
-      setBaileysStatus(normalizedStatus);
+      setBaileysStatus(data);
       setTimeout(pollBaileys, 1500);
-    } catch (e) {
-      const msg = getApiErrorMessage(e, "Erro ao reconectar o serviço Baileys.");
-      setBaileysStatus({ ok: false, connected: false, state: "offline", last_error: msg });
-      setBaileysQr(null);
-      toast.error(msg);
+    } catch {
+      toast.error("Erro ao reconectar — verifique logs do backend");
     } finally {
       setBaileysLoggingOut(false);
     }
@@ -615,25 +580,21 @@ export default function WhatsAppSettings() {
                           <AlertCircle className="w-4 h-4" />
                           Conflito de sessão
                         </div>
-                      ) : baileysStatus?.state === "offline" || baileysStatus?.state === "qr_unavailable" ? (
+                      ) : baileysStatus?.state === "offline" ? (
                         <div className="flex items-center gap-2 text-rose-700 font-medium">
                           <AlertCircle className="w-4 h-4" />
-                          {baileysStatus?.state === "offline" ? "Backend offline" : "QR indisponível"}
+                          Backend offline
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-gold-700 font-medium">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          {baileysStatus?.state === "reconnecting"
-                            ? "Reconectando serviço..."
-                            : baileysStatus?.state === "connecting"
-                              ? "Aguardando leitura do QR..."
-                              : "Inicializando..."}
+                          {baileysStatus?.state === "connecting" ? "Aguardando leitura do QR..." : "Inicializando..."}
                         </div>
                       )}
                       <div className="text-xs text-nude-500 mt-1">
                         Estado: <code className="bg-white px-1.5 py-0.5 rounded text-[11px]">{baileysStatus?.state || "—"}</code>
                       </div>
-                      {baileysStatus?.last_error && ["conflicted", "offline", "qr_unavailable"].includes(baileysStatus?.state) && (
+                      {baileysStatus?.last_error && (baileysStatus?.state === "conflicted" || baileysStatus?.state === "offline") && (
                         <div className="text-xs text-rose-700 mt-2 p-2 bg-rose-50 border border-rose-200 rounded" data-testid="baileys-conflict-msg">
                           ⚠️ {baileysStatus.last_error}
                         </div>
