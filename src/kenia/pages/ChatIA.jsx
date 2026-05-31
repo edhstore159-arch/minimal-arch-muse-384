@@ -98,15 +98,15 @@ const extractScheduleIntent = (text) => {
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
   const weekdayMatch = lower.match(/\b(domingo|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado)\b/i);
 
-  if (/\bhoje\b/i.test(lower)) {
+  if (/\bdepois de amanh[ãa]\b/i.test(lower)) {
+    const t = new Date(today);
+    t.setDate(t.getDate() + 2);
+    date = formatLocalDate(t);
+  } else if (/\bhoje\b/i.test(lower)) {
     date = formatLocalDate(today);
   } else if (/amanh[ãa]/i.test(lower)) {
     const t = new Date(today);
     t.setDate(t.getDate() + 1);
-    date = formatLocalDate(t);
-  } else if (/\bdepois de amanh[ãa]\b/i.test(lower)) {
-    const t = new Date(today);
-    t.setDate(t.getDate() + 2);
     date = formatLocalDate(t);
   } else if (weekdayMatch) {
     const key = weekdayMatch[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -559,6 +559,8 @@ export default function ChatIA() {
   };
 
   const QM = analysis ? QUAL_META[analysis.qualificacao] || QUAL_META.necessita_mais_info : null;
+  const schedulerDate = scheduler?.date ? parseLocalDateTime(getLocalDateTimeValue(scheduler.date, scheduler.time || "00:00")) : null;
+  const schedulerDayLabel = schedulerDate ? WEEKDAYS[schedulerDate.getDay()] : "";
 
   return (
     <div className="h-screen flex flex-col bg-background" data-testid="chat-ia-page">
@@ -732,11 +734,12 @@ export default function ChatIA() {
                     <Input
                       type="date"
                       value={scheduler.date}
-                      min={new Date().toISOString().slice(0, 10)}
+                      min={formatLocalDate(new Date())}
                       onChange={(e) => setScheduler({ ...scheduler, date: e.target.value })}
                       className="h-9"
                       data-testid="sched-date"
                     />
+                    {schedulerDayLabel && <div className="text-[11px] text-gold-700 mt-1 capitalize">{schedulerDayLabel}</div>}
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-nude-600">Horário</label>
