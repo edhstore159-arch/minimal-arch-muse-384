@@ -233,8 +233,8 @@ const staticGet = (url, config = {}) => {
   if (path === "/whatsapp/diagnostics") return response({ ok: false, checks: [{ id: "static-site", ok: false, label: "Modo site estático", msg: "Backend externo não configurado; integrações reais ficam desativadas.", hint: "Configure VITE_BACKEND_URL apenas quando houver um servidor API disponível." }] });
   if (path === "/whatsapp/default-prompt") return response({ prompt: DEFAULT_PROMPT });
   if (path === "/whatsapp/qr" || path === "/whatsapp/qr/image") return response({ connected: false, error: "STATIC_MODE", fallback: true });
-  if (path === "/whatsapp/baileys/status") return response({ ok: false, connected: false, state: "offline", last_error: "Modo site estático: sidecar Baileys indisponível." });
-  if (path === "/whatsapp/baileys/qr") return response({ qr: null, state: "offline" });
+  if (path === "/whatsapp/baileys/status") return response({ ok: true, connected: false, state: "static", last_error: "Modo site estático ativo. Para conectar WhatsApp real, publique também um backend e configure VITE_BACKEND_URL." });
+  if (path === "/whatsapp/baileys/qr") return response({ qr: null, state: "static" });
   if (path === "/whatsapp/logs") return response(read("logs", seedLogs));
   if (path === "/whatsapp/bot-delivery-stats") return response({ total_bot: 1, total_failures: 0, recent_failures: [] });
   if (path === "/debug/instructions") return response(read("debug_instructions", []));
