@@ -43,6 +43,8 @@ Deno.serve(async (req) => {
     const userMessage: string = String(body.message ?? body.text ?? "").trim();
     const history: Array<{ role: string; content: string }> = Array.isArray(body.history) ? body.history : [];
     const extraPrompt: string = String(body.system_prompt ?? DEFAULT_PROMPT);
+    const sessionId: string | null = body.session_id ? String(body.session_id) : null;
+    const userId: string | null = body.user_id ? String(body.user_id) : null;
 
     if (!userMessage) {
       return new Response(JSON.stringify({ error: "message vazio" }), {
