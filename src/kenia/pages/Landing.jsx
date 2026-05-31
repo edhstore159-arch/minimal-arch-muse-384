@@ -215,7 +215,7 @@ export default function Landing() {
                   <div className="text-xs text-gold-300 mb-1">Kênia Garcia (advogada) — resposta em áudio</div>
                   "Oi! Aqui é a Kênia Garcia, advogada. Sinto muito pela situação. Me responde só uma coisa pra eu já organizar seu caso: faz quanto tempo da demissão e você já assinou alguma rescisão?"
                 </div>
-                <div className="p-3 rounded-lg bg-background border border-gold-900/40 text-xs text-gold-200/50">
+                <div className="p-3 rounded-lg bg-nude-50 border border-gold-400 text-xs text-nude-900 font-medium">
                   ✓ Áudio transcrito com Whisper → ✓ Resposta gerada pela IA → ✓ Áudio TTS enviado ao cliente
                 </div>
               </div>
