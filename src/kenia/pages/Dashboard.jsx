@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState([]);
   const [leadForContact, setLeadForContact] = useState(null);
   const [metrics, setMetrics] = useState(null);
+  const [appointments, setAppointments] = useState([]);
   const [draft, setDraft] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiSession, setAiSession] = useState(null);
@@ -36,6 +37,7 @@ export default function Dashboard() {
   useEffect(() => {
     loadContacts();
     loadMetrics();
+    loadAppointments();
   }, []);
 
   useEffect(() => {
@@ -53,10 +55,12 @@ export default function Dashboard() {
   useEffect(() => {
     const t = setInterval(() => {
       loadContacts();
+      loadAppointments();
       if (activeContact) loadMessages(activeContact.id);
     }, 3000);
     return () => clearInterval(t);
   }, [activeContact]);
+
 
   const loadContacts = async () => {
     try {
@@ -85,6 +89,18 @@ export default function Dashboard() {
     try {
       const { data } = await api.get("/dashboard/metrics");
       setMetrics(data);
+    } catch {}
+  };
+
+  const loadAppointments = async () => {
+    try {
+      const { data } = await api.get("/appointments");
+      const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+      const now = Date.now();
+      const upcoming = list
+        .filter((a) => a?.starts_at && new Date(a.starts_at).getTime() >= now - 60 * 60 * 1000)
+        .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+      setAppointments(upcoming);
     } catch {}
   };
 
@@ -407,6 +423,33 @@ export default function Dashboard() {
                   <div className="font-display font-semibold text-base mt-3">{activeContact.name}</div>
                   <div className="text-xs text-nude-500 mt-0.5">{activeContact.phone}</div>
                 </div>
+
+                {appointments.length > 0 && (
+                  <div>
+                    <div className="text-xs tracking-widest uppercase font-semibold text-nude-500 mb-2 flex items-center gap-1.5">
+                      <Calendar className="w-3 h-3 text-gold-600" /> Próximas reuniões (Meet)
+                    </div>
+                    <div className="space-y-1.5">
+                      {appointments.slice(0, 4).map((a) => {
+                        const link = a.meeting_link || a.meet_url;
+                        const when = new Date(a.starts_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+                        return (
+                          <div key={a.id} className="p-2 bg-gold-50 border border-gold-200 rounded-md text-xs">
+                            <div className="font-medium text-nude-900 truncate">{a.client_name || a.title || "Reunião"}</div>
+                            <div className="text-nude-600 flex items-center gap-1 mt-0.5">
+                              <Calendar className="w-3 h-3" /> {when} • {a.duration_min || 60} min
+                            </div>
+                            {link && (
+                              <a href={link} target="_blank" rel="noreferrer" className="text-gold-700 hover:underline truncate block mt-1">
+                                🔗 Entrar no Meet
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {metrics?.alerts?.upcoming_hearings?.length > 0 && (
                   <div>
