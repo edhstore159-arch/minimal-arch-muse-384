@@ -160,8 +160,45 @@ export default function ChatIA() {
   const [playingIdx, setPlayingIdx] = useState(null);
   const [scheduler, setScheduler] = useState(null); // { date, time, duration, area }
   const [scheduling, setScheduling] = useState(false);
+  const [leadId, setLeadId] = useState(null);
   const audioRef = useRef(null);
   const scrollRef = useRef(null);
+
+  const upsertLead = async (extra = {}) => {
+    const clientName = (name || "").trim();
+    const clientPhone = (phone || "").trim();
+    if (!clientName && !clientPhone) return;
+    try {
+      if (leadId) {
+        await api.patch(`/leads/${leadId}`, {
+          name: clientName || undefined,
+          phone: clientPhone || undefined,
+          case_type: extra.area || analysis?.area || undefined,
+          description: extra.description || analysis?.resumo || undefined,
+          urgency: extra.urgency || (analysis?.acertividade > 80 ? "alta" : "media"),
+          score: analysis?.acertividade || undefined,
+          stage: extra.stage || undefined,
+          source: "ChatIA",
+        });
+      } else {
+        const { data } = await api.post("/leads", {
+          name: clientName || "Cliente do chat",
+          phone: clientPhone || "",
+          case_type: extra.area || analysis?.area || "Atendimento jurídico",
+          description: extra.description || analysis?.resumo || "Lead gerado pelo atendente virtual.",
+          urgency: extra.urgency || "media",
+          score: analysis?.acertividade || 60,
+          stage: extra.stage || "novos_leads",
+          source: "ChatIA",
+          tags: ["chatia"],
+        });
+        if (data?.id) setLeadId(data.id);
+      }
+    } catch {
+      /* silencioso — não bloqueia o chat */
+    }
+  };
+
 
   const openScheduler = (area) => {
     const slot = nextBusinessSlot();
@@ -207,6 +244,8 @@ export default function ChatIA() {
         },
       ]);
       toast.success("Agendamento confirmado");
+      // Marca o lead como qualificado/em negociação ao agendar
+      upsertLead({ stage: "em_negociacao", urgency: "alta" });
       setScheduler(null);
     } catch (e) {
       toast.error("Não consegui agendar. Tente novamente.");
@@ -312,6 +351,7 @@ export default function ChatIA() {
           },
         ]);
         toast.success("Agendamento criado no painel da Agenda");
+        upsertLead({ stage: "em_negociacao", urgency: "alta" });
         setScheduler(null);
       } catch {
         setMessages((prev) => [
@@ -351,6 +391,8 @@ export default function ChatIA() {
       };
       setMessages((prev) => [...prev, newMsg]);
       if (data.analysis) setAnalysis(data.analysis);
+      // Atualiza CRM: cria/atualiza lead automaticamente conforme o chat avança
+      upsertLead({ description: msg });
       if (autoplay && data.audio_base64) {
         // auto-play depois do paint
         setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 250);
