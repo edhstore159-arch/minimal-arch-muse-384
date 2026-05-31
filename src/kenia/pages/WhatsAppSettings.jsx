@@ -155,9 +155,11 @@ export default function WhatsAppSettings() {
       setTestResult(data);
       if (data.connected) {
         toast.success("WhatsApp conectado!");
-        const { data: st } = await api.get("/whatsapp/baileys/status");
-        setBaileysStatus(normalizeBaileysStatus(st));
-        setCfg((current) => current ? { ...current, provider: "baileys", bot_enabled: true } : current);
+        if (data.provider === "baileys") {
+          const { data: st } = await api.get("/whatsapp/baileys/status");
+          setBaileysStatus(normalizeBaileysStatus(st));
+          setCfg((current) => current ? { ...current, provider: "baileys", bot_enabled: true } : current);
+        }
       } else if (data.hint) {
         toast.warning(data.hint, { duration: 8000 });
       } else {
