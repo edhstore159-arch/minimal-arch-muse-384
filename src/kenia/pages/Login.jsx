@@ -20,9 +20,10 @@ export default function Login() {
   const { login, register } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loginData, setLoginData] = useState({
-    email: "demo@espirito-santo.com.br",
-    password: "demo123",
+    email: "admin@kenia-garcia.com.br",
+    password: "Kenia@Admin2026",
   });
+
   const [regData, setRegData] = useState({ name: "", email: "", password: "", oab: "" });
 
   const handleLogin = async (e) => {
@@ -30,14 +31,14 @@ export default function Login() {
     setLoading(true);
     try {
       await login(loginData.email, loginData.password);
-      try { await api.post("/seed/demo"); } catch {}
       toast.success("Bem-vinda de volta");
       const done = localStorage.getItem("onboarding_done");
       navigate(done ? "/app" : "/app/onboarding");
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Erro ao entrar");
+      toast.error(err?.message || "Erro ao entrar");
     } finally { setLoading(false); }
   };
+
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -50,9 +51,10 @@ export default function Login() {
       toast.success("Conta criada. Vamos configurar seu escritório.");
       navigate("/app/onboarding");
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Erro no cadastro");
+      toast.error(err?.message || "Erro no cadastro");
     } finally { setLoading(false); }
   };
+
 
   return (
     <div className="min-h-screen bg-background flex" data-testid="login-page">
@@ -183,10 +185,11 @@ export default function Login() {
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
                   <p className="text-xs text-nude-500 text-center font-sans-body">
-                    Conta demo: <span className="text-gold-700 font-medium">demo@espirito-santo.com.br</span>
+                    Admin: <span className="text-gold-700 font-medium">admin@kenia-garcia.com.br</span>
                     {" / "}
-                    <span className="text-gold-700 font-medium">demo123</span>
+                    <span className="text-gold-700 font-medium">Kenia@Admin2026</span>
                   </p>
+
                 </form>
               </TabsContent>
 
