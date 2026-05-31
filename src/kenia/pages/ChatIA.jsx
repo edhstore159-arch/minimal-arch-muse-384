@@ -126,9 +126,12 @@ const extractScheduleIntent = (text) => {
     date = formatLocalDate(t);
   }
 
-  const timeMatch = lower.match(/(\d{1,2})(?::|h)(\d{2})?/i);
+  const timeMatch = lower.match(/(?:\b(?:às|as)\s*)?(\d{1,2})(?::|h)(\d{2})?\b|\b(\d{1,2})\s*horas?\b/i)
+    || lower.match(/\b(?:às|as)\s*(\d{1,2})\b/i);
+  const rawHour = timeMatch?.[1] || timeMatch?.[3];
+  const rawMinute = timeMatch?.[2] || "00";
   const time = timeMatch
-    ? `${pad2(timeMatch[1])}:${pad2(timeMatch[2] || "00")}`
+    ? `${pad2(rawHour)}:${pad2(rawMinute)}`
     : "10:00";
 
   if (!isValidBusinessDate(date, time)) {
