@@ -337,6 +337,7 @@ export default function ChatIA() {
           session_id: sessionId,
           visitor_name: name || null,
           visitor_phone: phone || null,
+          messages: messages.map((m) => ({ role: m.role, content: m.content })).slice(-12),
           voice,
           want_audio: true,
           return_analysis: true,
