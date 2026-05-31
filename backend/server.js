@@ -35,6 +35,7 @@ async function closeSock() {
   try { sock?.end?.(); } catch {}
   try { sock?.ws?.close?.(); } catch {}
   sock = null;
+  starting = false;
 }
 
 async function startSock() {
@@ -74,7 +75,7 @@ async function startSock() {
       starting = false;
     }
     if (connection === "close") {
-      const code = new Boom(lastDisconnect?.error)?.output?.statusCode;
+      const code = lastDisconnect?.error?.output?.statusCode || new Boom(lastDisconnect?.error)?.output?.statusCode;
       lastError = lastDisconnect?.error?.message || null;
       const shouldReconnect = code !== DisconnectReason.loggedOut;
       await closeSock();
