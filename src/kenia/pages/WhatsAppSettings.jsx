@@ -72,11 +72,14 @@ export default function WhatsAppSettings() {
         setBaileysQr(null);
       }
     } catch (e) {
-      // Sidecar morreu / nao responde. Tenta reconectar automaticamente.
-      setBaileysStatus({ ok: false, connected: false, state: "offline" });
-      try {
-        await api.post("/whatsapp/baileys/reconnect");
-      } catch {}
+      // Sidecar morreu / nao responde. Marca offline e NAO tenta reconectar
+      // automaticamente para evitar loop infinito quando o backend nao existe.
+      const msg =
+        e?.response?.status
+          ? `Backend respondeu ${e.response.status} em /whatsapp/baileys/status`
+          : "Não foi possível contatar o backend (sidecar Baileys offline).";
+      setBaileysStatus({ ok: false, connected: false, state: "offline", last_error: msg });
+      setBaileysQr(null);
     }
   };
 
@@ -577,6 +580,11 @@ export default function WhatsAppSettings() {
                           <AlertCircle className="w-4 h-4" />
                           Conflito de sessão
                         </div>
+                      ) : baileysStatus?.state === "offline" ? (
+                        <div className="flex items-center gap-2 text-rose-700 font-medium">
+                          <AlertCircle className="w-4 h-4" />
+                          Backend offline
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2 text-gold-700 font-medium">
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -586,7 +594,7 @@ export default function WhatsAppSettings() {
                       <div className="text-xs text-nude-500 mt-1">
                         Estado: <code className="bg-white px-1.5 py-0.5 rounded text-[11px]">{baileysStatus?.state || "—"}</code>
                       </div>
-                      {baileysStatus?.last_error && baileysStatus?.state === "conflicted" && (
+                      {baileysStatus?.last_error && (baileysStatus?.state === "conflicted" || baileysStatus?.state === "offline") && (
                         <div className="text-xs text-rose-700 mt-2 p-2 bg-rose-50 border border-rose-200 rounded" data-testid="baileys-conflict-msg">
                           ⚠️ {baileysStatus.last_error}
                         </div>
