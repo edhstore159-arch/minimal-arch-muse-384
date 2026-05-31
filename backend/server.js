@@ -67,7 +67,11 @@ const appendMessage = (jid, msg) => {
   messagesStore.set(jid, list);
 };
 
-// ---- Atendente automático com IA (Lovable AI Gateway) ----
+// ---- Atendente automático com IA (Emergent ou Lovable AI Gateway) ----
+const EMERGENT_API_KEY = process.env.EMERGENT_API_KEY || process.env.EMERGENT_LLM_KEY || "";
+const EMERGENT_BASE_URL =
+  process.env.EMERGENT_BASE_URL || "https://integrations.emergentagent.com/llm/v1";
+const EMERGENT_MODEL = process.env.EMERGENT_MODEL || "gpt-4o-mini";
 const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY || process.env.VITE_LOVABLE_API_KEY || "";
 const AI_MODEL = process.env.AI_MODEL || "google/gemini-2.5-flash";
 const AI_SYSTEM_PROMPT =
@@ -76,8 +80,9 @@ const AI_SYSTEM_PROMPT =
 const aiHistory = new Map(); // jid -> [{role, content}]
 
 async function autoReply(jid, userText, contactName) {
-  if (!LOVABLE_API_KEY) {
-    console.warn("[autoReply] LOVABLE_API_KEY ausente — atendente automático desativado.");
+  const useEmergent = Boolean(EMERGENT_API_KEY);
+  if (!useEmergent && !LOVABLE_API_KEY) {
+    console.warn("[autoReply] Nenhuma chave de IA configurada (EMERGENT_API_KEY ou LOVABLE_API_KEY).");
     return;
   }
   if (!sock || connectionState !== "open") return;
@@ -88,17 +93,22 @@ async function autoReply(jid, userText, contactName) {
     { role: "user", content: userText },
   ];
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const endpoint = useEmergent
+      ? `${EMERGENT_BASE_URL.replace(/\/$/, "")}/chat/completions`
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const apiKey = useEmergent ? EMERGENT_API_KEY : LOVABLE_API_KEY;
+    const model = useEmergent ? EMERGENT_MODEL : AI_MODEL;
+    const resp = await fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: AI_MODEL, messages: messagesPayload }),
+      body: JSON.stringify({ model, messages: messagesPayload }),
     });
     if (!resp.ok) {
       const errText = await resp.text();
-      console.error("[autoReply] AI gateway", resp.status, errText.slice(0, 300));
+      console.error("[autoReply]", useEmergent ? "Emergent" : "Lovable", resp.status, errText.slice(0, 300));
       return;
     }
     const data = await resp.json();
