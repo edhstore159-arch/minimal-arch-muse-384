@@ -244,6 +244,8 @@ export default function ChatIA() {
         },
       ]);
       toast.success("Agendamento confirmado");
+      // Marca o lead como qualificado/em negociação ao agendar
+      upsertLead({ stage: "em_negociacao", urgency: "alta" });
       setScheduler(null);
     } catch (e) {
       toast.error("Não consegui agendar. Tente novamente.");
