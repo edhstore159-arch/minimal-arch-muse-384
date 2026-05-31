@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: kenia-whatsapp-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: baileys-auth
+      mountPath: /opt/render/project/src/backend/auth
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: AUTH_DIR
+        value: /opt/render/project/src/backend/auth
