@@ -25,12 +25,6 @@ export const DebugErrorThrower = () => {
 
   if (message) {
     const toThrow = message;
-    if (toThrow.includes("INSTRUÇÃO DE DESENVOLVIMENTO")) {
-      console.warn("Diagnóstico recebido sem derrubar a aplicação:", toThrow);
-      setMessage(null);
-      return null;
-    }
-
     // Limpa o state para que o erro só dispare uma vez por instrução
     // e o app possa recuperar após reload sem re-throw infinito.
     setMessage(null);
