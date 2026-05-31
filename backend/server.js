@@ -327,11 +327,11 @@ async function autoReply(jid, userText, contactName) {
   }
   const history = aiHistory.get(jid) || [];
   const messagesPayload = [
-    { role: "system", content: `${AI_SYSTEM_PROMPT}\nNome do contato: ${contactName || "Cliente"}.` },
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${currentSaoPauloTimeContext()}\nNome do contato: ${contactName || "Cliente"}.` },
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
-  recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
+  recordAutoReply({ step: "ai_request", jid, providers: [LOVABLE_API_KEY && "lovable", EMERGENT_API_KEY && "emergent", OPENAI_API_KEY && "openai"].filter(Boolean) });
   const result = await callAI(messagesPayload);
   const usedFallback = !result.ok;
   const reply = usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply;
