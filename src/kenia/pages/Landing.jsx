@@ -238,14 +238,14 @@ export default function Landing() {
             </p>
 
           </div>
-          <Card className="bg-[#221710] border-gold-900/40 p-6">
+          <Card className="bg-[#221710] border-gold-700/50 p-6 shadow-xl shadow-background/30">
             <form onSubmit={submit} className="space-y-3" data-testid="landing-lead-form">
-              <Input placeholder="Seu nome completo" className="bg-background border-gold-900/40 text-gold-100 placeholder:text-gold-200/30" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} data-testid="lead-form-name" />
-              <Input placeholder="WhatsApp (com DDD)" className="bg-background border-gold-900/40 text-gold-100 placeholder:text-gold-200/30" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} data-testid="lead-form-phone" />
-              <Input placeholder="E-mail" type="email" className="bg-background border-gold-900/40 text-gold-100 placeholder:text-gold-200/30" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="lead-form-email" />
-              <Input placeholder="Tipo de caso (ex: Trabalhista, Família...)" className="bg-background border-gold-900/40 text-gold-100 placeholder:text-gold-200/30" value={form.case_type} onChange={(e) => setForm({ ...form, case_type: e.target.value })} data-testid="lead-form-case" />
-              <Textarea placeholder="Conte rapidamente sua situação" className="bg-background border-gold-900/40 text-gold-100 placeholder:text-gold-200/30" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} data-testid="lead-form-desc" />
-              <Button type="submit" disabled={sending} className="w-full bg-gradient-to-r from-gold-500 to-gold-700 hover:from-gold-400 hover:to-gold-600 text-nude-900 font-semibold h-11 shadow-lg shadow-gold-900/30" data-testid="lead-form-submit">
+              <Input placeholder="Seu nome completo" className="bg-nude-50 border-gold-300 text-nude-950 placeholder:text-nude-700" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} data-testid="lead-form-name" />
+              <Input placeholder="WhatsApp (com DDD)" className="bg-nude-50 border-gold-300 text-nude-950 placeholder:text-nude-700" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} data-testid="lead-form-phone" />
+              <Input placeholder="E-mail" type="email" className="bg-nude-50 border-gold-300 text-nude-950 placeholder:text-nude-700" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="lead-form-email" />
+              <Input placeholder="Tipo de caso (ex: Trabalhista, Família...)" className="bg-nude-50 border-gold-300 text-nude-950 placeholder:text-nude-700" value={form.case_type} onChange={(e) => setForm({ ...form, case_type: e.target.value })} data-testid="lead-form-case" />
+              <Textarea placeholder="Conte rapidamente sua situação" className="bg-nude-50 border-gold-300 text-nude-950 placeholder:text-nude-700" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} data-testid="lead-form-desc" />
+              <Button type="submit" disabled={sending} className="w-full bg-gradient-to-r from-gold-400 to-gold-600 hover:from-gold-300 hover:to-gold-500 text-nude-950 font-bold h-11 shadow-lg shadow-gold-900/30" data-testid="lead-form-submit">
                 {sending ? "Enviando..." : "Quero uma demonstração"}
               </Button>
             </form>
@@ -255,7 +255,7 @@ export default function Landing() {
 
       {/* FOOTER */}
       <footer className="bg-background py-10 border-t border-gold-900/30">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gold-200/40">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-nude-700">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-gradient-to-br from-gold-500 to-gold-700 grid place-items-center">
               <Scale className="w-3 h-3 text-nude-900" />
@@ -263,9 +263,9 @@ export default function Landing() {
             <span>© 2026 Espírito Santo Adv · Todos os direitos reservados</span>
           </div>
           <div className="flex gap-6">
-            <Link to="/consulta" className="hover:text-gold-200">Consultar processo</Link>
-            <Link to="/login" className="hover:text-gold-200">Entrar</Link>
-            <a href="#features" className="hover:text-gold-200">Funcionalidades</a>
+            <Link to="/consulta" className="hover:text-gold-700">Consultar processo</Link>
+            <Link to="/login" className="hover:text-gold-700">Entrar</Link>
+            <a href="#features" className="hover:text-gold-700">Funcionalidades</a>
           </div>
         </div>
       </footer>
