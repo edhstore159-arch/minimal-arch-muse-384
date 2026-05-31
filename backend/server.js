@@ -338,7 +338,10 @@ app.post("/api/whatsapp/send-direct", async (req, res) => {
     const body = text || message || "";
     if (!String(body).trim()) return res.status(400).json({ delivered: false, ok: false, error: "missing message" });
     const providerResult = await sock.sendMessage(jid, { text: String(body) });
-    res.json(ok({ delivered: true, to: jid, message: outboundMessage(body, jid, providerResult), provider_result: providerResult }));
+    const outMsg = outboundMessage(body, jid, providerResult);
+    upsertContact(jid, { last_message: outMsg.text, last_message_at: outMsg.created_at });
+    appendMessage(jid, { id: outMsg.id, text: outMsg.text, from_me: true, created_at: outMsg.created_at });
+    res.json(ok({ delivered: true, to: jid, message: outMsg, provider_result: providerResult }));
   } catch (e) {
     res.status(500).json({ delivered: false, ok: false, error: e?.message || "send_failed" });
   }
