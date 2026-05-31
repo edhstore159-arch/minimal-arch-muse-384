@@ -84,6 +84,9 @@ const EMERGENT_MODEL = process.env.EMERGENT_MODEL || "gpt-4o-mini";
 const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY || process.env.VITE_LOVABLE_API_KEY || "";
 const AI_MODEL = process.env.AI_MODEL || "google/gemini-2.5-flash";
 const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 20000);
+const AUTO_REPLY_SEND_TIMEOUT_MS = Number(process.env.AUTO_REPLY_SEND_TIMEOUT_MS || 20000);
+const AUTO_REPLY_RETRY_EVERY_MS = Number(process.env.AUTO_REPLY_RETRY_EVERY_MS || 10000);
+const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
 const AI_SYSTEM_PROMPT =
   process.env.AI_SYSTEM_PROMPT ||
   [
@@ -181,6 +184,87 @@ function recordAutoReply(entry) {
   autoReplyDebug.history.unshift(stamped);
   autoReplyDebug.history = autoReplyDebug.history.slice(0, 30);
   console.log("[autoReply]", JSON.stringify(stamped));
+}
+
+const pendingAutoReplies = [];
+let processingAutoReplyQueue = false;
+
+function buildLocalLegalReply(jid, userText, contactName) {
+  const history = aiHistory.get(jid) || [];
+  const userTurns = history.filter((m) => m.role === "user").length + 1;
+  const name = String(contactName || "cliente").split(" ")[0];
+  const txt = String(userText || "").toLowerCase();
+  if (/urgente|pris[aã]o|audi[eê]ncia|prazo|intima[cç][aã]o|mandado|medida protetiva/.test(txt)) {
+    return `${name}, entendi a urgência. Vou sinalizar seu caso para a equipe agora; por favor me envie sua cidade/estado e um resumo breve do que aconteceu.`;
+  }
+  if (userTurns <= 1) {
+    return `Olá, ${name}! Sou a assistente virtual do escritório. Para iniciar seu atendimento, qual é a área do seu caso: Trabalhista, Cível, Família, Criminal, Previdenciário, Consumidor, Empresarial ou outra?`;
+  }
+  if (userTurns === 2) return "Entendi. Pode me contar, em poucas linhas, o que aconteceu e quando isso ocorreu?";
+  if (userTurns === 3) return "Certo. Existe algum prazo, audiência, notificação ou urgência nas próximas 24 a 72 horas?";
+  if (userTurns === 4) return "Obrigado. Para direcionar corretamente, qual é sua cidade e estado?";
+  return "Perfeito, já registrei as informações iniciais. Um advogado do escritório vai analisar e entrar em contato para orientar os próximos passos e agendar a consulta.";
+}
+
+function queueAutoReply(jid, reply, meta = {}) {
+  pendingAutoReplies.push({ jid, reply, attempts: 0, created_at: new Date().toISOString(), ...meta });
+  while (pendingAutoReplies.length > AUTO_REPLY_QUEUE_MAX) pendingAutoReplies.shift();
+  recordAutoReply({ step: "queued", jid, queue_size: pendingAutoReplies.length, reason: meta.reason || null });
+}
+
+async function sendBotText(jid, reply, meta = {}) {
+  try { await sock?.presenceSubscribe?.(jid); } catch {}
+  try { await sock?.sendPresenceUpdate?.("composing", jid); } catch {}
+  await new Promise((r) => setTimeout(r, 600));
+  try { await sock?.sendPresenceUpdate?.("paused", jid); } catch {}
+
+  let lastSendErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (!sock || connectionState !== "open") throw new Error(`socket_not_open:${connectionState}`);
+      recordAutoReply({ step: "send_attempt", jid, attempt, source: meta.source || "auto", reply: reply.slice(0, 200) });
+      const providerResult = await Promise.race([
+        sock.sendMessage(jid, { text: reply }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error(`sendMessage timeout ${AUTO_REPLY_SEND_TIMEOUT_MS}ms`)), AUTO_REPLY_SEND_TIMEOUT_MS)),
+      ]);
+      const out = outboundMessage(reply, jid, providerResult);
+      upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
+      appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
+      return { ok: true, out, providerResult, attempt };
+    } catch (e) {
+      lastSendErr = e?.message || String(e);
+      recordAutoReply({ step: "send_error", jid, attempt, source: meta.source || "auto", error: lastSendErr });
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+  }
+  throw new Error(lastSendErr || "send_failed");
+}
+
+async function processAutoReplyQueue() {
+  if (processingAutoReplyQueue || !pendingAutoReplies.length || !sock || connectionState !== "open") return;
+  processingAutoReplyQueue = true;
+  try {
+    for (let i = 0; i < pendingAutoReplies.length;) {
+      const item = pendingAutoReplies[i];
+      item.attempts += 1;
+      try {
+        await sendBotText(item.jid, item.reply, { source: "queue" });
+        pendingAutoReplies.splice(i, 1);
+        recordAutoReply({ step: "queue_sent", jid: item.jid, queue_size: pendingAutoReplies.length });
+      } catch (e) {
+        item.last_error = e?.message || String(e);
+        recordAutoReply({ step: "queue_retry_later", jid: item.jid, attempts: item.attempts, error: item.last_error });
+        if (item.attempts >= 12) {
+          pendingAutoReplies.splice(i, 1);
+          recordAutoReply({ step: "queue_drop", jid: item.jid, error: item.last_error });
+        } else {
+          i += 1;
+        }
+      }
+    }
+  } finally {
+    processingAutoReplyQueue = false;
+  }
 }
 
 async function autoReply(jid, userText, contactName) {
