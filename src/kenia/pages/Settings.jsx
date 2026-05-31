@@ -27,11 +27,18 @@ export default function Settings() {
   useEffect(() => { load(); }, []);
 
   const load = async () => {
+    const fallback = {
+      using_default_text: true,
+      using_default_image: true,
+      llm_text_key_masked: "Emergent padrão",
+      llm_image_key_masked: "Emergent padrão",
+    };
     try {
       const { data } = await api.get("/settings");
-      setSettings(data);
+      setSettings(data || fallback);
     } catch {
-      toast.error("Erro ao carregar configurações");
+      // Em modo estático ou backend offline, mostra a tela com valores padrão
+      setSettings(fallback);
     }
   };
 
