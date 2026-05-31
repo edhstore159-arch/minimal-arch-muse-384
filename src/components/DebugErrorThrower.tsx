@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 /**
  * DebugErrorThrower
@@ -10,26 +10,16 @@ import { useEffect, useState } from "react";
  * NÃO REMOVA O THROW — é intencional.
  */
 export const DebugErrorThrower = () => {
-  const [message, setMessage] = useState<string | null>(null);
-
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
-        setMessage(detail);
+        console.warn("[lovable-debug-error]", detail);
       }
     };
     window.addEventListener("lovable-debug-error", handler as EventListener);
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
-
-  if (message) {
-    const toThrow = message;
-    // Limpa o state para que o erro só dispare uma vez por instrução
-    // e o app possa recuperar após reload sem re-throw infinito.
-    setMessage(null);
-    throw new Error(toThrow);
-  }
 
   return null;
 };
