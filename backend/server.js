@@ -28,6 +28,13 @@ let currentQR = null;
 let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
 
+const statusPayload = () => ({
+  ok: true,
+  connected: connectionState === "open",
+  state: connectionState,
+  last_error: lastError,
+});
+
 async function startSock() {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
@@ -97,15 +104,10 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
 
 // ---- Status ----
 app.get("/api/whatsapp/baileys/status", (_req, res) => {
-  res.json({
-    ok: true,
-    connected: connectionState === "open",
-    state: connectionState,
-    last_error: lastError,
-  });
+  res.json(statusPayload());
 });
 
-app.get("/api/whatsapp/test-connection", (_req, res) => {
+app.all("/api/whatsapp/test-connection", (_req, res) => {
   res.json({
     connected: connectionState === "open",
     provider: "baileys",
@@ -115,7 +117,8 @@ app.get("/api/whatsapp/test-connection", (_req, res) => {
 
 // ---- QR Code ----
 app.get("/api/whatsapp/baileys/qr", async (_req, res) => {
-  res.json({ qr: currentQR, state: connectionState });
+  const qr = currentQR ? await QRCode.toDataURL(currentQR) : null;
+  res.json({ qr, raw_qr: currentQR, state: connectionState });
 });
 
 app.get("/api/whatsapp/qr", async (_req, res) => {
@@ -154,6 +157,24 @@ app.post("/api/whatsapp/send", async (req, res) => {
     res.json(ok({ to: jid }));
   } catch (e) {
     res.status(500).json({ ok: false, error: e?.message || "send_failed" });
+  }
+});
+
+app.post("/api/whatsapp/send-direct", async (req, res) => {
+  try {
+    if (!sock || connectionState !== "open") {
+      return res.status(503).json({ delivered: false, ok: false, error: "NOT_CONNECTED", state: connectionState });
+    }
+    const { phone, to, message, text } = req.body || {};
+    const target = phone || to;
+    if (!target) return res.status(400).json({ delivered: false, ok: false, error: "missing 'phone'" });
+    const jid = String(target).includes("@")
+      ? String(target)
+      : `${String(target).replace(/\D/g, "")}@s.whatsapp.net`;
+    await sock.sendMessage(jid, { text: String(message || text || "") });
+    res.json(ok({ delivered: true, to: jid, provider_result: { baileys: true } }));
+  } catch (e) {
+    res.status(500).json({ delivered: false, ok: false, error: e?.message || "send_failed" });
   }
 });
 
