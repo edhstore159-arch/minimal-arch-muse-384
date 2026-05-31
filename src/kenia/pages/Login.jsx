@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
+import { useAuth } from "@/kenia/contexts/AuthContext";
+import { api } from "@/kenia/lib/api";
+import { Button } from "@/kenia/components/ui/button";
+import { Input } from "@/kenia/components/ui/input";
+import { Label } from "@/kenia/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/kenia/components/ui/tabs";
+import { Card } from "@/kenia/components/ui/card";
 import { Gem, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 

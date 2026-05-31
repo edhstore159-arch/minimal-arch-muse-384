@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { api } from "@/kenia/lib/api";
+import { Card } from "@/kenia/components/ui/card";
+import { Button } from "@/kenia/components/ui/button";
+import { Input } from "@/kenia/components/ui/input";
+import { Label } from "@/kenia/components/ui/label";
+import { Textarea } from "@/kenia/components/ui/textarea";
+import { Switch } from "@/kenia/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/kenia/components/ui/tabs";
+import { Badge } from "@/kenia/components/ui/badge";
+import { Separator } from "@/kenia/components/ui/separator";
 import { toast } from "sonner";
 import {
   Zap, Server, Building2, Smartphone, CheckCircle2, XCircle,
@@ -38,7 +38,7 @@ export default function WhatsAppSettings() {
   const [baileysQr, setBaileysQr] = useState(null);
   const [baileysLoggingOut, setBaileysLoggingOut] = useState(false);
 
-  const backendUrl = process.env.REACT_APP_BACKEND_URL;
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL || "");
   const webhookBase = `${backendUrl}/api/whatsapp/webhook`;
 
   useEffect(() => { load(); runDiagnostics(); }, []);

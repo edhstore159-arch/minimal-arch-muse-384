@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { api } from "@/kenia/lib/api";
+import { Card } from "@/kenia/components/ui/card";
+import { Button } from "@/kenia/components/ui/button";
+import { Input } from "@/kenia/components/ui/input";
+import { Textarea } from "@/kenia/components/ui/textarea";
+import { Label } from "@/kenia/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/kenia/components/ui/tabs";
+import { Badge } from "@/kenia/components/ui/badge";
 import { toast } from "sonner";
 import { AlertTriangle, ImagePlus, Wand2, Send, Trash2, X, Download } from "lucide-react";
 

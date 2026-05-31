@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { api } from "@/kenia/lib/api";
+import { Card } from "@/kenia/components/ui/card";
+import { Button } from "@/kenia/components/ui/button";
+import { Badge } from "@/kenia/components/ui/badge";
+import { Input } from "@/kenia/components/ui/input";
+import { Textarea } from "@/kenia/components/ui/textarea";
+import { Label } from "@/kenia/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/kenia/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/kenia/components/ui/table";
 import { Plus, Calendar, Trash2, Scale, Building2 } from "lucide-react";
 import { toast } from "sonner";
 

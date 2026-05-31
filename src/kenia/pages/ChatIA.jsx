@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
+import { Card } from "@/kenia/components/ui/card";
+import { Button } from "@/kenia/components/ui/button";
+import { Textarea } from "@/kenia/components/ui/textarea";
+import { Input } from "@/kenia/components/ui/input";
+import { Badge } from "@/kenia/components/ui/badge";
+import { ScrollArea } from "@/kenia/components/ui/scroll-area";
+import { Separator } from "@/kenia/components/ui/separator";
+import { Progress } from "@/kenia/components/ui/progress";
 import { toast } from "sonner";
 import {
   Send, Volume2, VolumeX, Sparkles, Bot, Gauge, ShieldCheck,
   AlertTriangle, BookOpen, Loader2, RefreshCcw, Pause, Play,
 } from "lucide-react";
 
-const BACKEND = process.env.REACT_APP_BACKEND_URL;
+const BACKEND = (import.meta.env.VITE_BACKEND_URL || "");
 
 /**
  * Player de áudio nativo HTML5 que usa Blob URL em vez de data: URL.

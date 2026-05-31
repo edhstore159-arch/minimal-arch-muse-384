@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/kenia/lib/api";
+import { Card } from "@/kenia/components/ui/card";
+import { Badge } from "@/kenia/components/ui/badge";
+import { Button } from "@/kenia/components/ui/button";
+import { Input } from "@/kenia/components/ui/input";
+import { ScrollArea } from "@/kenia/components/ui/scroll-area";
+import { Separator } from "@/kenia/components/ui/separator";
+import { Progress } from "@/kenia/components/ui/progress";
+import { Textarea } from "@/kenia/components/ui/textarea";
 import {
   ShieldCheck, AlertTriangle, Gauge, Search, BookOpen,
   Sparkles, ChevronRight, RefreshCcw, Filter, FileText,

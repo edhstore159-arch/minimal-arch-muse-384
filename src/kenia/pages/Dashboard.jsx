@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from "react";
-import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
+import { api } from "@/kenia/lib/api";
+import { Card } from "@/kenia/components/ui/card";
+import { Input } from "@/kenia/components/ui/input";
+import { Button } from "@/kenia/components/ui/button";
+import { Badge } from "@/kenia/components/ui/badge";
+import { ScrollArea } from "@/kenia/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/kenia/components/ui/avatar";
+import { Separator } from "@/kenia/components/ui/separator";
 import { Search, Send, Phone, MoreVertical, Bot, Sparkles, Paperclip, Mail, MessageSquare, FileText, Flame, Tag, Calendar, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 

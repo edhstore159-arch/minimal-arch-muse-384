@@ -1,13 +1,13 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/kenia/contexts/AuthContext";
 import {
   LayoutDashboard, KanbanSquare, Scale, Wallet, Sparkles,
   BarChart3, LogOut, MessageSquare, Wrench, Radio,
   CalendarDays, Settings as SettingsIcon, Combine,
   ShieldCheck, Bot,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/kenia/components/ui/button";
+import { Avatar, AvatarFallback } from "@/kenia/components/ui/avatar";
 
 const LOGO_IMG = "https://customer-assets.emergentagent.com/job_nude-gold-dashboard/artifacts/ckw9kwam_IMG-20241228-WA0003.jpg";
 

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
+import { api } from "@/kenia/lib/api";
+import { Card } from "@/kenia/components/ui/card";
+import { Button } from "@/kenia/components/ui/button";
+import { Badge } from "@/kenia/components/ui/badge";
+import { ScrollArea } from "@/kenia/components/ui/scroll-area";
+import { Input } from "@/kenia/components/ui/input";
 import { toast } from "sonner";
 import {
   ArrowDownLeft, ArrowUpRight, Bot, RefreshCw, CheckCheck,

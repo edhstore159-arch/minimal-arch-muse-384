@@ -1,9 +1,9 @@
 import { useState, useRef } from "react";
-import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { api } from "@/kenia/lib/api";
+import { Card } from "@/kenia/components/ui/card";
+import { Button } from "@/kenia/components/ui/button";
+import { Textarea } from "@/kenia/components/ui/textarea";
+import { Label } from "@/kenia/components/ui/label";
 import { toast } from "sonner";
 import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon } from "lucide-react";
 

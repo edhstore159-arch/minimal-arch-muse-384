@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { api } from "@/kenia/lib/api";
+import { Card } from "@/kenia/components/ui/card";
+import { Button } from "@/kenia/components/ui/button";
+import { Input } from "@/kenia/components/ui/input";
+import { Label } from "@/kenia/components/ui/label";
+import { Textarea } from "@/kenia/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kenia/components/ui/select";
+import { Progress } from "@/kenia/components/ui/progress";
+import { Badge } from "@/kenia/components/ui/badge";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/kenia/contexts/AuthContext";
 import {
   Scale, ArrowRight, ArrowLeft, CheckCircle2, Zap,
   Building2, MessageSquare, Sparkles, Loader2, QrCode,

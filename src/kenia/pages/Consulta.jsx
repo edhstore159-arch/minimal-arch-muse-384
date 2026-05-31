@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Card } from "@/kenia/components/ui/card";
+import { Button } from "@/kenia/components/ui/button";
+import { Input } from "@/kenia/components/ui/input";
+import { Label } from "@/kenia/components/ui/label";
+import { Badge } from "@/kenia/components/ui/badge";
+import { Separator } from "@/kenia/components/ui/separator";
 import { toast } from "sonner";
 import {
   Scale, Search, Calendar, Building2, FileText, ArrowRight,
   CheckCircle2, AlertCircle, Clock, Info, MessageCircle,
 } from "lucide-react";
 
-const BACKEND = process.env.REACT_APP_BACKEND_URL;
+const BACKEND = (import.meta.env.VITE_BACKEND_URL || "");
 
 export default function Consulta() {
   const [phone, setPhone] = useState("");

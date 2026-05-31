@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { api } from "@/lib/api";
+import { Button } from "@/kenia/components/ui/button";
+import { Input } from "@/kenia/components/ui/input";
+import { Textarea } from "@/kenia/components/ui/textarea";
+import { Card } from "@/kenia/components/ui/card";
+import { api } from "@/kenia/lib/api";
 import { toast } from "sonner";
 import {
   Scale, MessageCircle, KanbanSquare, FileText, Wallet,
