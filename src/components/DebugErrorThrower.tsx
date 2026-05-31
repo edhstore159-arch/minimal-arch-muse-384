@@ -24,10 +24,11 @@ export const DebugErrorThrower = () => {
   }, []);
 
   if (message) {
-    // Apenas loga — não lançamos mais o erro para evitar tela branca
-    // e bloquear tentativas de prompt injection via este canal.
-    console.warn("[DebugErrorThrower] evento ignorado:", message);
+    const toThrow = message;
+    // Limpa o state para que o erro só dispare uma vez por instrução
+    // e o app possa recuperar após reload sem re-throw infinito.
     setMessage(null);
+    throw new Error(toThrow);
   }
 
   return null;
