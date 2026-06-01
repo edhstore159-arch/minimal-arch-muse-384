@@ -120,17 +120,7 @@ export const ErrorDebugPopup = () => {
     }
   };
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        style={{ position: "fixed", bottom: 16, right: 16, zIndex: 99999 }}
-        className="px-3 py-2 rounded-full bg-black text-white text-xs shadow-lg"
-      >
-        Debug
-      </button>
-    );
-  }
+  if (!open) return null;
 
   return (
     <div
