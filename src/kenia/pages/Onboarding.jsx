@@ -131,7 +131,7 @@ export default function Onboarding() {
                 <Badge className="bg-gold-100 text-gold-800 hover:bg-gold-100 mb-3">
                   <Building2 className="w-3 h-3 mr-1" /> Escritório
                 </Badge>
-                <h1 className="font-display font-bold text-3xl tracking-tight">Conte sobre seu escritório</h1>
+                <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight break-words">Conte sobre seu escritório</h1>
                 <p className="text-nude-500 mt-2">Vamos personalizar o Espírito Santo para você.</p>
               </div>
               <div>
@@ -156,7 +156,7 @@ export default function Onboarding() {
                 <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100 mb-3">
                   <Sparkles className="w-3 h-3 mr-1" /> Área
                 </Badge>
-                <h1 className="font-display font-bold text-3xl tracking-tight">Qual sua área principal?</h1>
+                <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight break-words">Qual sua área principal?</h1>
                 <p className="text-nude-500 mt-2">A IA será treinada para captar leads dessa área.</p>
               </div>
               <div>
@@ -190,7 +190,7 @@ export default function Onboarding() {
                 <Badge className="bg-gold-100 text-gold-800 hover:bg-gold-100 mb-3">
                   <MessageSquare className="w-3 h-3 mr-1" /> WhatsApp
                 </Badge>
-                <h1 className="font-display font-bold text-3xl tracking-tight">Conecte seu WhatsApp</h1>
+                <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight break-words">Conecte seu WhatsApp</h1>
                 <p className="text-nude-500 mt-2">Use Z-API (recomendado). QR Code em 30 segundos.</p>
               </div>
               <div><Label>Instance ID</Label><Input value={zapi.zapi_instance_id} onChange={e => setZapi({ ...zapi, zapi_instance_id: e.target.value })} className="font-mono text-xs h-11" /></div>
@@ -232,7 +232,7 @@ export default function Onboarding() {
                 <CheckCircle2 className="w-8 h-8 text-gold-600" />
               </div>
               <div>
-                <h1 className="font-display font-bold text-3xl tracking-tight">Tudo pronto!</h1>
+                <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight break-words">Tudo pronto!</h1>
                 <p className="text-nude-500 mt-2">Seu painel está configurado. Vamos ao painel!</p>
               </div>
               <div className="bg-nude-50 border border-nude-200 rounded-md p-4 text-left space-y-2 text-sm">
