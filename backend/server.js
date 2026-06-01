@@ -322,6 +322,36 @@ async function sendBotText(jid, reply, meta = {}) {
   throw new Error(lastSendErr || "send_failed");
 }
 
+async function sendBotAudio(jid, reply, audioBase64, meta = {}) {
+  const audioBuffer = Buffer.from(String(audioBase64 || ""), "base64");
+  if (!audioBuffer.length) throw new Error("audio_empty");
+  try { await sock?.presenceSubscribe?.(jid); } catch {}
+  try { await sock?.sendPresenceUpdate?.("recording", jid); } catch {}
+  await new Promise((r) => setTimeout(r, 900));
+  try { await sock?.sendPresenceUpdate?.("paused", jid); } catch {}
+
+  let lastSendErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (!sock || connectionState !== "open") throw new Error(`socket_not_open:${connectionState}`);
+      recordAutoReply({ step: "send_audio_attempt", jid, attempt, source: meta.source || "auto", reply: reply.slice(0, 200) });
+      const providerResult = await Promise.race([
+        sock.sendMessage(jid, { audio: audioBuffer, mimetype: "audio/mpeg", ptt: true }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error(`sendAudio timeout ${AUTO_REPLY_SEND_TIMEOUT_MS}ms`)), AUTO_REPLY_SEND_TIMEOUT_MS)),
+      ]);
+      const out = outboundMessage(`[áudio] ${reply}`, jid, providerResult);
+      upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
+      appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
+      return { ok: true, out, providerResult, attempt };
+    } catch (e) {
+      lastSendErr = e?.message || String(e);
+      recordAutoReply({ step: "send_audio_error", jid, attempt, source: meta.source || "auto", error: lastSendErr });
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+  }
+  throw new Error(lastSendErr || "send_audio_failed");
+}
+
 async function processAutoReplyQueue() {
   if (processingAutoReplyQueue || !pendingAutoReplies.length || !sock || connectionState !== "open") return;
   processingAutoReplyQueue = true;
@@ -349,8 +379,9 @@ async function processAutoReplyQueue() {
   }
 }
 
-async function autoReply(jid, userText, contactName) {
-  recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasOpenAI: Boolean(OPENAI_API_KEY), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
+async function autoReply(jid, userText, contactName, options = {}) {
+  const wantAudio = Boolean(options.wantAudio);
+  recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), wantAudio, hasOpenAI: Boolean(OPENAI_API_KEY), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
   if (!sock || connectionState !== "open") {
     recordAutoReply({ step: "skip_socket", jid, connectionState });
     return;
@@ -361,8 +392,21 @@ async function autoReply(jid, userText, contactName) {
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
-  recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
-  const result = await callAI(messagesPayload);
+  recordAutoReply({ step: "ai_request", jid, wantAudio, providers: [wantAudio && "cloud-chat-ai", OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
+  let result;
+  let audioBase64 = null;
+  if (wantAudio) {
+    try {
+      const cloud = await callCloudChatAI(userText, history, contactName, true);
+      result = { ok: true, provider: "cloud-chat-ai", model: "chat-ai", reply: cloud.reply };
+      audioBase64 = cloud.audioBase64;
+    } catch (e) {
+      recordAutoReply({ step: "cloud_chat_audio_fail", jid, error: e?.message || String(e) });
+      result = await callAI(messagesPayload);
+    }
+  } else {
+    result = await callAI(messagesPayload);
+  }
   const usedFallback = !result.ok;
   const reply = usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply;
   if (usedFallback) recordAutoReply({ step: "ai_fail_local_fallback", jid, result, reply: reply.slice(0, 200) });
@@ -370,7 +414,9 @@ async function autoReply(jid, userText, contactName) {
   history.push({ role: "assistant", content: reply });
   aiHistory.set(jid, history.slice(-20));
   try {
-    const sent = await sendBotText(jid, reply, { source: usedFallback ? "local_fallback" : result.provider });
+    const sent = wantAudio && audioBase64
+      ? await sendBotAudio(jid, reply, audioBase64, { source: usedFallback ? "local_fallback" : result.provider })
+      : await sendBotText(jid, reply, { source: usedFallback ? "local_fallback" : result.provider });
     recordAutoReply({ step: "sent", jid, attempt: sent.attempt, provider: usedFallback ? "local_fallback" : result.provider, model: result.model || null, reply: reply.slice(0, 200) });
   } catch (e) {
     queueAutoReply(jid, reply, { source: usedFallback ? "local_fallback" : result.provider, reason: e?.message || String(e) });
