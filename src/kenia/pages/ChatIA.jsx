@@ -528,18 +528,18 @@ export default function ChatIA() {
   const QM = analysis ? QUAL_META[analysis.qualificacao] || QUAL_META.necessita_mais_info : null;
 
   return (
-    <div className="h-screen flex flex-col bg-background" data-testid="chat-ia-page">
+    <div className="min-h-full flex flex-col bg-background" data-testid="chat-ia-page">
       {/* Header */}
-      <div className="px-8 py-5 bg-card border-b border-nude-200 flex items-center justify-between shrink-0">
-        <div>
-          <div className="overline text-gold-600">Análise de Caso · IA Humanizada</div>
-          <h1 className="font-serif text-3xl text-nude-900 mt-1 tracking-tight">
-            Kênia Garcia <span className="text-gold-600 italic">— advogada · atende você direto.</span>
+      <div className="px-4 sm:px-8 py-4 sm:py-5 bg-card border-b border-nude-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3 shrink-0">
+        <div className="min-w-0">
+          <div className="overline text-gold-600 text-[10px] sm:text-xs">Análise de Caso · IA Humanizada</div>
+          <h1 className="font-serif text-xl sm:text-2xl lg:text-3xl text-nude-900 mt-1 tracking-tight leading-tight">
+            Kênia Garcia <span className="text-gold-600 italic block sm:inline">— advogada · atende você direto.</span>
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge
-            className="bg-gold-50 text-gold-700 hover:bg-gold-50 border border-gold-200 gap-1.5 px-3 py-1.5 rounded-full font-medium"
+            className="bg-gold-50 text-gold-700 hover:bg-gold-50 border border-gold-200 gap-1.5 px-2.5 py-1 rounded-full font-medium text-[11px] sm:text-xs"
             data-testid="leg-date-badge"
           >
             <BookOpen className="w-3 h-3" /> Legislação · {legDate || "atualizando..."}
@@ -547,24 +547,24 @@ export default function ChatIA() {
           <Button
             size="sm"
             onClick={() => openScheduler()}
-            className="gap-1.5 bg-gold-600 hover:bg-gold-700 text-white"
+            className="gap-1.5 bg-gold-600 hover:bg-gold-700 text-white text-xs"
             data-testid="open-scheduler-btn"
           >
-            <CalendarPlus className="w-3.5 h-3.5" /> Agendar consulta
+            <CalendarPlus className="w-3.5 h-3.5" /> <span className="hidden xs:inline sm:inline">Agendar consulta</span><span className="xs:hidden sm:hidden">Agendar</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={reset}
-            className="gap-1.5"
+            className="gap-1.5 text-xs"
             data-testid="reset-chat-btn"
           >
-            <RefreshCcw className="w-3.5 h-3.5" /> Nova conversa
+            <RefreshCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Nova conversa</span><span className="sm:hidden">Nova</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-3 sm:gap-4 p-3 sm:p-4 lg:overflow-hidden min-h-0">
         {/* CHAT — center 8 cols */}
         <Card
           className="col-span-12 lg:col-span-8 flex flex-col overflow-hidden border-nude-200"
