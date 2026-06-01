@@ -248,11 +248,11 @@ export default function Onboarding() {
           )}
         </Card>
 
-        <div className="text-center mt-4 text-xs text-nude-400 flex items-center justify-center gap-3">
+        <div className="text-center mt-4 text-[11px] sm:text-xs text-nude-400 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-2">
           <span>🔒 API Oficial Meta compatível</span>
-          <span>•</span>
+          <span className="hidden sm:inline">•</span>
           <span>LGPD compliant</span>
-          <span>•</span>
+          <span className="hidden sm:inline">•</span>
           <span>Setup em 5 min</span>
         </div>
       </div>
