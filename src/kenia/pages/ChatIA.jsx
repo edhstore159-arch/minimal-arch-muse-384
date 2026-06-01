@@ -788,7 +788,7 @@ export default function ChatIA() {
 
         {/* ANALYSIS SIDE — 4 cols */}
         <Card
-          className="col-span-12 lg:col-span-4 flex flex-col overflow-hidden border-nude-200"
+          className="lg:col-span-4 flex flex-col overflow-hidden border-nude-200"
           data-testid="analysis-panel"
         >
           <div className="px-5 py-3 border-b border-nude-200 bg-nude-50/60">
