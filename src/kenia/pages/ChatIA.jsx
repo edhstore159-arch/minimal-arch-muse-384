@@ -486,9 +486,31 @@ export default function ChatIA() {
         { timeout: 90000 }
       );
       setSessionId(data.session_id);
+      const { clean, data: schedData } = parseAiSchedule(data.response || "");
+      let finalContent = clean || data.response;
+
+      // Se a IA fechou o bloco <AGENDAMENTO>, cria a consulta automaticamente
+      if (schedData?.data_agendamento && schedData?.horario_agendamento) {
+        try {
+          const { human, meetUrl, duration } = await createAppointment({
+            date: schedData.data_agendamento,
+            time: schedData.horario_agendamento,
+            duration: 60,
+            area: schedData.area_juridica || analysis?.area || "Atendimento jurídico",
+          });
+          if (schedData.nome && !name) setName(schedData.nome);
+          if (schedData.telefone && !phone) setPhone(schedData.telefone);
+          finalContent = `${finalContent}\n\n✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n🔗 ${meetUrl}`;
+          toast.success("Agendamento criado no painel da Agenda");
+          upsertLead({ stage: "em_negociacao", urgency: "alta", description: schedData.resumo_caso });
+        } catch {
+          toast.error("Não consegui salvar o agendamento — abra o botão Agendar consulta.");
+        }
+      }
+
       const newMsg = {
         role: "assistant",
-        content: data.response,
+        content: finalContent,
         audio_base64: data.audio_base64,
       };
       setMessages((prev) => [...prev, newMsg]);
