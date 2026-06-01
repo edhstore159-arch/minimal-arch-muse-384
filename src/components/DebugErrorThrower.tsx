@@ -3,11 +3,9 @@ import { useEffect, useState } from "react";
 /**
  * DebugErrorThrower
  *
- * Escuta "lovable-debug-error" e lança Error durante o render para escapar
- * até o overlay global da Lovable (fluxo "Try to Fix"). Deve ficar FORA de
- * qualquer ErrorBoundary/Suspense.
- *
- * NÃO REMOVA O THROW — é intencional.
+ * Mantém compatibilidade com o fluxo antigo de debug, mas não derruba mais a
+ * aplicação em produção/preview. As instruções são registradas no console para
+ * diagnóstico sem causar tela branca.
  */
 export const DebugErrorThrower = () => {
   const [message, setMessage] = useState<string | null>(null);
@@ -25,10 +23,8 @@ export const DebugErrorThrower = () => {
 
   if (message) {
     const toThrow = message;
-    // Limpa o state para que o erro só dispare uma vez por instrução
-    // e o app possa recuperar após reload sem re-throw infinito.
     setMessage(null);
-    throw new Error(toThrow);
+    console.info("Lovable debug instruction:", toThrow);
   }
 
   return null;
