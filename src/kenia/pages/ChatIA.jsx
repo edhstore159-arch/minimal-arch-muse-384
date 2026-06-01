@@ -18,14 +18,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
-// Sala de vídeo pública via Jitsi Meet — funciona sem login/integração e
-// abre direto no navegador do cliente quando ele clica no link enviado.
 const getMeetLink = () => {
   const room = `KeniaGarcia-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   return `https://meet.jit.si/${room}`;
 };
 
-// Detecta URLs no texto e devolve <a> clicáveis, preservando quebras de linha.
 const renderMessageContent = (text) => {
   const parts = String(text).split(/(https?:\/\/[^\s)]+)/g);
   return parts.map((part, i) =>
@@ -48,7 +45,6 @@ const renderMessageContent = (text) => {
 const pad2 = (n) => String(n).padStart(2, "0");
 const formatLocalDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
-// Mantém a hora local digitada pelo usuário (sem conversão UTC quebrada).
 const getAppointmentDateTime = (date, time) => {
   const [y, m, d] = date.split("-").map(Number);
   const [hh, mm] = time.split(":").map(Number);
@@ -57,7 +53,6 @@ const getAppointmentDateTime = (date, time) => {
 
 const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
-// Próximo dia útil (seg-sex) às 10:00 — usado como padrão do agendador
 const nextBusinessSlot = () => {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -91,7 +86,6 @@ const extractScheduleIntent = (text) => {
     const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
     date = `${year}-${month}-${day}`;
   } else {
-    // próximo dia útil às 10h por padrão
     const t = new Date(today);
     t.setDate(t.getDate() + 1);
     if (t.getDay() === 0) t.setDate(t.getDate() + 1);
@@ -107,12 +101,6 @@ const extractScheduleIntent = (text) => {
   return { date, time, duration: 60 };
 };
 
-
-/**
- * Player de áudio nativo HTML5 que usa Blob URL em vez de data: URL.
- * Data URLs grandes (>~250KB-1MB) silenciam ou falham em iOS Safari e Chrome
- * mobile. Blob URLs via URL.createObjectURL não têm essa limitação.
- */
 function NativeAudioPlayer({ audioB64, index }) {
   const [blobUrl, setBlobUrl] = useState(null);
   useEffect(() => {
@@ -189,10 +177,10 @@ export default function ChatIA() {
   const [legDate, setLegDate] = useState("");
   const [legBrief, setLegBrief] = useState("");
   const [playingIdx, setPlayingIdx] = useState(null);
-  const [scheduler, setScheduler] = useState(null); // { date, time, duration, area }
+  const [scheduler, setScheduler] = useState(null);
   const [scheduling, setScheduling] = useState(false);
   const [leadId, setLeadId] = useState(null);
-  const [showAnalysisPanel, setShowAnalysisPanel] = useState(true); // Controla visibilidade em mobile
+  const [showAnalysisPanel, setShowAnalysisPanel] = useState(true);
   const audioRef = useRef(null);
   const scrollRef = useRef(null);
   const [recording, setRecording] = useState(false);
@@ -202,37 +190,115 @@ export default function ChatIA() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-      const mr = new MediaRecorder(stream, { mimeType: mime });
+      console.log("🎙️ [startRecording] Iniciando gravação...");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      console.log("✅ [startRecording] Stream obtido:", {
+        audioTracks: stream.getAudioTracks().length,
+        videoTracks: stream.getVideoTracks().length,
+      });
+
+      const mimeOptions = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/wav",
+        "audio/mp4",
+      ];
+
+      let selectedMime = "audio/webm";
+      for (const mime of mimeOptions) {
+        if (MediaRecorder.isTypeSupported(mime)) {
+          selectedMime = mime;
+          console.log("🎵 [startRecording] MIME type suportado:", mime);
+          break;
+        }
+      }
+
+      console.log("🎵 [startRecording] MIME type selecionado:", selectedMime);
+
+      const mr = new MediaRecorder(stream, { mimeType: selectedMime });
       chunksRef.current = [];
-      mr.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data);
-      mr.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: mime });
-        await transcribeAndSend(blob, mime);
+
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          console.log("📦 [ondataavailable] Chunk gravado:", {
+            size: e.data.size,
+            type: e.data.type,
+            totalChunks: chunksRef.current.length + 1,
+          });
+          chunksRef.current.push(e.data);
+        }
       };
+
+      mr.onstop = async () => {
+        console.log("⏹️ [onstop] Gravação parada, processando...");
+        stream.getTracks().forEach((t) => {
+          t.stop();
+          console.log("🔌 [onstop] Track parado:", t.kind);
+        });
+        const blob = new Blob(chunksRef.current, { type: selectedMime });
+        console.log("📁 [onstop] Blob criado:", {
+          size: blob.size,
+          type: blob.type,
+          chunks: chunksRef.current.length,
+        });
+        await transcribeAndSend(blob, selectedMime);
+      };
+
+      mr.onerror = (e) => {
+        console.error("❌ [onerror] Erro do MediaRecorder:", e.error);
+        toast.error(`Erro na gravação: ${e.error}`);
+        setRecording(false);
+      };
+
       mr.start();
       mediaRecorderRef.current = mr;
       setRecording(true);
+      toast.success("🎙️ Gravação iniciada - fale agora!");
+      console.log("✅ [startRecording] MediaRecorder iniciado");
     } catch (err) {
-      console.error("Erro ao acessar microfone:", err);
-      toast.error("Não consegui acessar o microfone. Verifique as permissões.");
+      console.error("❌ [startRecording] Erro ao acessar microfone:", err);
+      toast.error(`Erro ao acessar microfone: ${err.message}`);
+      setRecording(false);
     }
   };
 
   const stopRecording = () => {
+    console.log("⏹️ [stopRecording] Comando para parar gravação");
     const mr = mediaRecorderRef.current;
-    if (mr && mr.state !== "inactive") mr.stop();
+    if (mr && mr.state !== "inactive") {
+      mr.stop();
+      console.log("✅ [stopRecording] Stop enviado ao MediaRecorder");
+    }
     setRecording(false);
   };
 
   const transcribeAndSend = async (blob, mime) => {
     setTranscribing(true);
+    const toastId = toast.loading("🔄 Transcrevendo áudio...");
+
     try {
+      console.log("📝 [transcribeAndSend] Iniciando transcrição", {
+        blobSize: blob.size,
+        mime,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (blob.size === 0) {
+        throw new Error("Blob vazio - nenhum áudio foi gravado");
+      }
+
       const buf = await blob.arrayBuffer();
+      console.log("📊 [transcribeAndSend] Buffer criado:", {
+        byteLength: buf.byteLength,
+      });
+
       let binary = "";
       const bytes = new Uint8Array(buf);
       const chunkSize = 0x8000;
@@ -240,23 +306,51 @@ export default function ChatIA() {
         binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
       }
       const audio_base64 = btoa(binary);
+      console.log("🔐 [transcribeAndSend] Base64 criado:", {
+        base64Length: audio_base64.length,
+        originalLength: buf.byteLength,
+        compressionRatio: (audio_base64.length / buf.byteLength).toFixed(2),
+      });
+
+      console.log("📤 [transcribeAndSend] Enviando para edge function transcribe-audio...");
       const { data, error } = await supabase.functions.invoke("transcribe-audio", {
         body: { audio_base64, mime_type: mime },
       });
+
+      console.log("📬 [transcribeAndSend] Resposta recebida", {
+        hasError: !!error,
+        hasData: !!data,
+        errorMessage: error?.message || "N/A",
+        dataKeys: data ? Object.keys(data) : [],
+      });
+
       if (error) {
-        console.error("Erro na transcrição:", error);
+        console.error("❌ [transcribeAndSend] Erro da função:", error);
+        const errorMsg = error?.message || JSON.stringify(error);
+        toast.error(`Erro na transcrição: ${errorMsg}`, { id: toastId });
         throw error;
       }
+
       const text = (data?.text || "").trim();
+      console.log("📄 [transcribeAndSend] Texto transcrito:", {
+        length: text.length,
+        preview: text.slice(0, 100),
+        isEmpty: text.length === 0,
+      });
+
       if (!text) {
-        toast.error("Não entendi o áudio. Tente falar mais perto do microfone.");
+        const msg = "Áudio não foi reconhecido. Tente novamente com áudio mais claro.";
+        toast.error(msg, { id: toastId });
+        console.warn("⚠️ [transcribeAndSend] Transcrição vazia retornada");
         return;
       }
-      console.log("Áudio transcrito com sucesso:", text);
+
+      toast.success(`✅ Texto: "${text.slice(0, 50)}..."`, { id: toastId });
       await send(text);
     } catch (err) {
-      console.error("Erro ao transcrever o áudio:", err);
-      toast.error("Erro ao transcrever o áudio. Tente digitar a mensagem.");
+      console.error("🔥 [transcribeAndSend] Erro geral:", err);
+      const errorMsg = err?.message || "Desconhecido";
+      toast.error(`Falha na transcrição: ${errorMsg}`, { id: toastId });
     } finally {
       setTranscribing(false);
     }
@@ -294,10 +388,8 @@ export default function ChatIA() {
       }
     } catch (err) {
       console.error("Erro ao salvar lead:", err);
-      /* silencioso — não bloqueia o chat */
     }
   };
-
 
   const openScheduler = (area) => {
     const slot = nextBusinessSlot();
@@ -321,7 +413,11 @@ export default function ChatIA() {
       status: "confirmado",
     });
     const human = new Date(starts_at).toLocaleString("pt-BR", {
-      weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit",
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
     });
     return { human, meetUrl, duration: Number(duration) || 60 };
   };
@@ -343,7 +439,6 @@ export default function ChatIA() {
         },
       ]);
       toast.success("Agendamento confirmado");
-      // Marca o lead como qualificado/em negociação ao agendar
       upsertLead({ stage: "em_negociacao", urgency: "alta" });
       setScheduler(null);
     } catch (err) {
@@ -355,7 +450,6 @@ export default function ChatIA() {
   };
 
   useEffect(() => {
-    // carrega brief diario de legislacao
     api
       .get("/legislation/today")
       .then((r) => {
@@ -379,10 +473,6 @@ export default function ChatIA() {
         if (audioRef.current.__blobUrl) URL.revokeObjectURL(audioRef.current.__blobUrl);
       } catch {}
     }
-    // FIX: usa Blob URL (object URL) ao invés de data: URL. Data URLs de áudio
-    // longos (>~250KB-1MB) silenciam em iOS Safari e em Chrome mobile;
-    // URL.createObjectURL() é universalmente confiável e suporta arquivos
-    // grandes sem limites de comprimento.
     let blobUrl = null;
     try {
       const bin = atob(b64);
@@ -401,7 +491,9 @@ export default function ChatIA() {
     setPlayingIdx(idx);
     a.onended = () => {
       setPlayingIdx(null);
-      try { URL.revokeObjectURL(blobUrl); } catch {}
+      try {
+        URL.revokeObjectURL(blobUrl);
+      } catch {}
     };
     a.onerror = () => {
       setPlayingIdx(null);
@@ -493,10 +585,8 @@ export default function ChatIA() {
       };
       setMessages((prev) => [...prev, newMsg]);
       if (data.analysis) setAnalysis(data.analysis);
-      // Atualiza CRM: cria/atualiza lead automaticamente conforme o chat avança
       upsertLead({ description: msg });
       if (autoplay && data.audio_base64) {
-        // auto-play depois do paint
         setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 250);
       }
     } catch (err) {
@@ -506,8 +596,7 @@ export default function ChatIA() {
         ...prev,
         {
           role: "assistant",
-          content:
-            "Desculpe, tive uma instabilidade aqui. Pode repetir sua mensagem? 🙏",
+          content: "Desculpe, tive uma instabilidade aqui. Pode repetir sua mensagem? 🙏",
         },
       ]);
     } finally {
@@ -575,7 +664,7 @@ export default function ChatIA() {
         </div>
       </div>
 
-      {/* MOBILE: Tabs para alternar entre Chat e Análise */}
+      {/* MOBILE: Tabs */}
       <div className="lg:hidden px-3 sm:px-4 py-2 bg-white border-b border-nude-200 flex gap-2">
         <Button
           variant={!showAnalysisPanel ? "default" : "outline"}
@@ -597,9 +686,9 @@ export default function ChatIA() {
         </Button>
       </div>
 
-      {/* Main Layout: Desktop grid, Mobile single column */}
+      {/* Main Layout */}
       <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-3 sm:gap-4 p-3 sm:p-4 lg:overflow-hidden min-h-0">
-        {/* CHAT — Desktop: 8 cols, Mobile: Full width (com toggle) */}
+        {/* CHAT */}
         {!showAnalysisPanel && (
           <Card
             className="flex-1 min-h-[60vh] lg:min-h-0 lg:col-span-8 flex flex-col overflow-hidden border-nude-200"
@@ -761,7 +850,9 @@ export default function ChatIA() {
                         data-testid="sched-duration"
                       >
                         {[30, 45, 60, 90].map((m) => (
-                          <option key={m} value={m}>{m} min</option>
+                          <option key={m} value={m}>
+                            {m} min
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -772,7 +863,11 @@ export default function ChatIA() {
                         className="w-full h-9 bg-gold-600 hover:bg-gold-700 text-white gap-1.5"
                         data-testid="sched-confirm"
                       >
-                        {scheduling ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-4 h-4" />}
+                        {scheduling ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <CalendarCheck className="w-4 h-4" />
+                        )}
                         Confirmar
                       </Button>
                     </div>
@@ -794,7 +889,7 @@ export default function ChatIA() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={onKeyDown}
-                  disabled={thinking}
+                  disabled={thinking || recording}
                   rows={2}
                   className="resize-none flex-1"
                   data-testid="chat-input"
@@ -804,10 +899,20 @@ export default function ChatIA() {
                   onClick={recording ? stopRecording : startRecording}
                   disabled={thinking || transcribing}
                   title={recording ? "Parar gravação" : "Gravar mensagem de áudio"}
-                  className={`h-12 px-3 sm:px-4 shrink-0 ${recording ? "bg-red-600 hover:bg-red-700" : "bg-nude-200 hover:bg-nude-300 text-nude-800"}`}
+                  className={`h-12 px-3 sm:px-4 shrink-0 transition-all ${
+                    recording
+                      ? "bg-red-600 hover:bg-red-700 animate-pulse shadow-lg shadow-red-600/50"
+                      : "bg-nude-200 hover:bg-nude-300 text-nude-800"
+                  }`}
                   data-testid="chat-mic-btn"
                 >
-                  {transcribing ? <Loader2 className="w-4 h-4 animate-spin" /> : recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  {transcribing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : recording ? (
+                    <MicOff className="w-4 h-4" />
+                  ) : (
+                    <Mic className="w-4 h-4" />
+                  )}
                 </Button>
                 <Button
                   onClick={() => send()}
@@ -822,7 +927,7 @@ export default function ChatIA() {
           </Card>
         )}
 
-        {/* ANALYSIS SIDE — Desktop: 4 cols, Mobile: Full width (com toggle) */}
+        {/* ANALYSIS SIDE */}
         {showAnalysisPanel && (
           <Card
             className="lg:col-span-4 flex flex-col overflow-hidden border-nude-200"
@@ -846,7 +951,10 @@ export default function ChatIA() {
                       <div className="text-xs tracking-widest uppercase font-semibold text-nude-500 mb-2">
                         Qualificação
                       </div>
-                      <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-full ${QM.cls}`} data-testid="qualif-badge">
+                      <div
+                        className={`inline-flex items-center gap-2 px-3 py-2 rounded-full ${QM.cls}`}
+                        data-testid="qualif-badge"
+                      >
                         <QM.icon className="w-4 h-4" /> {QM.label}
                       </div>
                       <p className="text-xs text-nude-600 mt-2 leading-relaxed">{QM.desc}</p>
