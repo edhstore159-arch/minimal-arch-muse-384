@@ -35,9 +35,26 @@ export const ErrorDebugPopup = () => {
     const onUp = () => { draggingRef.current = null; };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+
+    // Secret keyword to reopen: digite "voltardebug" em qualquer lugar (fora de inputs)
+    let buffer = "";
+    const TRIGGERS = ["voltardebug", "voutaldebug", "debugon"];
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.key.length !== 1) return;
+      buffer = (buffer + e.key.toLowerCase()).slice(-20);
+      if (TRIGGERS.some((w) => buffer.includes(w))) {
+        buffer = "";
+        setOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("keydown", onKey);
     };
   }, []);
 
