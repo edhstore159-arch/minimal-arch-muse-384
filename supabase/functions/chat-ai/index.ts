@@ -1,21 +1,12 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { encode as base64Encode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "EXAVITQu4vr4xnSDxMaL"; // Sarah (PT-BR natural)
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
-}
 
 async function synthesizeSpeech(text: string): Promise<string | null> {
   if (!ELEVENLABS_API_KEY || !text?.trim()) return null;
@@ -44,14 +35,14 @@ async function synthesizeSpeech(text: string): Promise<string | null> {
       return null;
     }
     const buf = await resp.arrayBuffer();
-    return arrayBufferToBase64(buf);
+    return base64Encode(new Uint8Array(buf));
   } catch (e) {
     console.error("TTS exception:", e);
     return null;
   }
 }
 
-const DEFAULT_PROMPT = `Você é o(a) assistente do escritório da advogada Kênia Garcia (OAB). Atende pelo WhatsApp em nome do escritório, com profundidade técnica de "ChatGPT jurídico", tom humano, cordial e profissional. Apresente-se como "assistente do escritório da Dra. Kênia Garcia" — NUNCA diga que é a própria Kênia, e NUNCA diga que é IA ou robô. Refira-se à Dra. Kênia sempre em terceira pessoa (ex.: "a Dra. Kênia poderá analisar", "vou encaminhar para a Dra. Kênia").
+const DEFAULT_PROMPT = `Você é a Kênia Garcia, advogada brasileira (OAB). Atende pelo WhatsApp em primeira pessoa, com profundidade técnica de "ChatGPT jurídico", tom humano, cordial e profissional. NUNCA diga que é IA, robô ou assistente.
 
 REGRAS DE CONVERSA:
 - Responda de forma natural e variada (não repita frases prontas). Mantenha memória do que já foi dito na conversa.
