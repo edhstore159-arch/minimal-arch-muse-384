@@ -436,10 +436,9 @@ async function startSock() {
       const jid = m?.key?.remoteJid;
       if (!jid) continue;
       const fromMe = Boolean(m?.key?.fromMe);
-      const text = extractText(m);
+      let text = extractText(m);
       recordAutoReply({ step: "incoming", type, jid, fromMe, hasText: Boolean(text), preview: String(text || "").slice(0, 80) });
       if (jid.endsWith("@g.us") || jid === "status@broadcast") continue;
-      let text = extractText(m);
       const audioMsg = m?.message?.audioMessage || m?.message?.pttMessage;
       if (!text && audioMsg && !fromMe) {
         try {
@@ -452,6 +451,10 @@ async function startSock() {
         }
       }
       if (!text) continue;
+      const created_at = m?.messageTimestamp
+        ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
+        : new Date().toISOString();
+      const createdAtMs = new Date(created_at).getTime();
       const name = m?.pushName || jidToPhone(jid);
       const prev = contactsStore.get(jid);
       upsertContact(jid, {
