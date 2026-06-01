@@ -146,7 +146,7 @@ export default function Landing() {
               </h2>
             </div>
             <div className="lg:col-span-7 lg:pt-4">
-              <p className="text-lg text-nude-200 leading-relaxed">
+              <p className="text-base sm:text-lg text-nude-200 leading-relaxed">
                 Pare de pular entre 5 ferramentas diferentes. <strong className="text-gold-300">Espírito Santo</strong> concentra
                 todo o ciclo do cliente — do primeiro contato no WhatsApp (texto ou áudio) ao último pagamento —
 
