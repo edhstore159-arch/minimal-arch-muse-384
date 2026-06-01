@@ -35,14 +35,14 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-nude-900" data-testid="landing-page">
       {/* NAV */}
       <header className="border-b border-nude-200 bg-card/85 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3" data-testid="landing-logo">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0" data-testid="landing-logo">
             <img
               src={LOGO_IMG}
               alt="Kênia Garcia Advocacia"
-              className="w-10 h-10 rounded-md object-cover ring-1 ring-gold-300/50"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-md object-cover ring-1 ring-gold-300/50 shrink-0"
             />
-            <div className="font-serif text-lg tracking-tight text-nude-900 leading-tight">
+            <div className="font-serif text-base sm:text-lg tracking-tight text-nude-900 leading-tight truncate">
               Kênia Garcia<span className="block overline text-gold-600 text-[10px]">Advocacia</span>
             </div>
           </div>
@@ -51,12 +51,14 @@ export default function Landing() {
             <a href="#how" className="hover:text-gold-700 transition-colors">Como funciona</a>
             <Link to="/consulta" className="hover:text-gold-700 transition-colors">Consultar processo</Link>
           </nav>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" className="text-nude-700 hover:text-gold-700 hover:bg-gold-50" onClick={() => navigate("/login")} data-testid="nav-login-btn">Entrar</Button>
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-nude-700 hover:text-gold-700 hover:bg-gold-50" onClick={() => navigate("/login")} data-testid="nav-login-btn">Entrar</Button>
             <Button
-              className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white font-medium shadow-sm"
+              size="sm"
+              className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white font-medium shadow-sm text-xs sm:text-sm px-3 sm:px-4"
               onClick={() => navigate("/login")} data-testid="nav-cta-btn">
-              Começar grátis
+              <span className="hidden sm:inline">Começar grátis</span>
+              <span className="sm:hidden">Entrar</span>
             </Button>
           </div>
         </div>
@@ -64,19 +66,19 @@ export default function Landing() {
 
       {/* HERO — split com foto à esquerda */}
       <section className="relative">
-        <div className="grid lg:grid-cols-2 min-h-[640px]">
+        <div className="grid lg:grid-cols-2 lg:min-h-[640px]">
           {/* Lado esquerdo: foto da fachada do escritório */}
-          <div className="relative overflow-hidden bg-nude-900 h-[420px] sm:h-[520px] lg:h-auto lg:min-h-[640px]">
+          <div className="relative overflow-hidden bg-nude-900 h-[320px] sm:h-[440px] lg:h-auto lg:min-h-[640px]">
             <img src={HERO_IMG} alt="Escritório Kênia Garcia Advocacia" className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-nude-900/60 via-transparent to-nude-900/30" />
             <div className="absolute inset-0 bg-gradient-to-t from-nude-900/80 via-transparent to-transparent" />
             {/* Verse overlay */}
-            <div className="absolute bottom-12 left-12 right-12 max-w-md" data-testid="bible-verse">
-              <p className="italic text-nude-50 text-2xl leading-snug font-serif drop-shadow-lg">
+            <div className="absolute bottom-6 sm:bottom-12 left-4 right-4 sm:left-12 sm:right-12 max-w-md" data-testid="bible-verse">
+              <p className="italic text-nude-50 text-lg sm:text-2xl leading-snug font-serif drop-shadow-lg">
                 "Atendimento que une <span className="text-gold-300">presença</span> e <span className="text-gold-200">tecnologia</span>."
               </p>
-              <div className="mt-6 pl-4 border-l-2 border-gold-400/70">
-                <p className="italic text-nude-100/90 text-sm leading-relaxed">
+              <div className="mt-4 sm:mt-6 pl-4 border-l-2 border-gold-400/70">
+                <p className="italic text-nude-100/90 text-xs sm:text-sm leading-relaxed">
                   "Mas recebereis poder, ao descer sobre vós o Espírito Santo, e sereis minhas
                   testemunhas tanto em Jerusalém como em toda a Judeia e Samaria e até aos confins da terra."
                 </p>
@@ -86,7 +88,7 @@ export default function Landing() {
           </div>
 
           {/* Lado direito: hero content */}
-          <div className="relative flex items-center justify-start px-6 lg:px-16 py-20 bg-background">
+          <div className="relative flex items-center justify-start px-4 sm:px-6 lg:px-16 py-12 sm:py-16 lg:py-20 bg-background">
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute -top-20 right-0 w-[420px] h-[420px] rounded-full bg-gold-700/10 blur-3xl" />
             </div>
@@ -95,11 +97,11 @@ export default function Landing() {
                 <Sparkles className="w-3.5 h-3.5" />
                 Atendimento 24h · WhatsApp · Voz
               </div>
-              <h1 className="font-display font-bold text-5xl lg:text-6xl leading-[0.95] tracking-tighter text-nude-900">
+              <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl leading-[0.95] tracking-tighter text-nude-900">
                 Seu escritório, <span className="italic font-medium text-gold-700">guiado</span>
                 <br />pelo <span className="text-gold-800">Espírito Santo</span>.
               </h1>
-              <p className="mt-6 text-base lg:text-lg text-nude-700 leading-relaxed">
+              <p className="mt-5 sm:mt-6 text-base lg:text-lg text-nude-700 leading-relaxed">
                 Captação de clientes, atendimento via WhatsApp (Baileys — QR Code auto-hospedado),
                 CRM, agenda, financeiro e criativos com IA. Seu robô atende — com texto <em>e voz</em> — 24h por dia.
               </p>
@@ -134,17 +136,17 @@ export default function Landing() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="py-24 bg-[#221710] border-y border-gold-900/30">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="grid lg:grid-cols-12 gap-8 mb-16">
+      <section id="features" className="py-16 sm:py-20 lg:py-24 bg-[#221710] border-y border-gold-900/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
+          <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 mb-12 sm:mb-16">
             <div className="lg:col-span-5">
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-3">Plataforma completa</div>
-              <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight text-nude-50">
+              <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight text-nude-50">
                 Da captação ao recebimento, tudo conectado.
               </h2>
             </div>
             <div className="lg:col-span-7 lg:pt-4">
-              <p className="text-lg text-nude-200 leading-relaxed">
+              <p className="text-base sm:text-lg text-nude-200 leading-relaxed">
                 Pare de pular entre 5 ferramentas diferentes. <strong className="text-gold-300">Espírito Santo</strong> concentra
                 todo o ciclo do cliente — do primeiro contato no WhatsApp (texto ou áudio) ao último pagamento —
 
@@ -165,11 +167,11 @@ export default function Landing() {
               { icon: BarChart3, title: "Dashboard de Métricas", desc: "Conversão, faturamento e produtividade em tempo real." },
               { icon: Bot, title: "Agendamento automático", desc: "Cliente confirma horário no chat → agenda + link Meet criados." },
             ].map((f, i) => (
-              <div key={i} className="bg-[#2a1d12] p-8 hover:bg-[#3a2616] transition-colors" data-testid={`feature-${i}`}>
+              <div key={i} className="bg-[#2a1d12] p-6 sm:p-8 hover:bg-[#3a2616] transition-colors" data-testid={`feature-${i}`}>
                 <div className="w-10 h-10 rounded-md bg-gradient-to-br from-gold-500/30 to-gold-700/30 border border-gold-500/40 grid place-items-center mb-5">
                   <f.icon className="w-5 h-5 text-gold-200" />
                 </div>
-                <h3 className="font-display font-semibold text-xl mb-2 text-nude-50">{f.title}</h3>
+                <h3 className="font-display font-semibold text-lg sm:text-xl mb-2 text-nude-50">{f.title}</h3>
                 <p className="text-sm text-nude-200 leading-relaxed">{f.desc}</p>
               </div>
 
@@ -179,12 +181,12 @@ export default function Landing() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how" className="py-24 bg-background">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section id="how" className="py-16 sm:py-20 lg:py-24 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-16 items-center">
             <div>
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-700 mb-3">Como funciona</div>
-              <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight mb-8 text-nude-900">
+              <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight mb-6 sm:mb-8 text-nude-900">
                 Três passos para transformar seu escritório.
               </h2>
               <div className="space-y-6">
@@ -204,7 +206,7 @@ export default function Landing() {
               </div>
 
             </div>
-            <Card className="bg-[#221710] border-gold-900/40 p-8">
+            <Card className="bg-[#221710] border-gold-900/40 p-5 sm:p-8">
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-4">Exemplo — fluxo de voz</div>
               <div className="space-y-4">
                 <div className="p-3 rounded-lg bg-gold-500/10 border border-gold-500/20 text-sm text-gold-100">
@@ -225,11 +227,11 @@ export default function Landing() {
       </section>
 
       {/* CONTATO / LEAD CAPTURE */}
-      <section id="contato" className="py-24 bg-[#1a1009]">
-        <div className="max-w-5xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-12 items-center">
+      <section id="contato" className="py-16 sm:py-20 lg:py-24 bg-[#1a1009]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-12 grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div>
             <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-300 mb-3">Vamos conversar</div>
-            <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight mb-4 text-nude-50">
+            <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight mb-4 text-nude-50">
               Receba uma demonstração personalizada.
             </h2>
             <p className="text-nude-200 leading-relaxed">
