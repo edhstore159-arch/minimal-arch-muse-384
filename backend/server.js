@@ -521,6 +521,7 @@ async function startSock() {
         }
       }
       if (!text) continue;
+      const receivedAudio = Boolean(audioMsg && !fromMe);
       const created_at = m?.messageTimestamp
         ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
         : new Date().toISOString();
@@ -549,8 +550,8 @@ async function startSock() {
         createdAtMs,
       });
       if (autoDecision.ok) {
-        recordAutoReply({ step: "auto_allowed", jid, type, reason: autoDecision.reason });
-        autoReply(jid, text, name).catch((e) => recordAutoReply({ step: "autoreply_throw", jid, error: e?.message || String(e) }));
+        recordAutoReply({ step: "auto_allowed", jid, type, reason: autoDecision.reason, receivedAudio });
+        autoReply(jid, text, name, { wantAudio: receivedAudio }).catch((e) => recordAutoReply({ step: "autoreply_throw", jid, error: e?.message || String(e) }));
       } else if (!fromMe && whatsappConfig.bot_enabled) {
         recordAutoReply({ step: "auto_skipped", jid, type, reason: autoDecision.reason });
       }
