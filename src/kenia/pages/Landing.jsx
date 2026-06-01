@@ -35,14 +35,14 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-nude-900" data-testid="landing-page">
       {/* NAV */}
       <header className="border-b border-nude-200 bg-card/85 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3" data-testid="landing-logo">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0" data-testid="landing-logo">
             <img
               src={LOGO_IMG}
               alt="Kênia Garcia Advocacia"
-              className="w-10 h-10 rounded-md object-cover ring-1 ring-gold-300/50"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-md object-cover ring-1 ring-gold-300/50 shrink-0"
             />
-            <div className="font-serif text-lg tracking-tight text-nude-900 leading-tight">
+            <div className="font-serif text-base sm:text-lg tracking-tight text-nude-900 leading-tight truncate">
               Kênia Garcia<span className="block overline text-gold-600 text-[10px]">Advocacia</span>
             </div>
           </div>
@@ -51,12 +51,14 @@ export default function Landing() {
             <a href="#how" className="hover:text-gold-700 transition-colors">Como funciona</a>
             <Link to="/consulta" className="hover:text-gold-700 transition-colors">Consultar processo</Link>
           </nav>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" className="text-nude-700 hover:text-gold-700 hover:bg-gold-50" onClick={() => navigate("/login")} data-testid="nav-login-btn">Entrar</Button>
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-nude-700 hover:text-gold-700 hover:bg-gold-50" onClick={() => navigate("/login")} data-testid="nav-login-btn">Entrar</Button>
             <Button
-              className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white font-medium shadow-sm"
+              size="sm"
+              className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white font-medium shadow-sm text-xs sm:text-sm px-3 sm:px-4"
               onClick={() => navigate("/login")} data-testid="nav-cta-btn">
-              Começar grátis
+              <span className="hidden sm:inline">Começar grátis</span>
+              <span className="sm:hidden">Entrar</span>
             </Button>
           </div>
         </div>
