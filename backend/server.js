@@ -13,7 +13,28 @@ import {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
 } from "@whiskeysockets/baileys";
+
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://kzlxysxvvlupjtrmxqmb.supabase.co";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
+
+async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
+  if (!SUPABASE_ANON_KEY) throw new Error("SUPABASE_ANON_KEY ausente no backend");
+  const b64 = Buffer.from(buffer).toString("base64");
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/transcribe-audio`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ audio_base64: b64, mime_type: mimetype }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`transcribe ${resp.status}: ${JSON.stringify(data)}`);
+  return data.text || data.transcript || "";
+}
 
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
