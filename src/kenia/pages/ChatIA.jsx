@@ -780,7 +780,7 @@ export default function ChatIA() {
                 className="h-12 px-5 bg-gold-600 hover:bg-gold-700 text-white"
                 data-testid="chat-send-btn"
               >
-                <Send className="w-4 h-4 mr-2" /> Enviar
+                <Send className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">Enviar</span>
               </Button>
             </div>
           </div>
