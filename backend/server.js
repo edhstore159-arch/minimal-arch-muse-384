@@ -439,11 +439,19 @@ async function startSock() {
       const text = extractText(m);
       recordAutoReply({ step: "incoming", type, jid, fromMe, hasText: Boolean(text), preview: String(text || "").slice(0, 80) });
       if (jid.endsWith("@g.us") || jid === "status@broadcast") continue;
+      let text = extractText(m);
+      const audioMsg = m?.message?.audioMessage || m?.message?.pttMessage;
+      if (!text && audioMsg && !fromMe) {
+        try {
+          recordAutoReply({ step: "audio_download", jid });
+          const buf = await downloadMediaMessage(m, "buffer", {}, { logger, reuploadRequest: sock.updateMediaMessage });
+          text = await transcribeAudioBuffer(buf, audioMsg.mimetype || "audio/ogg");
+          recordAutoReply({ step: "audio_transcribed", jid, preview: String(text || "").slice(0, 120) });
+        } catch (e) {
+          recordAutoReply({ step: "audio_error", jid, error: e?.message || String(e) });
+        }
+      }
       if (!text) continue;
-      const created_at = m?.messageTimestamp
-        ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
-        : new Date().toISOString();
-      const createdAtMs = new Date(created_at).getTime();
       const name = m?.pushName || jidToPhone(jid);
       const prev = contactsStore.get(jid);
       upsertContact(jid, {
