@@ -571,48 +571,50 @@ export default function ChatIA() {
           data-testid="chat-panel"
         >
           {/* visitor info */}
-          <div className="px-5 py-3 border-b border-nude-200 bg-nude-50/60 flex items-center gap-3 flex-wrap">
-            <Bot className="w-4 h-4 text-gold-600" />
-            <span className="text-sm font-medium text-nude-900">Cliente:</span>
+          <div className="px-3 sm:px-5 py-3 border-b border-nude-200 bg-nude-50/60 flex items-center gap-2 flex-wrap">
+            <Bot className="w-4 h-4 text-gold-600 shrink-0" />
+            <span className="text-sm font-medium text-nude-900 shrink-0">Cliente:</span>
             <Input
               placeholder="Nome (opcional)"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="h-8 w-44 text-xs"
+              className="h-8 flex-1 min-w-[120px] sm:flex-none sm:w-44 text-xs"
               data-testid="visitor-name-input"
             />
             <Input
               placeholder="WhatsApp (opcional)"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="h-8 w-44 text-xs"
+              className="h-8 flex-1 min-w-[120px] sm:flex-none sm:w-44 text-xs"
               data-testid="visitor-phone-input"
             />
-            <span className="text-sm font-medium text-nude-900 ml-auto">Voz:</span>
-            <select
-              value={voice}
-              onChange={(e) => setVoice(e.target.value)}
-              className="h-8 px-2 rounded-md border border-nude-200 bg-white text-xs"
-              data-testid="voice-select"
-            >
-              <option value="nova">Nova (jovem feminina)</option>
-              <option value="shimmer">Shimmer (alegre)</option>
-              <option value="coral">Coral (acolhedora)</option>
-              <option value="fable">Fable (narrativa)</option>
-              <option value="alloy">Alloy (neutra)</option>
-              <option value="onyx">Onyx (grave masculina)</option>
-              <option value="echo">Echo (calma)</option>
-            </select>
-            <Button
-              size="sm"
-              variant={autoplay ? "default" : "outline"}
-              onClick={() => setAutoplay((v) => !v)}
-              className={`h-8 gap-1.5 ${autoplay ? "bg-gold-600 hover:bg-gold-700 text-white" : ""}`}
-              data-testid="autoplay-toggle"
-            >
-              {autoplay ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-              {autoplay ? "Falar resposta" : "Sem áudio"}
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+              <span className="text-sm font-medium text-nude-900 shrink-0">Voz:</span>
+              <select
+                value={voice}
+                onChange={(e) => setVoice(e.target.value)}
+                className="h-8 px-2 rounded-md border border-nude-200 bg-white text-xs flex-1 sm:flex-none min-w-0"
+                data-testid="voice-select"
+              >
+                <option value="nova">Nova (jovem feminina)</option>
+                <option value="shimmer">Shimmer (alegre)</option>
+                <option value="coral">Coral (acolhedora)</option>
+                <option value="fable">Fable (narrativa)</option>
+                <option value="alloy">Alloy (neutra)</option>
+                <option value="onyx">Onyx (grave masculina)</option>
+                <option value="echo">Echo (calma)</option>
+              </select>
+              <Button
+                size="sm"
+                variant={autoplay ? "default" : "outline"}
+                onClick={() => setAutoplay((v) => !v)}
+                className={`h-8 gap-1.5 shrink-0 ${autoplay ? "bg-gold-600 hover:bg-gold-700 text-white" : ""}`}
+                data-testid="autoplay-toggle"
+              >
+                {autoplay ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{autoplay ? "Falar resposta" : "Sem áudio"}</span>
+              </Button>
+            </div>
           </div>
 
           {/* messages */}
