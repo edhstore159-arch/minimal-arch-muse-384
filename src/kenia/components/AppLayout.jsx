@@ -1,10 +1,11 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/kenia/contexts/AuthContext";
 import {
   LayoutDashboard, KanbanSquare, Scale, Wallet, Sparkles,
   BarChart3, LogOut, MessageSquare, Wrench, Radio,
   CalendarDays, Settings as SettingsIcon, Combine,
-  ShieldCheck, Bot,
+  ShieldCheck, Bot, Menu, X,
 } from "lucide-react";
 import { Button } from "@/kenia/components/ui/button";
 import { Avatar, AvatarFallback } from "@/kenia/components/ui/avatar";
@@ -31,6 +32,11 @@ const NAV = [
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Fecha o menu ao trocar de rota (mobile)
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -41,26 +47,45 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background flex" data-testid="app-layout">
-      {/* Sidebar — nude/gold executive */}
+      {/* Overlay mobile */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-nude-900/50 z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar — nude/gold executive (drawer no mobile, fixo no desktop) */}
       <aside
-        className="w-64 bg-card border-r border-nude-200 flex flex-col relative"
+        className={`bg-card border-r border-nude-200 flex flex-col w-64 z-50
+                    fixed inset-y-0 left-0 transform transition-transform duration-300 ease-in-out
+                    ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+                    lg:static lg:translate-x-0 lg:z-auto`}
         data-testid="app-sidebar"
       >
-        <div className="px-6 py-6 border-b border-nude-200">
-          <div className="flex items-center gap-3">
+        <div className="px-6 py-6 border-b border-nude-200 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
             <img
               src={LOGO_IMG}
               alt="Kênia Garcia Advocacia"
-              className="w-11 h-11 rounded-md object-cover shadow-sm shadow-gold-700/20 ring-1 ring-gold-300/40"
+              className="w-11 h-11 rounded-md object-cover shadow-sm shadow-gold-700/20 ring-1 ring-gold-300/40 shrink-0"
               data-testid="sidebar-logo"
             />
-            <div>
-              <div className="font-serif text-xl leading-none text-nude-900 tracking-tight">
+            <div className="min-w-0">
+              <div className="font-serif text-xl leading-none text-nude-900 tracking-tight truncate">
                 Kênia Garcia
               </div>
               <div className="overline mt-1.5 text-gold-600">Advocacia · IA</div>
             </div>
           </div>
+          <button
+            className="lg:hidden text-nude-600 hover:text-nude-900 p-1"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Fechar menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
@@ -119,8 +144,27 @@ export default function AppLayout() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-hidden">
-        <Outlet />
+      <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        {/* Topbar mobile com botão de menu */}
+        <header className="lg:hidden sticky top-0 z-30 h-14 px-3 flex items-center justify-between bg-card border-b border-nude-200">
+          <button
+            className="p-2 -ml-1 rounded-md text-nude-700 hover:bg-nude-100"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Abrir menu"
+            data-testid="mobile-menu-btn"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <img src={LOGO_IMG} alt="" className="w-7 h-7 rounded object-cover ring-1 ring-gold-300/40" />
+            <span className="font-serif text-sm text-nude-900 truncate">Kênia Garcia</span>
+          </div>
+          <div className="w-9" />
+        </header>
+
+        <div className="flex-1 overflow-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
