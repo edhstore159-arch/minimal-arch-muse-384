@@ -528,18 +528,18 @@ export default function ChatIA() {
   const QM = analysis ? QUAL_META[analysis.qualificacao] || QUAL_META.necessita_mais_info : null;
 
   return (
-    <div className="h-screen flex flex-col bg-background" data-testid="chat-ia-page">
+    <div className="min-h-full flex flex-col bg-background" data-testid="chat-ia-page">
       {/* Header */}
-      <div className="px-8 py-5 bg-card border-b border-nude-200 flex items-center justify-between shrink-0">
-        <div>
-          <div className="overline text-gold-600">Análise de Caso · IA Humanizada</div>
-          <h1 className="font-serif text-3xl text-nude-900 mt-1 tracking-tight">
-            Kênia Garcia <span className="text-gold-600 italic">— advogada · atende você direto.</span>
+      <div className="px-4 sm:px-8 py-4 sm:py-5 bg-card border-b border-nude-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3 shrink-0">
+        <div className="min-w-0">
+          <div className="overline text-gold-600 text-[10px] sm:text-xs">Análise de Caso · IA Humanizada</div>
+          <h1 className="font-serif text-xl sm:text-2xl lg:text-3xl text-nude-900 mt-1 tracking-tight leading-tight">
+            Kênia Garcia <span className="text-gold-600 italic block sm:inline">— advogada · atende você direto.</span>
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge
-            className="bg-gold-50 text-gold-700 hover:bg-gold-50 border border-gold-200 gap-1.5 px-3 py-1.5 rounded-full font-medium"
+            className="bg-gold-50 text-gold-700 hover:bg-gold-50 border border-gold-200 gap-1.5 px-2.5 py-1 rounded-full font-medium text-[11px] sm:text-xs"
             data-testid="leg-date-badge"
           >
             <BookOpen className="w-3 h-3" /> Legislação · {legDate || "atualizando..."}
@@ -547,72 +547,74 @@ export default function ChatIA() {
           <Button
             size="sm"
             onClick={() => openScheduler()}
-            className="gap-1.5 bg-gold-600 hover:bg-gold-700 text-white"
+            className="gap-1.5 bg-gold-600 hover:bg-gold-700 text-white text-xs"
             data-testid="open-scheduler-btn"
           >
-            <CalendarPlus className="w-3.5 h-3.5" /> Agendar consulta
+            <CalendarPlus className="w-3.5 h-3.5" /> <span className="hidden xs:inline sm:inline">Agendar consulta</span><span className="xs:hidden sm:hidden">Agendar</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={reset}
-            className="gap-1.5"
+            className="gap-1.5 text-xs"
             data-testid="reset-chat-btn"
           >
-            <RefreshCcw className="w-3.5 h-3.5" /> Nova conversa
+            <RefreshCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Nova conversa</span><span className="sm:hidden">Nova</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-3 sm:gap-4 p-3 sm:p-4 lg:overflow-hidden min-h-0">
         {/* CHAT — center 8 cols */}
         <Card
-          className="col-span-12 lg:col-span-8 flex flex-col overflow-hidden border-nude-200"
+          className="flex-1 min-h-[60vh] lg:min-h-0 lg:col-span-8 flex flex-col overflow-hidden border-nude-200"
           data-testid="chat-panel"
         >
           {/* visitor info */}
-          <div className="px-5 py-3 border-b border-nude-200 bg-nude-50/60 flex items-center gap-3 flex-wrap">
-            <Bot className="w-4 h-4 text-gold-600" />
-            <span className="text-sm font-medium text-nude-900">Cliente:</span>
+          <div className="px-3 sm:px-5 py-3 border-b border-nude-200 bg-nude-50/60 flex items-center gap-2 flex-wrap">
+            <Bot className="w-4 h-4 text-gold-600 shrink-0" />
+            <span className="text-sm font-medium text-nude-900 shrink-0">Cliente:</span>
             <Input
               placeholder="Nome (opcional)"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="h-8 w-44 text-xs"
+              className="h-8 flex-1 min-w-[120px] sm:flex-none sm:w-44 text-xs"
               data-testid="visitor-name-input"
             />
             <Input
               placeholder="WhatsApp (opcional)"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="h-8 w-44 text-xs"
+              className="h-8 flex-1 min-w-[120px] sm:flex-none sm:w-44 text-xs"
               data-testid="visitor-phone-input"
             />
-            <span className="text-sm font-medium text-nude-900 ml-auto">Voz:</span>
-            <select
-              value={voice}
-              onChange={(e) => setVoice(e.target.value)}
-              className="h-8 px-2 rounded-md border border-nude-200 bg-white text-xs"
-              data-testid="voice-select"
-            >
-              <option value="nova">Nova (jovem feminina)</option>
-              <option value="shimmer">Shimmer (alegre)</option>
-              <option value="coral">Coral (acolhedora)</option>
-              <option value="fable">Fable (narrativa)</option>
-              <option value="alloy">Alloy (neutra)</option>
-              <option value="onyx">Onyx (grave masculina)</option>
-              <option value="echo">Echo (calma)</option>
-            </select>
-            <Button
-              size="sm"
-              variant={autoplay ? "default" : "outline"}
-              onClick={() => setAutoplay((v) => !v)}
-              className={`h-8 gap-1.5 ${autoplay ? "bg-gold-600 hover:bg-gold-700 text-white" : ""}`}
-              data-testid="autoplay-toggle"
-            >
-              {autoplay ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-              {autoplay ? "Falar resposta" : "Sem áudio"}
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+              <span className="text-sm font-medium text-nude-900 shrink-0">Voz:</span>
+              <select
+                value={voice}
+                onChange={(e) => setVoice(e.target.value)}
+                className="h-8 px-2 rounded-md border border-nude-200 bg-white text-xs flex-1 sm:flex-none min-w-0"
+                data-testid="voice-select"
+              >
+                <option value="nova">Nova (jovem feminina)</option>
+                <option value="shimmer">Shimmer (alegre)</option>
+                <option value="coral">Coral (acolhedora)</option>
+                <option value="fable">Fable (narrativa)</option>
+                <option value="alloy">Alloy (neutra)</option>
+                <option value="onyx">Onyx (grave masculina)</option>
+                <option value="echo">Echo (calma)</option>
+              </select>
+              <Button
+                size="sm"
+                variant={autoplay ? "default" : "outline"}
+                onClick={() => setAutoplay((v) => !v)}
+                className={`h-8 gap-1.5 shrink-0 ${autoplay ? "bg-gold-600 hover:bg-gold-700 text-white" : ""}`}
+                data-testid="autoplay-toggle"
+              >
+                {autoplay ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{autoplay ? "Falar resposta" : "Sem áudio"}</span>
+              </Button>
+            </div>
           </div>
 
           {/* messages */}
@@ -767,7 +769,7 @@ export default function ChatIA() {
                 onClick={recording ? stopRecording : startRecording}
                 disabled={thinking || transcribing}
                 title={recording ? "Parar gravação" : "Gravar mensagem de áudio"}
-                className={`h-12 px-4 ${recording ? "bg-red-600 hover:bg-red-700" : "bg-nude-200 hover:bg-nude-300 text-nude-800"}`}
+                className={`h-12 px-3 sm:px-4 shrink-0 ${recording ? "bg-red-600 hover:bg-red-700" : "bg-nude-200 hover:bg-nude-300 text-nude-800"}`}
                 data-testid="chat-mic-btn"
               >
                 {transcribing ? <Loader2 className="w-4 h-4 animate-spin" /> : recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -775,10 +777,10 @@ export default function ChatIA() {
               <Button
                 onClick={() => send()}
                 disabled={thinking || transcribing || !input.trim()}
-                className="h-12 px-5 bg-gold-600 hover:bg-gold-700 text-white"
+                className="h-12 px-3 sm:px-5 shrink-0 bg-gold-600 hover:bg-gold-700 text-white"
                 data-testid="chat-send-btn"
               >
-                <Send className="w-4 h-4 mr-2" /> Enviar
+                <Send className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">Enviar</span>
               </Button>
             </div>
           </div>
@@ -786,7 +788,7 @@ export default function ChatIA() {
 
         {/* ANALYSIS SIDE — 4 cols */}
         <Card
-          className="col-span-12 lg:col-span-4 flex flex-col overflow-hidden border-nude-200"
+          className="lg:col-span-4 flex flex-col overflow-hidden border-nude-200"
           data-testid="analysis-panel"
         >
           <div className="px-5 py-3 border-b border-nude-200 bg-nude-50/60">
