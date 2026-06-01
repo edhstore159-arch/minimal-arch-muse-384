@@ -36,6 +36,30 @@ async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
   return data.text || data.transcript || "";
 }
 
+async function callCloudChatAI(userText, history = [], contactName = "Cliente", wantAudio = false) {
+  if (!SUPABASE_ANON_KEY) throw new Error("SUPABASE_ANON_KEY ausente no backend");
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/chat-ai`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      message: userText,
+      history: history.slice(-10),
+      system_prompt: `${AI_SYSTEM_PROMPT}\nNome do contato: ${contactName || "Cliente"}.`,
+      want_audio: wantAudio,
+    }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`chat-ai ${resp.status}: ${JSON.stringify(data)}`);
+  return {
+    reply: data.response || data.reply || "Desculpe, não consegui processar agora.",
+    audioBase64: typeof data.audio_base64 === "string" ? data.audio_base64 : null,
+  };
+}
+
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
 const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
@@ -114,7 +138,7 @@ const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
 const AI_SYSTEM_PROMPT =
   process.env.AI_SYSTEM_PROMPT ||
   [
-    "Você é a Kenia, assistente virtual de atendimento jurídico do escritório de advocacia.",
+    "Você é o(a) assistente virtual do escritório da Dra. Kênia Garcia, não a própria Kênia.",
     "Sua função é realizar o PRIMEIRO ATENDIMENTO automático no WhatsApp em português brasileiro, de forma cordial, profissional, empática e com raciocínio jurídico inicial, sem dizer que é IA.",
     "",
     "FLUXO DE ATENDIMENTO (siga em ordem, uma pergunta por vez):",
@@ -298,6 +322,36 @@ async function sendBotText(jid, reply, meta = {}) {
   throw new Error(lastSendErr || "send_failed");
 }
 
+async function sendBotAudio(jid, reply, audioBase64, meta = {}) {
+  const audioBuffer = Buffer.from(String(audioBase64 || ""), "base64");
+  if (!audioBuffer.length) throw new Error("audio_empty");
+  try { await sock?.presenceSubscribe?.(jid); } catch {}
+  try { await sock?.sendPresenceUpdate?.("recording", jid); } catch {}
+  await new Promise((r) => setTimeout(r, 900));
+  try { await sock?.sendPresenceUpdate?.("paused", jid); } catch {}
+
+  let lastSendErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (!sock || connectionState !== "open") throw new Error(`socket_not_open:${connectionState}`);
+      recordAutoReply({ step: "send_audio_attempt", jid, attempt, source: meta.source || "auto", reply: reply.slice(0, 200) });
+      const providerResult = await Promise.race([
+        sock.sendMessage(jid, { audio: audioBuffer, mimetype: "audio/mpeg", ptt: true }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error(`sendAudio timeout ${AUTO_REPLY_SEND_TIMEOUT_MS}ms`)), AUTO_REPLY_SEND_TIMEOUT_MS)),
+      ]);
+      const out = outboundMessage(`[áudio] ${reply}`, jid, providerResult);
+      upsertContact(jid, { last_message: out.text, last_message_at: out.created_at });
+      appendMessage(jid, { id: out.id, text: out.text, from_me: true, created_at: out.created_at });
+      return { ok: true, out, providerResult, attempt };
+    } catch (e) {
+      lastSendErr = e?.message || String(e);
+      recordAutoReply({ step: "send_audio_error", jid, attempt, source: meta.source || "auto", error: lastSendErr });
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+  }
+  throw new Error(lastSendErr || "send_audio_failed");
+}
+
 async function processAutoReplyQueue() {
   if (processingAutoReplyQueue || !pendingAutoReplies.length || !sock || connectionState !== "open") return;
   processingAutoReplyQueue = true;
@@ -325,8 +379,9 @@ async function processAutoReplyQueue() {
   }
 }
 
-async function autoReply(jid, userText, contactName) {
-  recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasOpenAI: Boolean(OPENAI_API_KEY), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
+async function autoReply(jid, userText, contactName, options = {}) {
+  const wantAudio = Boolean(options.wantAudio);
+  recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), wantAudio, hasOpenAI: Boolean(OPENAI_API_KEY), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
   if (!sock || connectionState !== "open") {
     recordAutoReply({ step: "skip_socket", jid, connectionState });
     return;
@@ -337,8 +392,21 @@ async function autoReply(jid, userText, contactName) {
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
-  recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
-  const result = await callAI(messagesPayload);
+  recordAutoReply({ step: "ai_request", jid, wantAudio, providers: [wantAudio && "cloud-chat-ai", OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
+  let result;
+  let audioBase64 = null;
+  if (wantAudio) {
+    try {
+      const cloud = await callCloudChatAI(userText, history, contactName, true);
+      result = { ok: true, provider: "cloud-chat-ai", model: "chat-ai", reply: cloud.reply };
+      audioBase64 = cloud.audioBase64;
+    } catch (e) {
+      recordAutoReply({ step: "cloud_chat_audio_fail", jid, error: e?.message || String(e) });
+      result = await callAI(messagesPayload);
+    }
+  } else {
+    result = await callAI(messagesPayload);
+  }
   const usedFallback = !result.ok;
   const reply = usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply;
   if (usedFallback) recordAutoReply({ step: "ai_fail_local_fallback", jid, result, reply: reply.slice(0, 200) });
@@ -346,7 +414,9 @@ async function autoReply(jid, userText, contactName) {
   history.push({ role: "assistant", content: reply });
   aiHistory.set(jid, history.slice(-20));
   try {
-    const sent = await sendBotText(jid, reply, { source: usedFallback ? "local_fallback" : result.provider });
+    const sent = wantAudio && audioBase64
+      ? await sendBotAudio(jid, reply, audioBase64, { source: usedFallback ? "local_fallback" : result.provider })
+      : await sendBotText(jid, reply, { source: usedFallback ? "local_fallback" : result.provider });
     recordAutoReply({ step: "sent", jid, attempt: sent.attempt, provider: usedFallback ? "local_fallback" : result.provider, model: result.model || null, reply: reply.slice(0, 200) });
   } catch (e) {
     queueAutoReply(jid, reply, { source: usedFallback ? "local_fallback" : result.provider, reason: e?.message || String(e) });
@@ -451,6 +521,7 @@ async function startSock() {
         }
       }
       if (!text) continue;
+      const receivedAudio = Boolean(audioMsg && !fromMe);
       const created_at = m?.messageTimestamp
         ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
         : new Date().toISOString();
@@ -479,8 +550,8 @@ async function startSock() {
         createdAtMs,
       });
       if (autoDecision.ok) {
-        recordAutoReply({ step: "auto_allowed", jid, type, reason: autoDecision.reason });
-        autoReply(jid, text, name).catch((e) => recordAutoReply({ step: "autoreply_throw", jid, error: e?.message || String(e) }));
+        recordAutoReply({ step: "auto_allowed", jid, type, reason: autoDecision.reason, receivedAudio });
+        autoReply(jid, text, name, { wantAudio: receivedAudio }).catch((e) => recordAutoReply({ step: "autoreply_throw", jid, error: e?.message || String(e) }));
       } else if (!fromMe && whatsappConfig.bot_enabled) {
         recordAutoReply({ step: "auto_skipped", jid, type, reason: autoDecision.reason });
       }
