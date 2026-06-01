@@ -1165,38 +1165,26 @@ export default function WhatsAppSettings() {
                     }
                     setCloning(true);
                     try {
-                      // Chama a ElevenLabs DIRETAMENTE do navegador usando a
-                      // api_key que o admin colou — não depende de backend.
-                      const fd = new FormData();
-                      fd.append("name", voiceCloneName);
-                      fd.append("description", `Voz clonada — ${voiceCloneName}`);
-                      fd.append("files", voiceCloneFile);
-                      const r = await fetch("https://api.elevenlabs.io/v1/voices/add", {
-                        method: "POST",
-                        headers: { "xi-api-key": cfg.elevenlabs_api_key },
-                        body: fd,
-                      });
-                      const data = await r.json().catch(() => ({}));
-                      if (!r.ok || !data?.voice_id) {
-                        const msg = data?.detail?.message || data?.detail || data?.message || `HTTP ${r.status}`;
-                        throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
-                      }
-                      const voiceId = String(data.voice_id);
-                      // Persiste o voice_id na config para uso nas respostas TTS
-                      const cfgPayload = {
-                        ...cfg,
-                        elevenlabs_voice_id: voiceId,
-                        elevenlabs_voice_name: voiceCloneName,
-                      };
+                      // FIX: salva a config ANTES de chamar /clone — o backend
+                      // /elevenlabs/clone lê a api_key do MongoDB, e se o usuario
+                      // só colou a key na UI sem clicar "Salvar" no topo, a key
+                      // ainda não foi persistida e o endpoint rejeita.
+                      const cfgPayload = { ...cfg };
                       delete cfgPayload.owner_id;
                       delete cfgPayload.updated_at;
-                      try { await api.put("/whatsapp/config", cfgPayload); } catch {}
-                      setCfg(cfgPayload);
-                      toast.success(`Voz clonada! voice_id: ${voiceId.slice(0, 14)}...`);
+                      await api.put("/whatsapp/config", cfgPayload);
+
+                      const fd = new FormData();
+                      fd.append("voice_name", voiceCloneName);
+                      fd.append("description", `Voz clonada — ${voiceCloneName}`);
+                      fd.append("audio_file", voiceCloneFile);
+                      const { data } = await api.post("/whatsapp/elevenlabs/clone", fd);
+                      toast.success(`Voz clonada! voice_id: ${data.voice_id.slice(0, 14)}...`);
                       await load();
                       setVoiceCloneFile(null);
                     } catch (e) {
-                      toast.error("Erro ao clonar: " + (e?.message || e), { duration: 7000 });
+                      const detail = e?.response?.data?.detail || e.message;
+                      toast.error("Erro ao clonar: " + detail, { duration: 7000 });
                     } finally {
                       setCloning(false);
                     }
