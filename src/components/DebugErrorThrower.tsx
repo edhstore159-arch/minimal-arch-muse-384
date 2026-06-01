@@ -23,11 +23,13 @@ export const DebugErrorThrower = () => {
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
 
-  useEffect(() => {
-    if (!message) return;
-    console.info("Lovable debug instruction:", message);
+  if (message) {
+    const toThrow = message;
+    // Limpa o state para que o erro só dispare uma vez por instrução
+    // e o app possa recuperar após reload sem re-throw infinito.
     setMessage(null);
-  }, [message]);
+    throw new Error(toThrow);
+  }
 
   return null;
 };
