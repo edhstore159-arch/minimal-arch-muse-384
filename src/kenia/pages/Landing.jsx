@@ -181,12 +181,12 @@ export default function Landing() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how" className="py-24 bg-background">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section id="how" className="py-16 sm:py-20 lg:py-24 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-16 items-center">
             <div>
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-700 mb-3">Como funciona</div>
-              <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight mb-8 text-nude-900">
+              <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight mb-6 sm:mb-8 text-nude-900">
                 Três passos para transformar seu escritório.
               </h2>
               <div className="space-y-6">
