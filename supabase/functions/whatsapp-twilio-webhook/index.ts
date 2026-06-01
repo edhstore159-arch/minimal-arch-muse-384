@@ -13,6 +13,7 @@ const corsHeaders = {
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY")!;
 
@@ -102,8 +103,8 @@ async function uploadAudio(base64: string): Promise<string | null> {
   const r = await fetch(`${SUPABASE_URL}/storage/v1/object/social-media/${filename}`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
       "Content-Type": "audio/mpeg",
       "x-upsert": "false",
     },
