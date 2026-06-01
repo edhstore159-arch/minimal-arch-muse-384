@@ -103,11 +103,10 @@ export default function DebugTool() {
       setInstruction("");
       setAttachments([]);
       loadHistory();
-      window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
+      console.info(message);
     } catch {
-      // still dispatch even if api fails
-      window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
-      toast.error("Erro ao registrar (evento disparado mesmo assim)");
+      console.info(message);
+      toast.error("Erro ao registrar a instrução");
     }
   };
 
