@@ -66,19 +66,19 @@ export default function Landing() {
 
       {/* HERO — split com foto à esquerda */}
       <section className="relative">
-        <div className="grid lg:grid-cols-2 min-h-[640px]">
+        <div className="grid lg:grid-cols-2 lg:min-h-[640px]">
           {/* Lado esquerdo: foto da fachada do escritório */}
-          <div className="relative overflow-hidden bg-nude-900 h-[420px] sm:h-[520px] lg:h-auto lg:min-h-[640px]">
+          <div className="relative overflow-hidden bg-nude-900 h-[320px] sm:h-[440px] lg:h-auto lg:min-h-[640px]">
             <img src={HERO_IMG} alt="Escritório Kênia Garcia Advocacia" className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-nude-900/60 via-transparent to-nude-900/30" />
             <div className="absolute inset-0 bg-gradient-to-t from-nude-900/80 via-transparent to-transparent" />
             {/* Verse overlay */}
-            <div className="absolute bottom-12 left-12 right-12 max-w-md" data-testid="bible-verse">
-              <p className="italic text-nude-50 text-2xl leading-snug font-serif drop-shadow-lg">
+            <div className="absolute bottom-6 sm:bottom-12 left-4 right-4 sm:left-12 sm:right-12 max-w-md" data-testid="bible-verse">
+              <p className="italic text-nude-50 text-lg sm:text-2xl leading-snug font-serif drop-shadow-lg">
                 "Atendimento que une <span className="text-gold-300">presença</span> e <span className="text-gold-200">tecnologia</span>."
               </p>
-              <div className="mt-6 pl-4 border-l-2 border-gold-400/70">
-                <p className="italic text-nude-100/90 text-sm leading-relaxed">
+              <div className="mt-4 sm:mt-6 pl-4 border-l-2 border-gold-400/70">
+                <p className="italic text-nude-100/90 text-xs sm:text-sm leading-relaxed">
                   "Mas recebereis poder, ao descer sobre vós o Espírito Santo, e sereis minhas
                   testemunhas tanto em Jerusalém como em toda a Judeia e Samaria e até aos confins da terra."
                 </p>
@@ -88,7 +88,7 @@ export default function Landing() {
           </div>
 
           {/* Lado direito: hero content */}
-          <div className="relative flex items-center justify-start px-6 lg:px-16 py-20 bg-background">
+          <div className="relative flex items-center justify-start px-4 sm:px-6 lg:px-16 py-12 sm:py-16 lg:py-20 bg-background">
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute -top-20 right-0 w-[420px] h-[420px] rounded-full bg-gold-700/10 blur-3xl" />
             </div>
@@ -97,11 +97,11 @@ export default function Landing() {
                 <Sparkles className="w-3.5 h-3.5" />
                 Atendimento 24h · WhatsApp · Voz
               </div>
-              <h1 className="font-display font-bold text-5xl lg:text-6xl leading-[0.95] tracking-tighter text-nude-900">
+              <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl leading-[0.95] tracking-tighter text-nude-900">
                 Seu escritório, <span className="italic font-medium text-gold-700">guiado</span>
                 <br />pelo <span className="text-gold-800">Espírito Santo</span>.
               </h1>
-              <p className="mt-6 text-base lg:text-lg text-nude-700 leading-relaxed">
+              <p className="mt-5 sm:mt-6 text-base lg:text-lg text-nude-700 leading-relaxed">
                 Captação de clientes, atendimento via WhatsApp (Baileys — QR Code auto-hospedado),
                 CRM, agenda, financeiro e criativos com IA. Seu robô atende — com texto <em>e voz</em> — 24h por dia.
               </p>
