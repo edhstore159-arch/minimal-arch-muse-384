@@ -17,7 +17,7 @@ const BUCKET = "debug-uploads";
 type Uploaded = { name: string; url: string; type: string; size: number };
 
 export const ErrorDebugPopup = () => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [text, setText] = useState("");
   const [files, setFiles] = useState<Uploaded[]>([]);
@@ -35,9 +35,26 @@ export const ErrorDebugPopup = () => {
     const onUp = () => { draggingRef.current = null; };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+
+    // Secret keyword to reopen: digite "voltardebug" em qualquer lugar (fora de inputs)
+    let buffer = "";
+    const TRIGGERS = ["voltardebug", "voutaldebug", "debugon"];
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.key.length !== 1) return;
+      buffer = (buffer + e.key.toLowerCase()).slice(-20);
+      if (TRIGGERS.some((w) => buffer.includes(w))) {
+        buffer = "";
+        setOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("keydown", onKey);
     };
   }, []);
 
@@ -103,17 +120,7 @@ export const ErrorDebugPopup = () => {
     }
   };
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        style={{ position: "fixed", bottom: 16, right: 16, zIndex: 99999 }}
-        className="px-3 py-2 rounded-full bg-black text-white text-xs shadow-lg"
-      >
-        Debug
-      </button>
-    );
-  }
+  if (!open) return null;
 
   return (
     <div
