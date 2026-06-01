@@ -439,15 +439,29 @@ async function startSock() {
       let text = extractText(m);
       recordAutoReply({ step: "incoming", type, jid, fromMe, hasText: Boolean(text), preview: String(text || "").slice(0, 80) });
       if (jid.endsWith("@g.us") || jid === "status@broadcast") continue;
-      const audioMsg = m?.message?.audioMessage || m?.message?.pttMessage;
+      const audioMsg =
+        m?.message?.audioMessage ||
+        m?.message?.pttMessage ||
+        m?.message?.ephemeralMessage?.message?.audioMessage ||
+        m?.message?.ephemeralMessage?.message?.pttMessage ||
+        m?.message?.viewOnceMessage?.message?.audioMessage ||
+        m?.message?.viewOnceMessage?.message?.pttMessage ||
+        m?.message?.viewOnceMessageV2?.message?.audioMessage ||
+        m?.message?.viewOnceMessageV2?.message?.pttMessage;
+      console.log("[audio] audioMsg:", !!audioMsg, "mimetype:", audioMsg?.mimetype, "keys:", m?.message && Object.keys(m.message));
+      recordAutoReply({ step: "audio_detect", jid, has: !!audioMsg, mimetype: audioMsg?.mimetype, msgKeys: m?.message ? Object.keys(m.message) : [] });
       if (!text && audioMsg && !fromMe) {
         try {
-          recordAutoReply({ step: "audio_download", jid });
+          recordAutoReply({ step: "audio_download_start", jid });
           const buf = await downloadMediaMessage(m, "buffer", {}, { logger, reuploadRequest: sock.updateMediaMessage });
+          console.log("[audio] Buffer size:", buf?.length);
+          recordAutoReply({ step: "audio_download_ok", jid, size: buf?.length || 0 });
+          if (!buf || !buf.length) throw new Error("Buffer vazio do downloadMediaMessage");
           text = await transcribeAudioBuffer(buf, audioMsg.mimetype || "audio/ogg");
           recordAutoReply({ step: "audio_transcribed", jid, preview: String(text || "").slice(0, 120) });
         } catch (e) {
-          recordAutoReply({ step: "audio_error", jid, error: e?.message || String(e) });
+          console.error("TRANSCRIPTION ERROR:", e);
+          recordAutoReply({ step: "audio_error", jid, error: e?.stack || e?.message || String(e) });
         }
       }
       if (!text) continue;
