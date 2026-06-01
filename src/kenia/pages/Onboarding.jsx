@@ -107,16 +107,16 @@ export default function Onboarding() {
   const progress = (step / 4) * 100;
 
   return (
-    <div className="min-h-screen bg-nude-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-nude-50 flex items-center justify-center p-3 sm:p-6">
       <div className="w-full max-w-2xl">
-        <div className="flex items-center gap-2.5 mb-6">
-          <div className="w-9 h-9 rounded-md bg-nude-900 grid place-items-center">
+        <div className="flex items-center gap-2.5 mb-4 sm:mb-6">
+          <div className="w-9 h-9 rounded-md bg-nude-900 grid place-items-center shrink-0">
             <Scale className="w-5 h-5 text-white" />
           </div>
-          <div className="font-display font-bold text-xl">Espírito Santo<span className="text-gold-600">.</span></div>
+          <div className="font-display font-bold text-lg sm:text-xl truncate">Espírito Santo<span className="text-gold-600">.</span></div>
         </div>
 
-        <Card className="p-8 border-nude-200 shadow-sm">
+        <Card className="p-4 sm:p-8 border-nude-200 shadow-sm">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2 text-xs text-nude-500">
               <span className="tracking-widest uppercase font-semibold">Passo {step} de 4</span>
