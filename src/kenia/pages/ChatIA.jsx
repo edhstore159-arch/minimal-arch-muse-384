@@ -567,7 +567,7 @@ export default function ChatIA() {
       <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-3 sm:gap-4 p-3 sm:p-4 lg:overflow-hidden min-h-0">
         {/* CHAT — center 8 cols */}
         <Card
-          className="col-span-12 lg:col-span-8 flex flex-col overflow-hidden border-nude-200"
+          className="flex-1 min-h-[60vh] lg:min-h-0 lg:col-span-8 flex flex-col overflow-hidden border-nude-200"
           data-testid="chat-panel"
         >
           {/* visitor info */}
