@@ -227,11 +227,11 @@ export default function Landing() {
       </section>
 
       {/* CONTATO / LEAD CAPTURE */}
-      <section id="contato" className="py-24 bg-[#1a1009]">
-        <div className="max-w-5xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-12 items-center">
+      <section id="contato" className="py-16 sm:py-20 lg:py-24 bg-[#1a1009]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-12 grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div>
             <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-300 mb-3">Vamos conversar</div>
-            <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight mb-4 text-nude-50">
+            <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight mb-4 text-nude-50">
               Receba uma demonstração personalizada.
             </h2>
             <p className="text-nude-200 leading-relaxed">
