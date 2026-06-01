@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
+// Só dispara agendamento automático quando o usuário pede EXPLICITAMENTE
+// para marcar/agendar — palavras genéricas como "consulta", "atendimento"
+// ou "horário" sozinhas NÃO interceptam a conversa (eram a causa do bot
+// repetir agendamento em vez de responder dúvidas sobre documentos etc.).
+const SCHEDULE_REGEX = /\b(agendar|agende|agendamento|marcar|marca[cç][aã]o)\b/i;
 
 // Sala de vídeo pública via Jitsi Meet — funciona sem login/integração e
 // abre direto no navegador do cliente quando ele clica no link enviado.
@@ -68,43 +72,49 @@ const nextBusinessSlot = () => {
 const extractScheduleIntent = (text) => {
   const lower = text.toLowerCase();
   if (!SCHEDULE_REGEX.test(lower)) return null;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let date = null;
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  const hasHoje = /\bhoje\b/.test(lower);
+  const hasAmanha = /amanh[ãa]/.test(lower);
+  const timeMatch = lower.match(/(\d{1,2})(?::|h)(\d{2})?/i);
 
-  if (/\bhoje\b/i.test(lower)) {
+  // Exige um marcador temporal CLARO + horário. Caso contrário, deixa o
+  // chat-ai coletar os dados via fluxo <AGENDAMENTO> do prompt.
+  if (!timeMatch) return null;
+  if (!hasHoje && !hasAmanha && !dateMatch) return null;
+
+  let date;
+  if (/\bdepois de amanh[ãa]\b/.test(lower)) {
+    const t = new Date(today); t.setDate(t.getDate() + 2); date = formatLocalDate(t);
+  } else if (hasAmanha) {
+    const t = new Date(today); t.setDate(t.getDate() + 1); date = formatLocalDate(t);
+  } else if (hasHoje) {
     date = formatLocalDate(today);
-  } else if (/amanh[ãa]/i.test(lower)) {
-    const t = new Date(today);
-    t.setDate(t.getDate() + 1);
-    date = formatLocalDate(t);
-  } else if (/\bdepois de amanh[ãa]\b/i.test(lower)) {
-    const t = new Date(today);
-    t.setDate(t.getDate() + 2);
-    date = formatLocalDate(t);
-  } else if (dateMatch) {
+  } else {
     const day = pad2(dateMatch[1]);
     const month = pad2(dateMatch[2]);
     const rawYear = dateMatch[3] || String(today.getFullYear());
     const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
     date = `${year}-${month}-${day}`;
-  } else {
-    // próximo dia útil às 10h por padrão
-    const t = new Date(today);
-    t.setDate(t.getDate() + 1);
-    if (t.getDay() === 0) t.setDate(t.getDate() + 1);
-    if (t.getDay() === 6) t.setDate(t.getDate() + 2);
-    date = formatLocalDate(t);
   }
 
-  const timeMatch = lower.match(/(\d{1,2})(?::|h)(\d{2})?/i);
-  const time = timeMatch
-    ? `${pad2(timeMatch[1])}:${pad2(timeMatch[2] || "00")}`
-    : "10:00";
-
+  const time = `${pad2(timeMatch[1])}:${pad2(timeMatch[2] || "00")}`;
   return { date, time, duration: 60 };
+};
+
+// Procura bloco <AGENDAMENTO>{...}</AGENDAMENTO> na resposta da IA.
+// Quando completo, cria o agendamento e devolve o texto limpo + dados.
+const SCHEDULE_BLOCK_RE = /<AGENDAMENTO>\s*([\s\S]*?)\s*<\/AGENDAMENTO>/i;
+const parseAiSchedule = (text) => {
+  const m = text?.match(SCHEDULE_BLOCK_RE);
+  if (!m) return { clean: text, data: null };
+  let data = null;
+  try { data = JSON.parse(m[1]); } catch { data = null; }
+  const clean = text.replace(SCHEDULE_BLOCK_RE, "").trim();
+  return { clean, data };
 };
 
 
@@ -476,9 +486,31 @@ export default function ChatIA() {
         { timeout: 90000 }
       );
       setSessionId(data.session_id);
+      const { clean, data: schedData } = parseAiSchedule(data.response || "");
+      let finalContent = clean || data.response;
+
+      // Se a IA fechou o bloco <AGENDAMENTO>, cria a consulta automaticamente
+      if (schedData?.data_agendamento && schedData?.horario_agendamento) {
+        try {
+          const { human, meetUrl, duration } = await createAppointment({
+            date: schedData.data_agendamento,
+            time: schedData.horario_agendamento,
+            duration: 60,
+            area: schedData.area_juridica || analysis?.area || "Atendimento jurídico",
+          });
+          if (schedData.nome && !name) setName(schedData.nome);
+          if (schedData.telefone && !phone) setPhone(schedData.telefone);
+          finalContent = `${finalContent}\n\n✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n🔗 ${meetUrl}`;
+          toast.success("Agendamento criado no painel da Agenda");
+          upsertLead({ stage: "em_negociacao", urgency: "alta", description: schedData.resumo_caso });
+        } catch {
+          toast.error("Não consegui salvar o agendamento — abra o botão Agendar consulta.");
+        }
+      }
+
       const newMsg = {
         role: "assistant",
-        content: data.response,
+        content: finalContent,
         audio_base64: data.audio_base64,
       };
       setMessages((prev) => [...prev, newMsg]);
