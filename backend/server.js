@@ -13,7 +13,28 @@ import {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
 } from "@whiskeysockets/baileys";
+
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://kzlxysxvvlupjtrmxqmb.supabase.co";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
+
+async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
+  if (!SUPABASE_ANON_KEY) throw new Error("SUPABASE_ANON_KEY ausente no backend");
+  const b64 = Buffer.from(buffer).toString("base64");
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/transcribe-audio`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ audio_base64: b64, mime_type: mimetype }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`transcribe ${resp.status}: ${JSON.stringify(data)}`);
+  return data.text || data.transcript || "";
+}
 
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
@@ -415,9 +436,20 @@ async function startSock() {
       const jid = m?.key?.remoteJid;
       if (!jid) continue;
       const fromMe = Boolean(m?.key?.fromMe);
-      const text = extractText(m);
+      let text = extractText(m);
       recordAutoReply({ step: "incoming", type, jid, fromMe, hasText: Boolean(text), preview: String(text || "").slice(0, 80) });
       if (jid.endsWith("@g.us") || jid === "status@broadcast") continue;
+      const audioMsg = m?.message?.audioMessage || m?.message?.pttMessage;
+      if (!text && audioMsg && !fromMe) {
+        try {
+          recordAutoReply({ step: "audio_download", jid });
+          const buf = await downloadMediaMessage(m, "buffer", {}, { logger, reuploadRequest: sock.updateMediaMessage });
+          text = await transcribeAudioBuffer(buf, audioMsg.mimetype || "audio/ogg");
+          recordAutoReply({ step: "audio_transcribed", jid, preview: String(text || "").slice(0, 120) });
+        } catch (e) {
+          recordAutoReply({ step: "audio_error", jid, error: e?.message || String(e) });
+        }
+      }
       if (!text) continue;
       const created_at = m?.messageTimestamp
         ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
