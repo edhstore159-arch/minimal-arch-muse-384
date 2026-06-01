@@ -17,7 +17,7 @@ const BUCKET = "debug-uploads";
 type Uploaded = { name: string; url: string; type: string; size: number };
 
 export const ErrorDebugPopup = () => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [text, setText] = useState("");
   const [files, setFiles] = useState<Uploaded[]>([]);
