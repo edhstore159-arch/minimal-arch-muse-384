@@ -24,9 +24,11 @@ export const DebugErrorThrower = () => {
   }, []);
 
   if (message) {
-    // Apenas registra no console em vez de lançar — evita tela branca.
-    console.warn("[DebugErrorThrower]", message);
+    const toThrow = message;
+    // Limpa o state para que o erro só dispare uma vez por instrução
+    // e o app possa recuperar após reload sem re-throw infinito.
     setMessage(null);
+    throw new Error(toThrow);
   }
 
   return null;
