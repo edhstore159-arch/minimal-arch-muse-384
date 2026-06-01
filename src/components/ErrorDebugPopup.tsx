@@ -91,7 +91,7 @@ export const ErrorDebugPopup = () => {
 
   const fire = () => {
     if (!text.trim() && files.length === 0) return;
-    window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: buildMessage() }));
+    console.info(buildMessage());
     setText("");
     setFiles([]);
   };
