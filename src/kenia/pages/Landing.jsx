@@ -206,7 +206,7 @@ export default function Landing() {
               </div>
 
             </div>
-            <Card className="bg-[#221710] border-gold-900/40 p-8">
+            <Card className="bg-[#221710] border-gold-900/40 p-5 sm:p-8">
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-4">Exemplo — fluxo de voz</div>
               <div className="space-y-4">
                 <div className="p-3 rounded-lg bg-gold-500/10 border border-gold-500/20 text-sm text-gold-100">
