@@ -136,12 +136,12 @@ export default function Landing() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="py-24 bg-[#221710] border-y border-gold-900/30">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="grid lg:grid-cols-12 gap-8 mb-16">
+      <section id="features" className="py-16 sm:py-20 lg:py-24 bg-[#221710] border-y border-gold-900/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
+          <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 mb-12 sm:mb-16">
             <div className="lg:col-span-5">
               <div className="text-xs tracking-[0.2em] uppercase font-semibold text-gold-400 mb-3">Plataforma completa</div>
-              <h2 className="font-display font-bold text-4xl lg:text-5xl tracking-tight leading-tight text-nude-50">
+              <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight text-nude-50">
                 Da captação ao recebimento, tudo conectado.
               </h2>
             </div>
