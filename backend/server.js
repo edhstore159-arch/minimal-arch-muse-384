@@ -36,6 +36,30 @@ async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
   return data.text || data.transcript || "";
 }
 
+async function callCloudChatAI(userText, history = [], contactName = "Cliente", wantAudio = false) {
+  if (!SUPABASE_ANON_KEY) throw new Error("SUPABASE_ANON_KEY ausente no backend");
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/chat-ai`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      message: userText,
+      history: history.slice(-10),
+      system_prompt: `${AI_SYSTEM_PROMPT}\nNome do contato: ${contactName || "Cliente"}.`,
+      want_audio: wantAudio,
+    }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`chat-ai ${resp.status}: ${JSON.stringify(data)}`);
+  return {
+    reply: data.response || data.reply || "Desculpe, não consegui processar agora.",
+    audioBase64: typeof data.audio_base64 === "string" ? data.audio_base64 : null,
+  };
+}
+
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
 const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
@@ -114,7 +138,7 @@ const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
 const AI_SYSTEM_PROMPT =
   process.env.AI_SYSTEM_PROMPT ||
   [
-    "Você é a Kenia, assistente virtual de atendimento jurídico do escritório de advocacia.",
+    "Você é o(a) assistente virtual do escritório da Dra. Kênia Garcia, não a própria Kênia.",
     "Sua função é realizar o PRIMEIRO ATENDIMENTO automático no WhatsApp em português brasileiro, de forma cordial, profissional, empática e com raciocínio jurídico inicial, sem dizer que é IA.",
     "",
     "FLUXO DE ATENDIMENTO (siga em ordem, uma pergunta por vez):",
