@@ -124,11 +124,13 @@ Deno.serve(async (req) => {
     const numMedia = Number(form.get("NumMedia") || "0");
 
     let userText = body;
+    let receivedAudio = false;
 
     if (!userText && numMedia > 0) {
       const mediaUrl = String(form.get("MediaUrl0") || "");
       const mediaType = String(form.get("MediaContentType0") || "audio/ogg");
       if (mediaUrl && mediaType.startsWith("audio")) {
+        receivedAudio = true;
         const { buffer, contentType } = await fetchTwilioMedia(mediaUrl);
         userText = await transcribe(buffer, contentType);
       }
@@ -139,9 +141,10 @@ Deno.serve(async (req) => {
       return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
     }
 
-    const reply = await callChatAI(userText);
+    const { reply, audioBase64 } = await callChatAI(userText, receivedAudio);
+    const audioUrl = receivedAudio && audioBase64 ? await uploadAudio(audioBase64) : null;
     // From e To invertidos para responder
-    await sendTwilioMessage(to, from, reply);
+    await sendTwilioMessage(to, from, reply, audioUrl || undefined);
 
     return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
   } catch (e) {
