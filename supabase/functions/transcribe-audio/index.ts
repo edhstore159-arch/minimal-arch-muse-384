@@ -19,13 +19,13 @@ function pickExtension(mime: string): string {
   return "webm";
 }
 
-async function transcribeWithElevenLabs(bytes: Uint8Array, mime: string): Promise<string> {
+async function transcribeWithElevenLabs(bytes: Uint8Array, mime: string, modelId: string): Promise<string> {
   if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY ausente");
   const ext = pickExtension(mime);
   const blob = new Blob([bytes], { type: mime || "audio/webm" });
   const form = new FormData();
   form.append("file", blob, `audio.${ext}`);
-  form.append("model_id", "scribe_v2");
+  form.append("model_id", modelId);
   form.append("language_code", "por");
   form.append("tag_audio_events", "false");
   form.append("diarize", "false");
@@ -38,7 +38,7 @@ async function transcribeWithElevenLabs(bytes: Uint8Array, mime: string): Promis
 
   if (!resp.ok) {
     const detail = await resp.text();
-    console.error("❌ ElevenLabs STT error", { status: resp.status, detail: detail.slice(0, 300) });
+    console.error("❌ ElevenLabs STT error", { model: modelId, status: resp.status, detail: detail.slice(0, 300) });
     throw new Error(`ElevenLabs STT ${resp.status}: ${detail.slice(0, 200)}`);
   }
 
@@ -103,15 +103,18 @@ Deno.serve(async (req) => {
     let provider = "";
     let lastError: string | null = null;
 
-    // Primary: ElevenLabs Scribe (reliable for short audio in PT-BR)
+    // Primary: ElevenLabs Scribe — tenta scribe_v1 (estável) e cai para scribe_v2 se falhar
     if (ELEVENLABS_API_KEY) {
-      try {
-        const bytes = base64ToBytes(audio_base64);
-        text = await transcribeWithElevenLabs(bytes, mt);
-        provider = "elevenlabs";
-      } catch (err) {
-        lastError = String((err as Error)?.message || err);
-        console.warn("⚠️ ElevenLabs falhou, tentando fallback:", lastError);
+      const bytes = base64ToBytes(audio_base64);
+      for (const model of ["scribe_v1", "scribe_v2"]) {
+        try {
+          text = await transcribeWithElevenLabs(bytes, mt, model);
+          provider = `elevenlabs:${model}`;
+          if (text) break;
+        } catch (err) {
+          lastError = String((err as Error)?.message || err);
+          console.warn(`⚠️ ElevenLabs ${model} falhou:`, lastError);
+        }
       }
     }
 
