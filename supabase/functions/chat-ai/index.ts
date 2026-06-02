@@ -77,6 +77,37 @@ Se o cliente disser que já tem advogado, agradeça e encerre cordialmente.
 
 NUNCA invente datas. Use o CONTEXTO TEMPORAL abaixo para calcular "hoje", "amanhã", "próxima sexta" etc.`;
 
+function stripAppointmentBlock(text: string): string {
+  return String(text || "")
+    .replace(/<AGENDAMENTO>[\s\S]*?<\/AGENDAMENTO>/g, "")
+    .trim();
+}
+
+function parseAppointmentBlock(text: string) {
+  const match = String(text || "").match(/<AGENDAMENTO>([\s\S]*?)<\/AGENDAMENTO>/);
+  if (!match) return null;
+  try {
+    const payload = JSON.parse(match[1].trim());
+    const date = String(payload.data_agendamento || "").trim();
+    const time = String(payload.horario_agendamento || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null;
+    return {
+      client_name: String(payload.nome || "Cliente do chat").trim() || "Cliente do chat",
+      phone: String(payload.telefone || "").trim() || null,
+      email: String(payload.email || "").trim() || null,
+      city: String(payload.cidade || "").trim() || null,
+      legal_area: String(payload.area_juridica || "Atendimento jurídico").trim() || "Atendimento jurídico",
+      case_summary: String(payload.resumo_caso || "").trim() || null,
+      appointment_date: date,
+      appointment_time: time,
+      raw_payload: payload,
+    };
+  } catch (err) {
+    console.error("Bloco AGENDAMENTO inválido:", err);
+    return null;
+  }
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -155,13 +186,15 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     }
 
     const data = await aiResp.json();
-    const reply: string = data?.choices?.[0]?.message?.content ?? "";
+    const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
+    const appointment = parseAppointmentBlock(rawReply);
+    const reply = stripAppointmentBlock(rawReply);
 
     // Gera áudio (TTS ElevenLabs) se o cliente pediu
     const wantAudio = body.want_audio !== false; // default true
     const audio_base64 = wantAudio ? await synthesizeSpeech(reply) : null;
 
-    // Salva conversa no banco (não bloqueia resposta se falhar)
+    // Salva conversa e agendamento no banco (não bloqueia resposta se falhar)
     try {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       await supabase.from("conversations").insert({
@@ -170,13 +203,23 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
         message: userMessage,
         response: reply,
       });
+      if (appointment) {
+        await supabase.from("appointments").insert({
+          user_id: userId,
+          session_id: sessionId,
+          ...appointment,
+          source: "chat_ai",
+          status: "scheduled",
+        });
+      }
     } catch (err) {
-      console.error("Erro ao salvar conversa:", err);
+      console.error("Erro ao salvar conversa/agendamento:", err);
     }
 
     return new Response(
       JSON.stringify({
         response: reply,
+        appointment,
         audio_base64,
         analysis: { acertividade: 90, qualificacao: "ok" },
         server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
