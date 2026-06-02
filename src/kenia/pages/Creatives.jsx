@@ -40,7 +40,11 @@ export default function Creatives() {
     setGenerating(true);
     try {
       const { data } = await api.post("/creatives/generate", form);
-      toast.success("Criativo gerado!");
+      if (data?.image_b64) {
+        toast.success("Criativo gerado!");
+      } else {
+        toast.error(`Imagem não gerada${data?.error ? `: ${String(data.error).slice(0, 120)}` : ""}`);
+      }
       setPreview(data);
       setOpen(false);
       setForm({ title: "", network: "instagram", format: "post", topic: "", tone: "profissional", case_type: "" });
