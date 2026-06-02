@@ -534,20 +534,22 @@ export default function Creatives() {
               <div className="flex flex-wrap gap-2 mt-1.5">
                 {PLATFORMS.map((p) => {
                   const active = scheduleForm.platforms.includes(p.id);
+                  const connected = Boolean(accountFor(p.id)?.is_connected);
                   return (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => togglePlatform(p.id)}
                       className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${active ? "bg-nude-900 text-white border-nude-900" : "bg-white text-nude-700 border-nude-300 hover:bg-nude-50"}`}
+                      title={connected ? "Conta conectada" : "Ainda não conectada"}
                     >
-                      {p.label}
+                      {p.label}{connected ? " ✓" : ""}
                     </button>
                   );
                 })}
               </div>
               <p className="text-[11px] text-nude-500 mt-2">
-                Para publicar automaticamente é preciso conectar cada rede (Meta, LinkedIn, TikTok, YouTube, X). Enquanto não estiverem conectadas, o post fica na fila e fica visível aqui.
+                Redes com ✓ já estão conectadas. As demais ficam salvas na fila até a conta oficial ser conectada.
               </p>
             </div>
           </div>
