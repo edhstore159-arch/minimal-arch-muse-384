@@ -18,10 +18,20 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
+// Gera link de videoconferência (Jitsi — funciona como Google Meet, sem necessidade de login)
+// Pode ser substituído por integração oficial com Google Calendar API no futuro.
 const getMeetLink = () => {
   const room = `KeniaGarcia-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   return `https://meet.jit.si/${room}`;
 };
+
+// Monta link wa.me para enviar o agendamento ao cliente via WhatsApp
+const buildWhatsAppShare = (phone, text) => {
+  const digits = String(phone || "").replace(/\D/g, "");
+  const base = digits ? `https://wa.me/${digits}` : `https://wa.me/`;
+  return `${base}?text=${encodeURIComponent(text)}`;
+};
+
 
 const renderMessageContent = (text) => {
   const parts = String(text).split(/(https?:\/\/[^\s)]+)/g);
@@ -191,6 +201,64 @@ export default function ChatIA() {
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const typingTimerRef = useRef(null);
+
+  // Simula digitação humana: insere a mensagem do assistente caractere por caractere,
+  // com pequenas pausas naturais em pontuação. Resolve quando termina.
+  const typeAssistantMessage = (fullText, audioB64 = null) =>
+    new Promise((resolve) => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      const text = String(fullText || "");
+      // velocidade alvo ~ 35-55 chars/s (humano), com leve variação
+      const baseDelay = 22; // ms por caractere base
+      let idx = 0;
+
+      // adiciona placeholder vazio
+      setMessages((prev) => [...prev, { role: "assistant", content: "", audio_base64: null, typing: true }]);
+
+      const step = () => {
+        idx += 1;
+        const partial = text.slice(0, idx);
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last && last.role === "assistant") {
+            copy[copy.length - 1] = { ...last, content: partial };
+          }
+          return copy;
+        });
+
+        if (idx >= text.length) {
+          // finaliza, anexa áudio
+          setMessages((prev) => {
+            const copy = [...prev];
+            const last = copy[copy.length - 1];
+            if (last && last.role === "assistant") {
+              copy[copy.length - 1] = { ...last, content: text, audio_base64: audioB64, typing: false };
+            }
+            return copy;
+          });
+          typingTimerRef.current = null;
+          resolve();
+          return;
+        }
+
+        const ch = text[idx - 1];
+        let delay = baseDelay + Math.random() * 30;
+        if (/[\.!\?]/.test(ch)) delay += 350; // pausa em final de frase
+        else if (/[,;:]/.test(ch)) delay += 160; // pausa em vírgula
+        else if (ch === "\n") delay += 250;
+        typingTimerRef.current = setTimeout(step, delay);
+      };
+
+      // pequeno atraso inicial pra parecer que "está pensando + digitando"
+      typingTimerRef.current = setTimeout(step, 400);
+    });
+
+  useEffect(() => () => {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+  }, []);
+
 
   const startRecording = async () => {
     try {
@@ -426,6 +494,21 @@ export default function ChatIA() {
     return { human, meetUrl, duration: Number(duration) || 60 };
   };
 
+  const buildAppointmentMessage = ({ human, meetUrl, duration }) => {
+    const clientFirst = (name || "").trim().split(/\s+/)[0];
+    const greeting = clientFirst ? `${clientFirst}, sua` : "Sua";
+    const shareLink = buildWhatsAppShare(
+      phone,
+      `Olá! Sua consulta com a Dra. Kênia Garcia está confirmada para ${human} (${duration} min).\nLink da videochamada: ${meetUrl}`
+    );
+    return (
+      `✅ ${greeting} consulta está agendada para ${human} (${duration} min) por videoconferência.\n\n` +
+      `🔗 Link da sala: ${meetUrl}\n\n` +
+      `📲 Enviar o link para o cliente no WhatsApp:\n${shareLink}\n\n` +
+      `O agendamento já aparece no painel da Agenda${phone ? " e o link acima abre o WhatsApp do cliente pronto pra enviar." : "."}`
+    );
+  };
+
   const confirmSchedule = async () => {
     if (!scheduler?.date || !scheduler?.time) {
       toast.error("Escolha data e horário");
@@ -433,18 +516,11 @@ export default function ChatIA() {
     }
     setScheduling(true);
     try {
-      const { human, meetUrl, duration } = await createAppointment(scheduler);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp será notificado.` : "."}`,
-          audio_base64: null,
-        },
-      ]);
+      const result = await createAppointment(scheduler);
       toast.success("Agendamento confirmado");
       upsertLead({ stage: "em_negociacao", urgency: "alta" });
       setScheduler(null);
+      await typeAssistantMessage(buildAppointmentMessage(result));
     } catch (err) {
       console.error("Erro ao criar agendamento:", err);
       toast.error("Não consegui agendar. Tente novamente.");
@@ -452,6 +528,7 @@ export default function ChatIA() {
       setScheduling(false);
     }
   };
+
 
   useEffect(() => {
     api
@@ -534,35 +611,23 @@ export default function ChatIA() {
     const scheduleIntent = extractScheduleIntent(msg);
     if (scheduleIntent) {
       try {
-        const { human, meetUrl, duration } = await createAppointment({
+        const result = await createAppointment({
           ...scheduleIntent,
           area: analysis?.area || "Atendimento jurídico",
         });
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: `✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp será notificado.` : "."}`,
-            audio_base64: null,
-          },
-        ]);
         toast.success("Agendamento criado no painel da Agenda");
         upsertLead({ stage: "em_negociacao", urgency: "alta" });
         setScheduler(null);
+        setThinking(false);
+        await typeAssistantMessage(buildAppointmentMessage(result));
       } catch (err) {
         console.error("Erro ao agendar automaticamente:", err);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "Não consegui salvar automaticamente agora. Abra o botão Agendar consulta e confirme o horário manualmente.",
-            audio_base64: null,
-          },
-        ]);
+        setThinking(false);
+        await typeAssistantMessage(
+          "Não consegui salvar automaticamente agora. Abra o botão Agendar consulta e confirme o horário manualmente."
+        );
         openScheduler(analysis?.area || "Atendimento jurídico");
         toast.error("Não consegui criar o agendamento automaticamente");
-      } finally {
-        setThinking(false);
       }
       return;
     }
@@ -582,34 +647,26 @@ export default function ChatIA() {
         { timeout: 90000 }
       );
       setSessionId(data.session_id);
-      const newMsg = {
-        role: "assistant",
-        content: data.response,
-        audio_base64: data.audio_base64,
-      };
-      setMessages((prev) => [...prev, newMsg]);
       if (data.appointment) {
         toast.success("Consulta salva automaticamente na Agenda");
       }
       if (data.analysis) setAnalysis(data.analysis);
       upsertLead({ description: msg });
+      setThinking(false);
+      await typeAssistantMessage(data.response, data.audio_base64 || null);
       if (autoplay && data.audio_base64) {
-        setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 250);
+        setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 200);
       }
     } catch (err) {
       console.error("Erro ao conversar com a IA:", err);
       toast.error("Erro ao conversar com a IA. Tente novamente.");
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Desculpe, tive uma instabilidade aqui. Pode repetir sua mensagem? 🙏",
-        },
-      ]);
+      setThinking(false);
+      await typeAssistantMessage("Desculpe, tive uma instabilidade aqui. Pode repetir sua mensagem? 🙏");
     } finally {
       setThinking(false);
     }
   };
+
 
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
