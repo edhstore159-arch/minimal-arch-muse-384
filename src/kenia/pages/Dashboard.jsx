@@ -417,7 +417,7 @@ export default function Dashboard() {
         </Card>
 
         {/* RIGHT - Client Data */}
-        <Card className="col-span-3 flex flex-col overflow-hidden border-nude-200" data-testid="client-panel">
+        <Card className="hidden lg:flex lg:col-span-3 flex-col overflow-hidden border-nude-200" data-testid="client-panel">
           <div className="p-4 border-b border-nude-200">
             <h2 className="font-display font-semibold text-sm">Dados do Cliente</h2>
           </div>
