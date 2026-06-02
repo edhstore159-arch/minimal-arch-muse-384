@@ -466,6 +466,8 @@ export default function ChatIA() {
   const openScheduler = (area) => {
     const slot = nextBusinessSlot();
     setScheduler({ date: slot.date, time: slot.time, duration: 60, area: area || analysis?.area || "" });
+    // No mobile, garante que o painel do chat (onde o scheduler é renderizado) fique visível
+    setShowAnalysisPanel(false);
   };
 
   const createAppointment = async ({ date, time, duration = 60, area = "" }) => {
