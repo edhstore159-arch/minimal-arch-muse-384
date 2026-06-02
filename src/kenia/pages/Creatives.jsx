@@ -291,9 +291,9 @@ export default function Creatives() {
                   <Select value={form.network} onValueChange={v => setForm({ ...form, network: v })}>
                     <SelectTrigger data-testid="creative-network"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="facebook">Facebook</SelectItem>
-                      <SelectItem value="linkedin">LinkedIn</SelectItem>
+                      {PLATFORMS.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -371,6 +371,52 @@ export default function Creatives() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
+        <Card className="mb-5 border-nude-200 bg-white p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="text-xs tracking-widest uppercase text-gold-600 font-semibold flex items-center gap-1.5">
+                <Link2 className="w-3 h-3" /> Contas para publicação automática
+              </div>
+              <div className="text-sm text-nude-500 mt-1">
+                {connectedCount > 0
+                  ? `${connectedCount} rede${connectedCount > 1 ? "s" : ""} conectada${connectedCount > 1 ? "s" : ""} para a fila de posts.`
+                  : "Conecte as redes antes de agendar posts automáticos."}
+              </div>
+            </div>
+            <Badge variant="outline" className="w-fit gap-1 border-nude-200 text-nude-700">
+              {connectedCount > 0 ? <CheckCircle2 className="w-3 h-3 text-gold-600" /> : <AlertCircle className="w-3 h-3 text-amber-600" />}
+              {connectedCount > 0 ? "Automação preparada" : "Aguardando conexão"}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+            {PLATFORMS.map((platform) => {
+              const account = accountFor(platform.id);
+              const connected = Boolean(account?.is_connected);
+              return (
+                <div key={platform.id} className="rounded-md border border-nude-200 bg-nude-50 p-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-nude-900">
+                    <NetIcon network={platform.id} className="w-4 h-4 text-gold-600" />
+                    <span className="truncate">{platform.label}</span>
+                  </div>
+                  <div className="text-[11px] text-nude-500 mt-1 truncate">
+                    {connected ? account.account_handle : "Não conectada"}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={connected ? "outline" : "default"}
+                    className={connected ? "mt-2 h-8 w-full text-xs" : "mt-2 h-8 w-full text-xs bg-nude-900 hover:bg-nude-800"}
+                    onClick={() => connected ? disconnectSocialAccount(account) : connectSocialAccount(platform)}
+                    data-testid={`social-${connected ? "disconnect" : "connect"}-${platform.id}`}
+                  >
+                    {connected ? <><Unplug className="w-3 h-3 mr-1" /> Desconectar</> : <><Link2 className="w-3 h-3 mr-1" /> Conectar</>}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
         {items.length === 0 ? (
           <Card className="p-12 border-dashed border-nude-300 text-center">
             <div className="w-12 h-12 rounded-md bg-gold-100 grid place-items-center mx-auto mb-4">
@@ -378,7 +424,7 @@ export default function Creatives() {
             </div>
             <div className="font-display font-semibold text-lg mb-1">Nenhum criativo ainda</div>
             <div className="text-sm text-nude-500 mb-4 max-w-sm mx-auto">
-              Gere posts profissionais para Instagram, Facebook e LinkedIn em segundos com IA.
+              Gere posts profissionais para Instagram, Facebook, LinkedIn, TikTok, YouTube, X, Pinterest e WhatsApp em segundos com IA.
             </div>
             <Button onClick={() => setOpen(true)} className="bg-nude-900 hover:bg-nude-800">
               <Wand2 className="w-4 h-4 mr-2" /> Criar primeiro post
