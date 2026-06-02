@@ -9,18 +9,18 @@ import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/kenia/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kenia/components/ui/select";
-import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2, Upload, X as XIcon, CalendarClock } from "lucide-react";
+import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2, Upload, X as XIcon, CalendarClock, Youtube, MessageCircle, Link2, Unplug, CheckCircle2, AlertCircle, Music2 } from "lucide-react";
 import { toast } from "sonner";
 
 const PLATFORMS = [
-  { id: "instagram", label: "Instagram" },
-  { id: "facebook", label: "Facebook" },
-  { id: "linkedin", label: "LinkedIn" },
-  { id: "tiktok", label: "TikTok" },
-  { id: "youtube", label: "YouTube" },
-  { id: "x", label: "X (Twitter)" },
-  { id: "pinterest", label: "Pinterest" },
-  { id: "whatsapp", label: "WhatsApp" },
+  { id: "instagram", label: "Instagram", handle: "@instagram" },
+  { id: "facebook", label: "Facebook", handle: "Página Facebook" },
+  { id: "linkedin", label: "LinkedIn", handle: "Perfil LinkedIn" },
+  { id: "tiktok", label: "TikTok", handle: "@tiktok" },
+  { id: "youtube", label: "YouTube", handle: "Canal YouTube" },
+  { id: "x", label: "X (Twitter)", handle: "@x" },
+  { id: "pinterest", label: "Pinterest", handle: "Pinterest" },
+  { id: "whatsapp", label: "WhatsApp", handle: "WhatsApp Business" },
 ];
 
 
@@ -43,6 +43,7 @@ export default function Creatives() {
     scheduled_for: "",
     platforms: ["instagram"],
   });
+  const [socialAccounts, setSocialAccounts] = useState([]);
 
   const onPickImage = (e) => {
     const file = e.target.files?.[0];
@@ -57,7 +58,7 @@ export default function Creatives() {
   };
 
 
-  useEffect(() => { load(); loadScheduled(); }, []);
+  useEffect(() => { load(); loadScheduled(); loadSocialAccounts(); }, []);
   const load = async () => {
     try {
       const { data } = await api.get("/creatives");
@@ -79,6 +80,62 @@ export default function Creatives() {
       setScheduled(data || []);
     } catch {
       setScheduled([]);
+    }
+  };
+
+  const loadSocialAccounts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("social_accounts")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setSocialAccounts(data || []);
+    } catch {
+      setSocialAccounts([]);
+    }
+  };
+
+  const accountFor = (platform) => socialAccounts.find((a) => a.platform === platform);
+
+  const connectSocialAccount = async (platform) => {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        toast.error("Faça login para conectar contas sociais");
+        return;
+      }
+      const existing = accountFor(platform.id);
+      const payload = {
+        user_id: userId,
+        platform: platform.id,
+        account_name: platform.label,
+        account_handle: platform.handle,
+        is_connected: true,
+      };
+      const result = existing
+        ? await supabase.from("social_accounts").update(payload).eq("id", existing.id)
+        : await supabase.from("social_accounts").insert(payload);
+      if (result.error) throw result.error;
+      toast.success(`${platform.label} conectado para agendamentos`);
+      loadSocialAccounts();
+    } catch (e) {
+      toast.error(`Não foi possível conectar: ${e.message || e}`);
+    }
+  };
+
+  const disconnectSocialAccount = async (account) => {
+    try {
+      const { error } = await supabase
+        .from("social_accounts")
+        .update({ is_connected: false })
+        .eq("id", account.id);
+      if (error) throw error;
+      toast.success("Conta desconectada da fila automática");
+      loadSocialAccounts();
+    } catch (e) {
+      toast.error(`Não foi possível desconectar: ${e.message || e}`);
     }
   };
 
@@ -197,8 +254,15 @@ export default function Creatives() {
   const NetIcon = ({ network, className }) => {
     if (network === "instagram") return <Instagram className={className} />;
     if (network === "facebook") return <Facebook className={className} />;
-    return <Linkedin className={className} />;
+    if (network === "linkedin") return <Linkedin className={className} />;
+    if (network === "tiktok") return <Music2 className={className} />;
+    if (network === "youtube") return <Youtube className={className} />;
+    if (network === "whatsapp") return <MessageCircle className={className} />;
+    if (network === "x") return <XIcon className={className} />;
+    return <Sparkles className={className} />;
   };
+
+  const connectedCount = socialAccounts.filter((a) => a.is_connected).length;
 
   return (
     <div className="h-screen flex flex-col bg-nude-50 overflow-hidden">
