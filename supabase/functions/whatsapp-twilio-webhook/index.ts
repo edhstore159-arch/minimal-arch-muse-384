@@ -13,8 +13,10 @@ const corsHeaders = {
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY")!;
+const AUDIO_BUCKET = "debug-uploads"; // bucket público
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -73,7 +75,7 @@ async function transcribe(buffer: ArrayBuffer, mime: string): Promise<string> {
   return d.text || d.transcript || "";
 }
 
-async function callChatAI(userText: string, sessionId: string): Promise<string> {
+async function callChatAI(userText: string, sessionId: string, wantAudio: boolean): Promise<{ reply: string; audio_base64: string | null }> {
   const r = await fetch(`${SUPABASE_URL}/functions/v1/chat-ai`, {
     method: "POST",
     headers: {
@@ -81,14 +83,46 @@ async function callChatAI(userText: string, sessionId: string): Promise<string> 
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       apikey: SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ message: userText, want_audio: false, session_id: sessionId }),
+    body: JSON.stringify({ message: userText, want_audio: wantAudio, session_id: sessionId }),
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`chat-ai ${r.status}: ${JSON.stringify(d)}`);
-  return d.response || d.reply || "Desculpe, não consegui processar agora.";
+  return {
+    reply: d.response || d.reply || "Desculpe, não consegui processar agora.",
+    audio_base64: d.audio_base64 || null,
+  };
 }
 
-async function sendTwilioMessage(from: string, to: string, body: string) {
+async function uploadAudioPublic(audioB64: string): Promise<string | null> {
+  try {
+    const bin = atob(audioB64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const path = `wa-tts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp3`;
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${AUDIO_BUCKET}/${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        "Content-Type": "audio/mpeg",
+        "x-upsert": "true",
+      },
+      body: bytes,
+    });
+    if (!r.ok) {
+      console.error("[whatsapp] upload áudio falhou", r.status, await r.text());
+      return null;
+    }
+    return `${SUPABASE_URL}/storage/v1/object/public/${AUDIO_BUCKET}/${path}`;
+  } catch (e) {
+    console.error("[whatsapp] upload exceção", e);
+    return null;
+  }
+}
+
+async function sendTwilioMessage(from: string, to: string, body: string, mediaUrl?: string | null) {
+  const params: Record<string, string> = { From: from, To: to, Body: body };
+  if (mediaUrl) params.MediaUrl = mediaUrl;
   const r = await fetch(`${GATEWAY_URL}/Messages.json`, {
     method: "POST",
     headers: {
@@ -96,7 +130,7 @@ async function sendTwilioMessage(from: string, to: string, body: string) {
       "X-Connection-Api-Key": TWILIO_API_KEY,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams({ From: from, To: to, Body: body }),
+    body: new URLSearchParams(params),
   });
   if (!r.ok) {
     const t = await r.text();
@@ -124,6 +158,7 @@ Deno.serve(async (req) => {
 
     let userText = body;
     let audioFailed = false;
+    let inboundWasAudio = false;
 
     // Processa áudio sempre que houver mídia de áudio (mesmo se também vier Body)
     if (numMedia > 0) {
@@ -132,6 +167,7 @@ Deno.serve(async (req) => {
       const mediaType = mediaTypeRaw.split(";")[0].trim().toLowerCase();
       const isAudio = mediaType.startsWith("audio") || mediaType.includes("ogg") || mediaType.includes("opus");
       if (mediaUrl && isAudio) {
+        inboundWasAudio = true;
         try {
           console.log("[whatsapp] baixando áudio", { mediaUrl, mediaType });
           const { buffer, contentType } = await fetchTwilioMedia(mediaUrl);
@@ -169,10 +205,15 @@ Deno.serve(async (req) => {
       return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
     }
 
-    const reply = await callChatAI(userText, from.replace(/[^\d+]/g, ""));
+    const { reply, audio_base64 } = await callChatAI(userText, from.replace(/[^\d+]/g, ""), inboundWasAudio);
     await sleep(1000 + Math.floor(Math.random() * 2000));
+    let mediaUrl: string | null = null;
+    if (inboundWasAudio && audio_base64) {
+      mediaUrl = await uploadAudioPublic(audio_base64);
+      console.log("[whatsapp] resposta em áudio", { hasUrl: !!mediaUrl });
+    }
     // From e To invertidos para responder
-    await sendTwilioMessage(to, from, reply);
+    await sendTwilioMessage(to, from, reply, mediaUrl);
 
     return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
   } catch (e) {
