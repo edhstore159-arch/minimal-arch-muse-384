@@ -9,18 +9,18 @@ import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/kenia/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kenia/components/ui/select";
-import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2, Upload, X as XIcon, CalendarClock, Youtube, MessageCircle, Link2, Unplug, CheckCircle2, AlertCircle, Music2 } from "lucide-react";
+import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2, Upload, X as XIcon, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 
 const PLATFORMS = [
-  { id: "instagram", label: "Instagram", handle: "@instagram" },
-  { id: "facebook", label: "Facebook", handle: "Página Facebook" },
-  { id: "linkedin", label: "LinkedIn", handle: "Perfil LinkedIn" },
-  { id: "tiktok", label: "TikTok", handle: "@tiktok" },
-  { id: "youtube", label: "YouTube", handle: "Canal YouTube" },
-  { id: "x", label: "X (Twitter)", handle: "@x" },
-  { id: "pinterest", label: "Pinterest", handle: "Pinterest" },
-  { id: "whatsapp", label: "WhatsApp", handle: "WhatsApp Business" },
+  { id: "instagram", label: "Instagram" },
+  { id: "facebook", label: "Facebook" },
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "YouTube" },
+  { id: "x", label: "X (Twitter)" },
+  { id: "pinterest", label: "Pinterest" },
+  { id: "whatsapp", label: "WhatsApp" },
 ];
 
 
@@ -43,7 +43,6 @@ export default function Creatives() {
     scheduled_for: "",
     platforms: ["instagram"],
   });
-  const [socialAccounts, setSocialAccounts] = useState([]);
 
   const onPickImage = (e) => {
     const file = e.target.files?.[0];
@@ -58,7 +57,7 @@ export default function Creatives() {
   };
 
 
-  useEffect(() => { load(); loadScheduled(); loadSocialAccounts(); }, []);
+  useEffect(() => { load(); loadScheduled(); }, []);
   const load = async () => {
     try {
       const { data } = await api.get("/creatives");
@@ -80,62 +79,6 @@ export default function Creatives() {
       setScheduled(data || []);
     } catch {
       setScheduled([]);
-    }
-  };
-
-  const loadSocialAccounts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("social_accounts")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setSocialAccounts(data || []);
-    } catch {
-      setSocialAccounts([]);
-    }
-  };
-
-  const accountFor = (platform) => socialAccounts.find((a) => a.platform === platform);
-
-  const connectSocialAccount = async (platform) => {
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id;
-      if (!userId) {
-        toast.error("Faça login para conectar contas sociais");
-        return;
-      }
-      const existing = accountFor(platform.id);
-      const payload = {
-        user_id: userId,
-        platform: platform.id,
-        account_name: platform.label,
-        account_handle: platform.handle,
-        is_connected: true,
-      };
-      const result = existing
-        ? await supabase.from("social_accounts").update(payload).eq("id", existing.id)
-        : await supabase.from("social_accounts").insert(payload);
-      if (result.error) throw result.error;
-      toast.success(`${platform.label} conectado para agendamentos`);
-      loadSocialAccounts();
-    } catch (e) {
-      toast.error(`Não foi possível conectar: ${e.message || e}`);
-    }
-  };
-
-  const disconnectSocialAccount = async (account) => {
-    try {
-      const { error } = await supabase
-        .from("social_accounts")
-        .update({ is_connected: false })
-        .eq("id", account.id);
-      if (error) throw error;
-      toast.success("Conta desconectada da fila automática");
-      loadSocialAccounts();
-    } catch (e) {
-      toast.error(`Não foi possível desconectar: ${e.message || e}`);
     }
   };
 
@@ -254,15 +197,8 @@ export default function Creatives() {
   const NetIcon = ({ network, className }) => {
     if (network === "instagram") return <Instagram className={className} />;
     if (network === "facebook") return <Facebook className={className} />;
-    if (network === "linkedin") return <Linkedin className={className} />;
-    if (network === "tiktok") return <Music2 className={className} />;
-    if (network === "youtube") return <Youtube className={className} />;
-    if (network === "whatsapp") return <MessageCircle className={className} />;
-    if (network === "x") return <XIcon className={className} />;
-    return <Sparkles className={className} />;
+    return <Linkedin className={className} />;
   };
-
-  const connectedCount = socialAccounts.filter((a) => a.is_connected).length;
 
   return (
     <div className="h-screen flex flex-col bg-nude-50 overflow-hidden">
@@ -291,9 +227,9 @@ export default function Creatives() {
                   <Select value={form.network} onValueChange={v => setForm({ ...form, network: v })}>
                     <SelectTrigger data-testid="creative-network"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {PLATFORMS.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-                      ))}
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="linkedin">LinkedIn</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -371,52 +307,6 @@ export default function Creatives() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        <Card className="mb-5 border-nude-200 bg-white p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-xs tracking-widest uppercase text-gold-600 font-semibold flex items-center gap-1.5">
-                <Link2 className="w-3 h-3" /> Contas para publicação automática
-              </div>
-              <div className="text-sm text-nude-500 mt-1">
-                {connectedCount > 0
-                  ? `${connectedCount} rede${connectedCount > 1 ? "s" : ""} conectada${connectedCount > 1 ? "s" : ""} para a fila de posts.`
-                  : "Conecte as redes antes de agendar posts automáticos."}
-              </div>
-            </div>
-            <Badge variant="outline" className="w-fit gap-1 border-nude-200 text-nude-700">
-              {connectedCount > 0 ? <CheckCircle2 className="w-3 h-3 text-gold-600" /> : <AlertCircle className="w-3 h-3 text-amber-600" />}
-              {connectedCount > 0 ? "Automação preparada" : "Aguardando conexão"}
-            </Badge>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
-            {PLATFORMS.map((platform) => {
-              const account = accountFor(platform.id);
-              const connected = Boolean(account?.is_connected);
-              return (
-                <div key={platform.id} className="rounded-md border border-nude-200 bg-nude-50 p-3">
-                  <div className="flex items-center gap-2 text-sm font-medium text-nude-900">
-                    <NetIcon network={platform.id} className="w-4 h-4 text-gold-600" />
-                    <span className="truncate">{platform.label}</span>
-                  </div>
-                  <div className="text-[11px] text-nude-500 mt-1 truncate">
-                    {connected ? account.account_handle : "Não conectada"}
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={connected ? "outline" : "default"}
-                    className={connected ? "mt-2 h-8 w-full text-xs" : "mt-2 h-8 w-full text-xs bg-nude-900 hover:bg-nude-800"}
-                    onClick={() => connected ? disconnectSocialAccount(account) : connectSocialAccount(platform)}
-                    data-testid={`social-${connected ? "disconnect" : "connect"}-${platform.id}`}
-                  >
-                    {connected ? <><Unplug className="w-3 h-3 mr-1" /> Desconectar</> : <><Link2 className="w-3 h-3 mr-1" /> Conectar</>}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
         {items.length === 0 ? (
           <Card className="p-12 border-dashed border-nude-300 text-center">
             <div className="w-12 h-12 rounded-md bg-gold-100 grid place-items-center mx-auto mb-4">
@@ -424,7 +314,7 @@ export default function Creatives() {
             </div>
             <div className="font-display font-semibold text-lg mb-1">Nenhum criativo ainda</div>
             <div className="text-sm text-nude-500 mb-4 max-w-sm mx-auto">
-              Gere posts profissionais para Instagram, Facebook, LinkedIn, TikTok, YouTube, X, Pinterest e WhatsApp em segundos com IA.
+              Gere posts profissionais para Instagram, Facebook e LinkedIn em segundos com IA.
             </div>
             <Button onClick={() => setOpen(true)} className="bg-nude-900 hover:bg-nude-800">
               <Wand2 className="w-4 h-4 mr-2" /> Criar primeiro post
@@ -534,22 +424,20 @@ export default function Creatives() {
               <div className="flex flex-wrap gap-2 mt-1.5">
                 {PLATFORMS.map((p) => {
                   const active = scheduleForm.platforms.includes(p.id);
-                  const connected = Boolean(accountFor(p.id)?.is_connected);
                   return (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => togglePlatform(p.id)}
                       className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${active ? "bg-nude-900 text-white border-nude-900" : "bg-white text-nude-700 border-nude-300 hover:bg-nude-50"}`}
-                      title={connected ? "Conta conectada" : "Ainda não conectada"}
                     >
-                      {p.label}{connected ? " ✓" : ""}
+                      {p.label}
                     </button>
                   );
                 })}
               </div>
               <p className="text-[11px] text-nude-500 mt-2">
-                Redes com ✓ já estão conectadas. As demais ficam salvas na fila até a conta oficial ser conectada.
+                Para publicar automaticamente é preciso conectar cada rede (Meta, LinkedIn, TikTok, YouTube, X). Enquanto não estiverem conectadas, o post fica na fila e fica visível aqui.
               </p>
             </div>
           </div>
