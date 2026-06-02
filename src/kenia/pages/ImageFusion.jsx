@@ -1,16 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import { useState, useRef } from "react";
 import JSZip from "jszip";
 import { api } from "@/kenia/lib/api";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
-import { Input } from "@/kenia/components/ui/input";
-import { Badge } from "@/kenia/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/kenia/components/ui/dialog";
 import { toast } from "sonner";
-import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, Info, CalendarClock, Trash2 } from "lucide-react";
+import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, Info } from "lucide-react";
 
 // Presets oficiais para redes sociais (px)
 const SOCIAL_PRESETS = [
@@ -36,25 +32,7 @@ const SOCIAL_PRESETS = [
   { group: "WhatsApp",  name: "Status",          w: 1080, h: 1920 },
 ];
 
-const PLATFORMS = [
-  { id: "instagram", label: "Instagram" },
-  { id: "facebook", label: "Facebook" },
-  { id: "linkedin", label: "LinkedIn" },
-  { id: "tiktok", label: "TikTok" },
-  { id: "youtube", label: "YouTube" },
-  { id: "x", label: "X (Twitter)" },
-  { id: "pinterest", label: "Pinterest" },
-  { id: "whatsapp", label: "WhatsApp" },
-];
-
-const platformFromGroup = (group = "") => {
-  const id = slug(group);
-  return id === "twitter" ? "x" : id;
-};
-
 const slug = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-
-const imageToBase64 = (value) => String(value || "").replace(/^data:image\/\w+;base64,/, "");
 
 // Cobre o canvas com a imagem original (cover/crop centralizado).
 function renderPresetToCanvas(img, w, h) {
@@ -149,7 +127,6 @@ function ImagePicker({ value, onChange, label, testidPrefix }) {
           }}
         />
       </div>
-
     </div>
   );
 }
@@ -162,91 +139,6 @@ export default function ImageFusion() {
   const [result, setResult] = useState(null);
   const [variants, setVariants] = useState([]); // {preset, dataUrl, blob}
   const [generatingVariants, setGeneratingVariants] = useState(false);
-  const [scheduled, setScheduled] = useState([]);
-  const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [scheduleTarget, setScheduleTarget] = useState(null);
-  const [scheduleForm, setScheduleForm] = useState({
-    caption: "",
-    hashtags: "",
-    scheduled_for: "",
-    platforms: ["instagram"],
-  });
-
-  useEffect(() => { loadScheduled(); }, []);
-
-  const loadScheduled = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("scheduled_posts")
-        .select("*")
-        .ilike("creative_id", "fusion-%")
-        .order("scheduled_for", { ascending: true, nullsFirst: false })
-        .limit(50);
-      if (error) throw error;
-      setScheduled(data || []);
-    } catch {
-      setScheduled([]);
-    }
-  };
-
-  const togglePlatform = (id) => {
-    setScheduleForm((s) => ({
-      ...s,
-      platforms: s.platforms.includes(id)
-        ? s.platforms.filter((p) => p !== id)
-        : [...s.platforms, id],
-    }));
-  };
-
-  const openSchedule = (target = null) => {
-    const targetPlatforms = target?.preset?.group ? [platformFromGroup(target.preset.group)] : ["instagram"];
-    const platforms = targetPlatforms.filter((p) => PLATFORMS.some((item) => item.id === p));
-    setScheduleTarget(target || { dataUrl: result, preset: { group: "Fusão", name: "Original" } });
-    setScheduleForm({
-      caption: prompt || "Imagem criada no Estúdio de Fusão.",
-      hashtags: "",
-      scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
-      platforms: platforms.length ? platforms : ["instagram"],
-    });
-    setScheduleOpen(true);
-  };
-
-  const saveSchedule = async () => {
-    if (!scheduleTarget) return;
-    if (!scheduleForm.platforms.length) { toast.error("Selecione pelo menos uma rede"); return; }
-    if (!scheduleForm.scheduled_for) { toast.error("Defina data e hora"); return; }
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id;
-      if (!userId) { toast.error("Faça login para agendar publicações"); return; }
-      const preset = scheduleTarget.preset || {};
-      const title = preset.group === "Fusão" ? "Fusão de imagens · Original" : `Fusão · ${preset.group} ${preset.name}`;
-      const { error } = await supabase.from("scheduled_posts").insert({
-        user_id: userId,
-        creative_id: `fusion-${Date.now()}`,
-        title,
-        caption: scheduleForm.caption,
-        hashtags: scheduleForm.hashtags || null,
-        image_b64: imageToBase64(scheduleTarget.dataUrl || result),
-        platforms: scheduleForm.platforms,
-        scheduled_for: new Date(scheduleForm.scheduled_for).toISOString(),
-        status: "scheduled",
-      });
-      if (error) throw error;
-      toast.success("Fusão agendada na fila de publicações.");
-      setScheduleOpen(false);
-      setScheduleTarget(null);
-      loadScheduled();
-    } catch (e) {
-      toast.error(`Não foi possível agendar: ${e.message || e}`);
-    }
-  };
-
-  const cancelScheduled = async (id) => {
-    if (!confirm("Cancelar este agendamento?")) return;
-    await supabase.from("scheduled_posts").delete().eq("id", id);
-    loadScheduled();
-  };
 
   const fuse = async () => {
     if (!img1 || !img2) { toast.error("Envie as duas imagens antes de gerar"); return; }
@@ -370,16 +262,10 @@ export default function ImageFusion() {
               )}
             </div>
             {result && (
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <Button onClick={downloadOriginal} variant="outline" size="sm"
-                  className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100">
-                  <Download className="w-4 h-4 mr-2" /> Baixar
-                </Button>
-                <Button onClick={() => openSchedule()} variant="outline" size="sm"
-                  className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100">
-                  <CalendarClock className="w-4 h-4 mr-2" /> Agendar
-                </Button>
-              </div>
+              <Button onClick={downloadOriginal} variant="outline" size="sm"
+                className="mt-3 border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100">
+                <Download className="w-4 h-4 mr-2" /> Baixar original
+              </Button>
             )}
           </Card>
         </div>
@@ -432,16 +318,10 @@ export default function ImageFusion() {
                     <div className="p-2 text-[11px]">
                       <div className="text-gold-300 font-semibold truncate">{v.preset.group} · {v.preset.name}</div>
                       <div className="text-nude-500">{v.preset.w} × {v.preset.h}</div>
-                      <div className="mt-1.5 grid grid-cols-2 gap-1">
-                        <button onClick={() => downloadOne(v)}
-                          className="text-[10px] py-1 rounded bg-gold-600/20 hover:bg-gold-500/30 text-gold-200 flex items-center justify-center gap-1">
-                          <Download className="w-3 h-3" /> Baixar
-                        </button>
-                        <button onClick={() => openSchedule(v)}
-                          className="text-[10px] py-1 rounded bg-gold-600/20 hover:bg-gold-500/30 text-gold-200 flex items-center justify-center gap-1">
-                          <CalendarClock className="w-3 h-3" /> Agendar
-                        </button>
-                      </div>
+                      <button onClick={() => downloadOne(v)}
+                        className="mt-1.5 w-full text-[10px] py-1 rounded bg-gold-600/20 hover:bg-gold-500/30 text-gold-200 flex items-center justify-center gap-1">
+                        <Download className="w-3 h-3" /> Baixar
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -460,85 +340,6 @@ export default function ImageFusion() {
           </Card>
         )}
       </div>
-
-      {scheduled.length > 0 && (
-        <div className="border-t border-gold-900/40 bg-nude-900 px-6 py-4 max-h-64 overflow-auto">
-          <div className="flex items-center justify-between mb-2 gap-3">
-            <div className="font-display font-semibold text-sm text-gold-100 flex items-center gap-2">
-              <CalendarClock className="w-4 h-4 text-gold-400" /> Fusões agendadas
-            </div>
-            <div className="text-xs text-nude-400">{scheduled.length} na fila</div>
-          </div>
-          <div className="space-y-2">
-            {scheduled.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 text-xs bg-nude-950/70 border border-gold-900/40 rounded-md px-3 py-2">
-                {p.image_b64 ? (
-                  <img src={`data:image/png;base64,${p.image_b64}`} alt="" className="w-10 h-10 rounded object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded bg-nude-800 grid place-items-center text-nude-500"><Sparkles className="w-4 h-4" /></div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate text-gold-100">{p.title || "Fusão de imagens"}</div>
-                  <div className="text-nude-400 truncate">
-                    {p.scheduled_for ? new Date(p.scheduled_for).toLocaleString("pt-BR") : "sem data"} • {(p.platforms || []).join(", ") || "—"}
-                  </div>
-                </div>
-                <Badge variant="outline" className="capitalize border-gold-700/50 text-gold-200">{p.status}</Badge>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-400" onClick={() => cancelScheduled(p.id)}>
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-        <DialogContent className="max-w-lg bg-nude-950 border-gold-900/40 text-gold-50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-gold-100">
-              <CalendarClock className="w-4 h-4 text-gold-400" /> Agendar fusão de imagem
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-gold-200">Legenda</Label>
-              <Textarea rows={4} value={scheduleForm.caption} onChange={(e) => setScheduleForm({ ...scheduleForm, caption: e.target.value })} className="bg-nude-900 border-gold-900/40 text-gold-100" />
-            </div>
-            <div>
-              <Label className="text-gold-200">Hashtags (opcional)</Label>
-              <Input placeholder="#advocacia #direitos" value={scheduleForm.hashtags} onChange={(e) => setScheduleForm({ ...scheduleForm, hashtags: e.target.value })} className="bg-nude-900 border-gold-900/40 text-gold-100" />
-            </div>
-            <div>
-              <Label className="text-gold-200">Data e hora</Label>
-              <Input type="datetime-local" value={scheduleForm.scheduled_for} onChange={(e) => setScheduleForm({ ...scheduleForm, scheduled_for: e.target.value })} className="bg-nude-900 border-gold-900/40 text-gold-100" />
-            </div>
-            <div>
-              <Label className="text-gold-200">Redes</Label>
-              <div className="flex flex-wrap gap-2 mt-1.5">
-                {PLATFORMS.map((p) => {
-                  const active = scheduleForm.platforms.includes(p.id);
-                  return (
-                    <button key={p.id} type="button" onClick={() => togglePlatform(p.id)}
-                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${active ? "bg-gold-500 text-nude-950 border-gold-400" : "bg-nude-900 text-gold-200 border-gold-900/50 hover:bg-nude-800"}`}
-                    >
-                      {p.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-nude-400 mt-2">
-                As redes conectadas publicam automaticamente; sem conexão, a fusão fica salva na fila.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={saveSchedule} className="bg-gradient-to-r from-gold-500 to-gold-700 text-nude-950 font-semibold">
-              <CalendarClock className="w-4 h-4 mr-2" /> Confirmar agendamento
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
