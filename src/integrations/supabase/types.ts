@@ -233,42 +233,57 @@ export type Database = {
         Row: {
           caption: string
           created_at: string
+          creative_id: string | null
           error_message: string | null
           hashtags: string | null
           id: string
+          image_b64: string | null
+          last_attempt_at: string | null
           media_url: string | null
+          platform_results: Json
           platforms: Database["public"]["Enums"]["social_platform"][]
           published_at: string | null
           scheduled_for: string | null
           status: Database["public"]["Enums"]["post_status"]
+          title: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           caption: string
           created_at?: string
+          creative_id?: string | null
           error_message?: string | null
           hashtags?: string | null
           id?: string
+          image_b64?: string | null
+          last_attempt_at?: string | null
           media_url?: string | null
+          platform_results?: Json
           platforms?: Database["public"]["Enums"]["social_platform"][]
           published_at?: string | null
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["post_status"]
+          title?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           caption?: string
           created_at?: string
+          creative_id?: string | null
           error_message?: string | null
           hashtags?: string | null
           id?: string
+          image_b64?: string | null
+          last_attempt_at?: string | null
           media_url?: string | null
+          platform_results?: Json
           platforms?: Database["public"]["Enums"]["social_platform"][]
           published_at?: string | null
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["post_status"]
+          title?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -600,7 +615,15 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user" | "migrant" | "volunteer" | "helper"
       post_status: "draft" | "scheduled" | "publishing" | "published" | "failed"
-      social_platform: "instagram" | "facebook"
+      social_platform:
+        | "instagram"
+        | "facebook"
+        | "linkedin"
+        | "tiktok"
+        | "youtube"
+        | "x"
+        | "pinterest"
+        | "whatsapp"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -730,7 +753,16 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user", "migrant", "volunteer", "helper"],
       post_status: ["draft", "scheduled", "publishing", "published", "failed"],
-      social_platform: ["instagram", "facebook"],
+      social_platform: [
+        "instagram",
+        "facebook",
+        "linkedin",
+        "tiktok",
+        "youtube",
+        "x",
+        "pinterest",
+        "whatsapp",
+      ],
     },
   },
 } as const
