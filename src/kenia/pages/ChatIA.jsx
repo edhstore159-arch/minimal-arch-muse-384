@@ -494,6 +494,21 @@ export default function ChatIA() {
     return { human, meetUrl, duration: Number(duration) || 60 };
   };
 
+  const buildAppointmentMessage = ({ human, meetUrl, duration }) => {
+    const clientFirst = (name || "").trim().split(/\s+/)[0];
+    const greeting = clientFirst ? `${clientFirst}, sua` : "Sua";
+    const shareLink = buildWhatsAppShare(
+      phone,
+      `Olá! Sua consulta com a Dra. Kênia Garcia está confirmada para ${human} (${duration} min).\nLink da videochamada: ${meetUrl}`
+    );
+    return (
+      `✅ ${greeting} consulta está agendada para ${human} (${duration} min) por videoconferência.\n\n` +
+      `🔗 Link da sala: ${meetUrl}\n\n` +
+      `📲 Enviar o link para o cliente no WhatsApp:\n${shareLink}\n\n` +
+      `O agendamento já aparece no painel da Agenda${phone ? " e o link acima abre o WhatsApp do cliente pronto pra enviar." : "."}`
+    );
+  };
+
   const confirmSchedule = async () => {
     if (!scheduler?.date || !scheduler?.time) {
       toast.error("Escolha data e horário");
@@ -501,18 +516,11 @@ export default function ChatIA() {
     }
     setScheduling(true);
     try {
-      const { human, meetUrl, duration } = await createAppointment(scheduler);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp será notificado.` : "."}`,
-          audio_base64: null,
-        },
-      ]);
+      const result = await createAppointment(scheduler);
       toast.success("Agendamento confirmado");
       upsertLead({ stage: "em_negociacao", urgency: "alta" });
       setScheduler(null);
+      await typeAssistantMessage(buildAppointmentMessage(result));
     } catch (err) {
       console.error("Erro ao criar agendamento:", err);
       toast.error("Não consegui agendar. Tente novamente.");
@@ -520,6 +528,7 @@ export default function ChatIA() {
       setScheduling(false);
     }
   };
+
 
   useEffect(() => {
     api
