@@ -28,8 +28,7 @@ export const DebugErrorThrower = () => {
   }, []);
 
   if (message) {
-    // Log instead of throwing so the app doesn't blank-screen on dev instructions
-    console.warn("[lovable-debug-instruction]", message);
+    throw new Error(message);
   }
 
   return null;
