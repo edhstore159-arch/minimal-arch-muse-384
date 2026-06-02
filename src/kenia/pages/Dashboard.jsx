@@ -268,7 +268,7 @@ export default function Dashboard() {
         </Card>
 
         {/* CENTER - Active Chat + AI */}
-        <Card className="col-span-6 flex flex-col overflow-hidden border-nude-200" data-testid="chat-panel">
+        <Card className={`${activeContact ? "flex" : "hidden md:flex"} md:col-span-8 lg:col-span-6 flex-col overflow-hidden border-nude-200`} data-testid="chat-panel">
           {activeContact ? (
             <>
               <div className="px-5 py-3 border-b border-nude-200 flex items-center gap-3">
