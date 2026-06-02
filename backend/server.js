@@ -205,6 +205,25 @@ async function callAI(messagesPayload) {
   return { ok: false, error: "Todos os provedores de IA configurados falharam.", attempts, ...attempts[attempts.length - 1] };
 }
 
+async function generateCreativeImage(prompt) {
+  if (!LOVABLE_API_KEY) return { ok: false, error: "LOVABLE_API_KEY ausente no backend do Render." };
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+    method: "POST",
+    headers: { "Lovable-API-Key": LOVABLE_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "openai/gpt-image-2",
+      prompt: `Arte quadrada profissional para redes sociais de um escritório de advocacia brasileiro. Tema: ${prompt}. Visual elegante, jurídico, humano, sem texto, sem letras, sem marcas d'água.`,
+      quality: "low",
+      size: "1024x1024",
+      stream: false,
+    }),
+  });
+  const data = await resp.json().catch(async () => ({ error: await resp.text().catch(() => "Erro desconhecido") }));
+  if (!resp.ok) return { ok: false, status: resp.status, error: data?.error || JSON.stringify(data) };
+  const b64 = data?.data?.[0]?.b64_json;
+  return b64 ? { ok: true, b64_json: b64 } : { ok: false, error: "Sem imagem gerada." };
+}
+
 const autoReplyDebug = { last: null, history: [] };
 function recordAutoReply(entry) {
   const stamped = { at: new Date().toISOString(), ...entry };
@@ -336,7 +355,7 @@ async function autoReply(jid, userText, contactName) {
   }
   const history = aiHistory.get(jid) || [];
   const messagesPayload = [
-    { role: "system", content: `${AI_SYSTEM_PROMPT}\nNome do contato: ${contactName || "Cliente"}.` },
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nNome do contato: ${contactName || "Cliente"}.` },
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
