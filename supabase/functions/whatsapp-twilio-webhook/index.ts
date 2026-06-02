@@ -158,6 +158,7 @@ Deno.serve(async (req) => {
 
     let userText = body;
     let audioFailed = false;
+    let inboundWasAudio = false;
 
     // Processa áudio sempre que houver mídia de áudio (mesmo se também vier Body)
     if (numMedia > 0) {
