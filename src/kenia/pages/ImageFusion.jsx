@@ -1,12 +1,16 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import JSZip from "jszip";
 import { api } from "@/kenia/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
+import { Input } from "@/kenia/components/ui/input";
+import { Badge } from "@/kenia/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/kenia/components/ui/dialog";
 import { toast } from "sonner";
-import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, Info } from "lucide-react";
+import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, Info, CalendarClock, Trash2 } from "lucide-react";
 
 // Presets oficiais para redes sociais (px)
 const SOCIAL_PRESETS = [
@@ -32,7 +36,25 @@ const SOCIAL_PRESETS = [
   { group: "WhatsApp",  name: "Status",          w: 1080, h: 1920 },
 ];
 
+const PLATFORMS = [
+  { id: "instagram", label: "Instagram" },
+  { id: "facebook", label: "Facebook" },
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "YouTube" },
+  { id: "x", label: "X (Twitter)" },
+  { id: "pinterest", label: "Pinterest" },
+  { id: "whatsapp", label: "WhatsApp" },
+];
+
+const platformFromGroup = (group = "") => {
+  const id = slug(group);
+  return id === "twitter" ? "x" : id;
+};
+
 const slug = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+const imageToBase64 = (value) => String(value || "").replace(/^data:image\/\w+;base64,/, "");
 
 // Cobre o canvas com a imagem original (cover/crop centralizado).
 function renderPresetToCanvas(img, w, h) {
