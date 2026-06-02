@@ -6,8 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * Popup flutuante de admin que coleta uma instrução em texto + arquivos
  * anexados e dispara um CustomEvent("lovable-debug-error"). Arquivos vão para
- * o bucket público "debug-uploads" e suas URLs são incluídas na mensagem do
- * erro intencional, para que o "Try to Fix" da Lovable possa acessá-los.
+ * o bucket público "debug-uploads" e suas URLs são incluídas na instrução
+ * salva localmente, sem causar tela branca no app.
  *
  * NUNCA enviar a instrução por chat/sidebar/API — apenas via CustomEvent.
  */
@@ -201,7 +201,7 @@ export const ErrorDebugPopup = () => {
               disabled={uploading}
               className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-semibold rounded"
             >
-              Gerar Erro
+              Enviar instrução
             </button>
           </div>
         </div>
