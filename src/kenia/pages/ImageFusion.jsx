@@ -161,6 +161,90 @@ export default function ImageFusion() {
   const [result, setResult] = useState(null);
   const [variants, setVariants] = useState([]); // {preset, dataUrl, blob}
   const [generatingVariants, setGeneratingVariants] = useState(false);
+  const [scheduled, setScheduled] = useState([]);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleTarget, setScheduleTarget] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    caption: "",
+    hashtags: "",
+    scheduled_for: "",
+    platforms: ["instagram"],
+  });
+
+  useEffect(() => { loadScheduled(); }, []);
+
+  const loadScheduled = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("scheduled_posts")
+        .select("*")
+        .ilike("creative_id", "fusion-%")
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .limit(50);
+      if (error) throw error;
+      setScheduled(data || []);
+    } catch {
+      setScheduled([]);
+    }
+  };
+
+  const togglePlatform = (id) => {
+    setScheduleForm((s) => ({
+      ...s,
+      platforms: s.platforms.includes(id)
+        ? s.platforms.filter((p) => p !== id)
+        : [...s.platforms, id],
+    }));
+  };
+
+  const openSchedule = (target = null) => {
+    const targetPlatforms = target?.preset?.group ? [platformFromGroup(target.preset.group)] : ["instagram"];
+    setScheduleTarget(target || { dataUrl: result, preset: { group: "Fusão", name: "Original" } });
+    setScheduleForm({
+      caption: prompt || "Imagem criada no Estúdio de Fusão.",
+      hashtags: "",
+      scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
+      platforms: targetPlatforms.filter((p) => PLATFORMS.some((item) => item.id === p)),
+    });
+    setScheduleOpen(true);
+  };
+
+  const saveSchedule = async () => {
+    if (!scheduleTarget) return;
+    if (!scheduleForm.platforms.length) { toast.error("Selecione pelo menos uma rede"); return; }
+    if (!scheduleForm.scheduled_for) { toast.error("Defina data e hora"); return; }
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) { toast.error("Faça login para agendar publicações"); return; }
+      const preset = scheduleTarget.preset || {};
+      const title = preset.group === "Fusão" ? "Fusão de imagens · Original" : `Fusão · ${preset.group} ${preset.name}`;
+      const { error } = await supabase.from("scheduled_posts").insert({
+        user_id: userId,
+        creative_id: `fusion-${Date.now()}`,
+        title,
+        caption: scheduleForm.caption,
+        hashtags: scheduleForm.hashtags || null,
+        image_b64: imageToBase64(scheduleTarget.dataUrl || result),
+        platforms: scheduleForm.platforms,
+        scheduled_for: new Date(scheduleForm.scheduled_for).toISOString(),
+        status: "scheduled",
+      });
+      if (error) throw error;
+      toast.success("Fusão agendada na fila de publicações.");
+      setScheduleOpen(false);
+      setScheduleTarget(null);
+      loadScheduled();
+    } catch (e) {
+      toast.error(`Não foi possível agendar: ${e.message || e}`);
+    }
+  };
+
+  const cancelScheduled = async (id) => {
+    if (!confirm("Cancelar este agendamento?")) return;
+    await supabase.from("scheduled_posts").delete().eq("id", id);
+    loadScheduled();
+  };
 
   const fuse = async () => {
     if (!img1 || !img2) { toast.error("Envie as duas imagens antes de gerar"); return; }
