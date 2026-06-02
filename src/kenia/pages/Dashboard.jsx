@@ -65,8 +65,17 @@ export default function Dashboard() {
   const loadContacts = async () => {
     try {
       const { data } = await api.get("/whatsapp/contacts");
+      // Dedupe by id (and fallback to phone) — backend pode retornar duplicatas
+      const seen = new Set();
+      const unique = [];
+      for (const c of data || []) {
+        const key = c.id || (c.phone || "").replace(/\D/g, "");
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        unique.push(c);
+      }
       // Sort by last_message_at DESC so newest conversations bubble up
-      const sorted = [...data].sort((a, b) => {
+      const sorted = unique.sort((a, b) => {
         const ta = a.last_message_at || "";
         const tb = b.last_message_at || "";
         return tb.localeCompare(ta);
@@ -81,7 +90,16 @@ export default function Dashboard() {
   const loadMessages = async (cid) => {
     try {
       const { data } = await api.get(`/whatsapp/messages/${cid}`);
-      setMessages(data);
+      // Dedupe by id; se nao tiver id, dedupe por (text + timestamp + from_me)
+      const seen = new Set();
+      const unique = [];
+      for (const m of data || []) {
+        const key = m.id || `${m.from_me ? "1" : "0"}|${m.timestamp || m.created_at || ""}|${m.text || ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        unique.push(m);
+      }
+      setMessages(unique);
     } catch {}
   };
 
