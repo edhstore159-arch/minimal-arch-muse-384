@@ -39,10 +39,10 @@ export default function Login() {
       toast.error(err?.message || "Erro ao entrar");
     } finally { setLoading(false); }
   };
-  const handleGoogle = async () => {
+  const handleOAuth = async (provider) => {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
+      const result = await lovable.auth.signInWithOAuth(provider, {
         redirect_uri: `${window.location.origin}/app`,
       });
       if (result?.error) throw result.error;
@@ -50,10 +50,12 @@ export default function Login() {
       const done = localStorage.getItem("onboarding_done");
       navigate(done ? "/app" : "/app/onboarding");
     } catch (err) {
-      toast.error(err?.message || "Erro ao entrar com Google");
+      toast.error(err?.message || `Erro ao entrar com ${provider}`);
       setLoading(false);
     }
   };
+  const handleGoogle = () => handleOAuth("google");
+  const handleApple = () => handleOAuth("apple");
 
 
 
