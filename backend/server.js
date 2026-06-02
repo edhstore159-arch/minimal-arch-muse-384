@@ -831,6 +831,46 @@ app.get("/api/whatsapp/messages/:id", (req, res) => {
   res.json([]);
 });
 
+const creativesStore = [];
+
+app.get("/api/creatives", (_req, res) => {
+  res.json(creativesStore);
+});
+
+app.post("/api/creatives/generate", async (req, res) => {
+  const topic = req.body?.topic || req.body?.title || req.body?.prompt || "post jurídico";
+  const result = await generateCreativeImage(topic).catch((e) => ({ ok: false, error: e?.message || String(e) }));
+  const item = {
+    id: `creative-${Date.now()}`,
+    title: req.body?.title || topic,
+    network: req.body?.network || "instagram",
+    format: req.body?.format || "post",
+    caption: `Post sugerido: ${topic}.\n\nExplique o direito com clareza, cite documentos importantes e finalize convidando para atendimento com a Dra. Kênia Garcia.`,
+    image_b64: result.ok ? result.b64_json : "",
+    ...(result.ok ? {} : { error: result.error || "Imagem não gerada" }),
+  };
+  creativesStore.unshift(item);
+  res.status(201).json(item);
+});
+
+app.post("/api/chat/message", async (req, res) => {
+  const message = String(req.body?.message || req.body?.text || "").trim();
+  if (!message) return res.status(400).json({ error: "message vazio" });
+  const history = Array.isArray(req.body?.history) ? req.body.history.slice(-20) : [];
+  const result = await callAI([
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}` },
+    ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") })),
+    { role: "user", content: message },
+  ]);
+  const reply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
+  res.json({
+    session_id: req.body?.session_id || `session-${Date.now()}`,
+    response: reply,
+    audio_base64: null,
+    analysis: { acertividade: result.ok ? 90 : 70, qualificacao: result.ok ? "ok" : "fallback" },
+  });
+});
+
 // ---- Fallback /api/* ----
 app.all("/api/*", (_req, res) => res.json(ok({ fallback: true })));
 
