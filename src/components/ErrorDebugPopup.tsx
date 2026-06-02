@@ -120,7 +120,18 @@ export const ErrorDebugPopup = () => {
     }
   };
 
-  if (!open) return null;
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        title="Abrir Debug Tool (admin)"
+        style={{ position: "fixed", right: 16, bottom: 16, zIndex: 99999 }}
+        className="h-11 w-11 rounded-full bg-black text-white shadow-2xl hover:bg-gray-800 flex items-center justify-center text-lg"
+      >
+        🐞
+      </button>
+    );
+  }
 
   return (
     <div
