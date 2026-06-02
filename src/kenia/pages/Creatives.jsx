@@ -16,10 +16,23 @@ export default function Creatives() {
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [refImage, setRefImage] = useState(null); // data URL
   const [form, setForm] = useState({
     title: "", network: "instagram", format: "post",
     topic: "", tone: "profissional", case_type: "",
   });
+
+  const onPickImage = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 8MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setRefImage(String(reader.result));
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => { load(); }, []);
   const load = async () => {
