@@ -7,7 +7,7 @@ import { Badge } from "@/kenia/components/ui/badge";
 import { ScrollArea } from "@/kenia/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/kenia/components/ui/avatar";
 import { Separator } from "@/kenia/components/ui/separator";
-import { Search, Send, Phone, MoreVertical, Bot, Sparkles, Paperclip, Mail, MessageSquare, FileText, Flame, Tag, Calendar, AlertTriangle } from "lucide-react";
+import { Search, Send, Phone, MoreVertical, Bot, Sparkles, Paperclip, Mail, MessageSquare, FileText, Flame, Tag, Calendar, AlertTriangle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 const URG_COLORS = {
