@@ -167,6 +167,7 @@ Deno.serve(async (req) => {
       const mediaType = mediaTypeRaw.split(";")[0].trim().toLowerCase();
       const isAudio = mediaType.startsWith("audio") || mediaType.includes("ogg") || mediaType.includes("opus");
       if (mediaUrl && isAudio) {
+        inboundWasAudio = true;
         try {
           console.log("[whatsapp] baixando áudio", { mediaUrl, mediaType });
           const { buffer, contentType } = await fetchTwilioMedia(mediaUrl);
