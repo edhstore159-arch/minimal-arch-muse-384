@@ -487,11 +487,16 @@ liveApi.interceptors.response.use(
   }
 );
 
+const cloudFirstGetPaths = new Set(["/appointments", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
 const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/appointments"]);
 
 export const api = HAS_BACKEND
   ? {
-      get: liveApi.get.bind(liveApi),
+      get: (url, config) => {
+        const [path] = String(url).split("?");
+        if (cloudFirstGetPaths.has(path)) return staticGet(url, config);
+        return liveApi.get(url, config);
+      },
       post: (url, body, config) => {
         const [path] = String(url).split("?");
         if (cloudFirstPostPaths.has(path)) return staticPost(url, body);
