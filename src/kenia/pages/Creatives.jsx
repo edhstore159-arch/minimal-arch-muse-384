@@ -34,6 +34,15 @@ export default function Creatives() {
     title: "", network: "instagram", format: "post",
     topic: "", tone: "profissional", case_type: "",
   });
+  const [scheduled, setScheduled] = useState([]);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleTarget, setScheduleTarget] = useState(null); // creative item
+  const [scheduleForm, setScheduleForm] = useState({
+    caption: "",
+    hashtags: "",
+    scheduled_for: "",
+    platforms: ["instagram"],
+  });
 
   const onPickImage = (e) => {
     const file = e.target.files?.[0];
@@ -46,6 +55,7 @@ export default function Creatives() {
     reader.onload = () => setRefImage(String(reader.result));
     reader.readAsDataURL(file);
   };
+
 
   useEffect(() => { load(); }, []);
   const load = async () => {
