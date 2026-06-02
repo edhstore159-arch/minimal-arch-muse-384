@@ -271,7 +271,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
         response: reply,
         appointment,
         audio_base64,
-        analysis: { acertividade: 90, qualificacao: "ok" },
+        analysis,
         server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
