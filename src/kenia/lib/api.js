@@ -302,6 +302,7 @@ const staticPost = (url, body = {}) => {
   }
   if (path === "/chat/message") {
     return (async () => {
+      const sessionId = body.session_id || nextId("session");
       try {
         const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: null }));
         const { data, error } = await supabase.functions.invoke("chat-ai", {
@@ -309,18 +310,46 @@ const staticPost = (url, body = {}) => {
             message: body.message || body.text || "",
             history: body.history || [],
             system_prompt: body.system_prompt,
-            session_id: body.session_id,
+            session_id: sessionId,
             user_id: authData?.user?.id || null,
           },
         });
         if (error) throw error;
+        const analysis = data?.analysis || { acertividade: 80, qualificacao: "ok" };
+        // Persist/upsert análise local para AdminCases mostrar nome/telefone/área reais
+        try {
+          const items = read("case_analyses", seedAnalyses);
+          const existingIdx = items.findIndex((i) => i.session_id === sessionId);
+          const prev = existingIdx >= 0 ? items[existingIdx] : {};
+          const merged = {
+            id: prev.id || nextId("case"),
+            session_id: sessionId,
+            visitor_name: body.visitor_name || prev.visitor_name || null,
+            visitor_phone: body.visitor_phone || prev.visitor_phone || null,
+            area: analysis.area || prev.area || "Em análise",
+            qualificacao: analysis.qualificacao || prev.qualificacao || "necessita_mais_info",
+            acertividade: Number(analysis.acertividade ?? prev.acertividade ?? 0),
+            chance_exito: Number(analysis.chance_exito ?? prev.chance_exito ?? 0),
+            resumo: analysis.resumo || prev.resumo || "",
+            motivo: analysis.motivo || prev.motivo || "",
+            fundamentos: analysis.fundamentos || prev.fundamentos || [],
+            proxima_pergunta: analysis.proxima_pergunta || prev.proxima_pergunta || "",
+            admin_notes: prev.admin_notes || "",
+            updated_at: nowIso(),
+          };
+          if (existingIdx >= 0) items[existingIdx] = merged;
+          else items.unshift(merged);
+          write("case_analyses", items);
+        } catch (saveErr) {
+          console.error("Erro ao salvar análise local:", saveErr);
+        }
         return {
           data: {
-            session_id: body.session_id || nextId("session"),
+            session_id: sessionId,
             response: data?.response || "Sem resposta da IA.",
             audio_base64: data?.audio_base64 || null,
             appointment: data?.appointment || null,
-            analysis: data?.analysis || { acertividade: 80, qualificacao: "ok" },
+            analysis,
             server_time: data?.server_time,
           },
           status: 200,
@@ -331,7 +360,7 @@ const staticPost = (url, body = {}) => {
       } catch (e) {
         return {
           data: {
-            session_id: body.session_id || nextId("session"),
+            session_id: sessionId,
             response: `Erro ao consultar IA: ${e?.message || e}. Verifique se a edge function chat-ai está publicada.`,
             audio_base64: null,
             analysis: { acertividade: 0, qualificacao: "erro" },
@@ -341,6 +370,7 @@ const staticPost = (url, body = {}) => {
       }
     })();
   }
+
 
   if (path === "/finance/transactions") return insertItem("transactions", seedTransactions, "tx", body);
   if (path === "/appointments") {
