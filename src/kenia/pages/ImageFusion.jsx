@@ -369,10 +369,16 @@ export default function ImageFusion() {
               )}
             </div>
             {result && (
-              <Button onClick={downloadOriginal} variant="outline" size="sm"
-                className="mt-3 border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100">
-                <Download className="w-4 h-4 mr-2" /> Baixar original
-              </Button>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <Button onClick={downloadOriginal} variant="outline" size="sm"
+                  className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100">
+                  <Download className="w-4 h-4 mr-2" /> Baixar
+                </Button>
+                <Button onClick={() => openSchedule()} variant="outline" size="sm"
+                  className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100">
+                  <CalendarClock className="w-4 h-4 mr-2" /> Agendar
+                </Button>
+              </div>
             )}
           </Card>
         </div>
