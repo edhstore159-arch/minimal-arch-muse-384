@@ -7,6 +7,7 @@ import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
 import { toast } from "sonner";
 import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, Info } from "lucide-react";
+import SocialConnections from "@/kenia/components/SocialConnections";
 
 // Presets oficiais para redes sociais (px)
 const SOCIAL_PRESETS = [
