@@ -272,6 +272,16 @@ export default function Dashboard() {
           {activeContact ? (
             <>
               <div className="px-5 py-3 border-b border-nude-200 flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 md:hidden"
+                  onClick={() => setActiveContact(null)}
+                  data-testid="back-to-contacts"
+                  aria-label="Voltar"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
                 <Avatar className={`w-9 h-9 ${activeContact.avatar_color}`}>
                   <AvatarFallback className="bg-transparent text-white text-xs font-semibold">
                     {initials(activeContact.name)}
