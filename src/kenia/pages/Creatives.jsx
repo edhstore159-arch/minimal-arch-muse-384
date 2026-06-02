@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/kenia/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Badge } from "@/kenia/components/ui/badge";
@@ -8,8 +9,20 @@ import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/kenia/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kenia/components/ui/select";
-import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2, Upload, X as XIcon } from "lucide-react";
+import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2, Upload, X as XIcon, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
+
+const PLATFORMS = [
+  { id: "instagram", label: "Instagram" },
+  { id: "facebook", label: "Facebook" },
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "YouTube" },
+  { id: "x", label: "X (Twitter)" },
+  { id: "pinterest", label: "Pinterest" },
+  { id: "whatsapp", label: "WhatsApp" },
+];
+
 
 export default function Creatives() {
   const [items, setItems] = useState([]);
@@ -20,6 +33,15 @@ export default function Creatives() {
   const [form, setForm] = useState({
     title: "", network: "instagram", format: "post",
     topic: "", tone: "profissional", case_type: "",
+  });
+  const [scheduled, setScheduled] = useState([]);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleTarget, setScheduleTarget] = useState(null); // creative item
+  const [scheduleForm, setScheduleForm] = useState({
+    caption: "",
+    hashtags: "",
+    scheduled_for: "",
+    platforms: ["instagram"],
   });
 
   const onPickImage = (e) => {
@@ -34,7 +56,8 @@ export default function Creatives() {
     reader.readAsDataURL(file);
   };
 
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => { load(); loadScheduled(); }, []);
   const load = async () => {
     try {
       const { data } = await api.get("/creatives");
@@ -44,6 +67,85 @@ export default function Creatives() {
       setItems([]);
     }
   };
+
+  const loadScheduled = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("scheduled_posts")
+        .select("*")
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .limit(50);
+      if (error) throw error;
+      setScheduled(data || []);
+    } catch {
+      setScheduled([]);
+    }
+  };
+
+  const openSchedule = (item) => {
+    setScheduleTarget(item);
+    setScheduleForm({
+      caption: item.caption || "",
+      hashtags: "",
+      scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
+      platforms: [item.network || "instagram"],
+    });
+    setScheduleOpen(true);
+  };
+
+  const togglePlatform = (id) => {
+    setScheduleForm((s) => ({
+      ...s,
+      platforms: s.platforms.includes(id)
+        ? s.platforms.filter((p) => p !== id)
+        : [...s.platforms, id],
+    }));
+  };
+
+  const saveSchedule = async () => {
+    if (!scheduleTarget) return;
+    if (!scheduleForm.platforms.length) {
+      toast.error("Selecione pelo menos uma rede");
+      return;
+    }
+    if (!scheduleForm.scheduled_for) {
+      toast.error("Defina data e hora");
+      return;
+    }
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        toast.error("Faça login para agendar publicações");
+        return;
+      }
+      const { error } = await supabase.from("scheduled_posts").insert({
+        user_id: userId,
+        creative_id: scheduleTarget.id,
+        title: scheduleTarget.title,
+        caption: scheduleForm.caption,
+        hashtags: scheduleForm.hashtags || null,
+        image_b64: scheduleTarget.image_b64 || null,
+        platforms: scheduleForm.platforms,
+        scheduled_for: new Date(scheduleForm.scheduled_for).toISOString(),
+        status: "scheduled",
+      });
+      if (error) throw error;
+      toast.success("Publicação agendada! As redes conectadas serão postadas automaticamente.", { duration: 6000 });
+      setScheduleOpen(false);
+      setScheduleTarget(null);
+      loadScheduled();
+    } catch (e) {
+      toast.error(`Não foi possível agendar: ${e.message || e}`);
+    }
+  };
+
+  const cancelScheduled = async (id) => {
+    if (!confirm("Cancelar este agendamento?")) return;
+    await supabase.from("scheduled_posts").delete().eq("id", id);
+    loadScheduled();
+  };
+
 
   const generate = async () => {
     if (!form.title || !form.topic) {
@@ -247,10 +349,14 @@ export default function Creatives() {
                         <Download className="w-3 h-3 mr-1" /> PNG
                       </Button>
                     )}
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openSchedule(item)} data-testid={`schedule-${item.id}`}>
+                      <CalendarClock className="w-3 h-3 mr-1" /> Agendar
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500" onClick={() => remove(item.id)} data-testid={`delete-creative-${item.id}`}>
                       <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
+
                 </div>
               </Card>
             ))}
@@ -258,10 +364,96 @@ export default function Creatives() {
         )}
       </div>
 
+      {scheduled.length > 0 && (
+        <div className="border-t border-nude-200 bg-white px-6 py-4 max-h-64 overflow-auto">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-display font-semibold text-sm flex items-center gap-2">
+              <CalendarClock className="w-4 h-4 text-gold-600" /> Publicações agendadas
+            </div>
+            <div className="text-xs text-nude-500">
+              {scheduled.length} na fila • automação ativa quando as redes forem conectadas
+            </div>
+          </div>
+          <div className="space-y-2">
+            {scheduled.map((p) => (
+              <div key={p.id} className="flex items-center gap-3 text-xs bg-nude-50 border border-nude-200 rounded-md px-3 py-2">
+                {p.image_b64 ? (
+                  <img src={`data:image/png;base64,${p.image_b64}`} alt="" className="w-10 h-10 rounded object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded bg-nude-200 grid place-items-center text-nude-400"><Sparkles className="w-4 h-4" /></div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{p.title || p.caption?.slice(0, 60) || "Post"}</div>
+                  <div className="text-nude-500 truncate">
+                    {p.scheduled_for ? new Date(p.scheduled_for).toLocaleString("pt-BR") : "sem data"} • {(p.platforms || []).join(", ") || "—"}
+                  </div>
+                </div>
+                <Badge variant="outline" className="capitalize">{p.status}</Badge>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500" onClick={() => cancelScheduled(p.id)}>
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Schedule dialog */}
+      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="w-4 h-4 text-gold-600" /> Agendar publicação
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Legenda</Label>
+              <Textarea rows={4} value={scheduleForm.caption} onChange={(e) => setScheduleForm({ ...scheduleForm, caption: e.target.value })} />
+            </div>
+            <div>
+              <Label>Hashtags (opcional)</Label>
+              <Input placeholder="#direitos #advocacia" value={scheduleForm.hashtags} onChange={(e) => setScheduleForm({ ...scheduleForm, hashtags: e.target.value })} />
+            </div>
+            <div>
+              <Label>Data e hora</Label>
+              <Input type="datetime-local" value={scheduleForm.scheduled_for} onChange={(e) => setScheduleForm({ ...scheduleForm, scheduled_for: e.target.value })} />
+            </div>
+            <div>
+              <Label>Redes</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {PLATFORMS.map((p) => {
+                  const active = scheduleForm.platforms.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => togglePlatform(p.id)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${active ? "bg-nude-900 text-white border-nude-900" : "bg-white text-nude-700 border-nude-300 hover:bg-nude-50"}`}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-nude-500 mt-2">
+                Para publicar automaticamente é preciso conectar cada rede (Meta, LinkedIn, TikTok, YouTube, X). Enquanto não estiverem conectadas, o post fica na fila e fica visível aqui.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={saveSchedule} className="bg-nude-900 hover:bg-nude-800">
+              <CalendarClock className="w-4 h-4 mr-2" /> Confirmar agendamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Preview dialog */}
       {preview && (
         <Dialog open={!!preview} onOpenChange={() => setPreview(null)}>
           <DialogContent className="max-w-2xl">
+
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-gold-500" /> Criativo Gerado
