@@ -114,22 +114,48 @@ Deno.serve(async (req) => {
     const body = String(form.get("Body") || "").trim();
     const numMedia = Number(form.get("NumMedia") || "0");
 
-    let userText = body;
+    console.log("[whatsapp] inbound", {
+      from,
+      to,
+      hasBody: body.length > 0,
+      numMedia,
+      mediaType0: form.get("MediaContentType0"),
+    });
 
-    if (!userText && numMedia > 0) {
+    let userText = body;
+    let audioFailed = false;
+
+    // Processa áudio sempre que houver mídia de áudio (mesmo se também vier Body)
+    if (numMedia > 0) {
       const mediaUrl = String(form.get("MediaUrl0") || "");
       const mediaTypeRaw = String(form.get("MediaContentType0") || "audio/ogg");
       const mediaType = mediaTypeRaw.split(";")[0].trim().toLowerCase();
-      if (mediaUrl && mediaType.startsWith("audio")) {
-        const { buffer, contentType } = await fetchTwilioMedia(mediaUrl);
-        const cleanCt = (contentType || mediaType).split(";")[0].trim().toLowerCase();
-        userText = await transcribe(buffer, cleanCt);
-        console.log("[whatsapp] áudio transcrito", { mediaType, cleanCt, chars: userText.length });
+      const isAudio = mediaType.startsWith("audio") || mediaType.includes("ogg") || mediaType.includes("opus");
+      if (mediaUrl && isAudio) {
+        try {
+          console.log("[whatsapp] baixando áudio", { mediaUrl, mediaType });
+          const { buffer, contentType } = await fetchTwilioMedia(mediaUrl);
+          const cleanCt = (contentType || mediaType).split(";")[0].trim().toLowerCase();
+          console.log("[whatsapp] áudio baixado", { bytes: buffer.byteLength, cleanCt });
+          const transcribed = await transcribe(buffer, cleanCt);
+          console.log("[whatsapp] transcrição", { chars: transcribed.length, preview: transcribed.slice(0, 80) });
+          if (transcribed) userText = transcribed;
+          else audioFailed = true;
+        } catch (audioErr) {
+          console.error("[whatsapp] erro no áudio:", audioErr);
+          audioFailed = true;
+        }
       }
     }
 
     if (!userText) {
-      // Responde 200 vazio (TwiML) para evitar retry
+      if (audioFailed) {
+        await sendTwilioMessage(
+          to,
+          from,
+          "Recebi seu áudio, mas não consegui entender desta vez. Pode tentar gravar novamente ou enviar por texto? 🙏",
+        ).catch((err) => console.error("[whatsapp] falha ao avisar áudio:", err));
+      }
       return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
     }
 
