@@ -185,6 +185,33 @@ export default function Dashboard() {
         audio_base64: data.audio_base64,
         analysis: data.analysis,
       }]);
+      // Aplica a análise da IA aos dados do cliente (leadForContact)
+      if (data.analysis && activeContact) {
+        try {
+          const a = data.analysis;
+          const urgency = a.acertividade >= 80 ? "alta" : a.acertividade >= 50 ? "media" : "baixa";
+          const stageMap = { qualificado: "qualificado", nao_qualificado: "nao_interessado", necessita_mais_info: "em_contato" };
+          const patch = {
+            case_type: a.area || leadForContact?.case_type || "Atendimento jurídico",
+            description: a.resumo || leadForContact?.description || prompt,
+            score: Math.round(Number(a.acertividade) || leadForContact?.score || 50),
+            urgency,
+            stage: stageMap[a.qualificacao] || leadForContact?.stage || "em_contato",
+            tags: a.fundamentos?.slice(0, 4) || leadForContact?.tags || [],
+            source: leadForContact?.source || "Chat IA",
+            name: activeContact.name,
+            phone: activeContact.phone,
+          };
+          if (leadForContact?.id) {
+            await api.patch(`/leads/${leadForContact.id}`, patch);
+          } else {
+            await api.post("/leads", patch);
+          }
+          loadLeadForContact(activeContact.phone);
+        } catch (err) {
+          console.error("Falha ao atualizar lead com análise da IA:", err);
+        }
+      }
       // Auto-play audio
       if (data.audio_base64) {
         try {
@@ -192,6 +219,7 @@ export default function Dashboard() {
           a.play().catch(() => {});
         } catch {}
       }
+
     } catch {
       setAiMessages((m) => [...m, { role: "assistant", content: "Desculpe, não consegui processar agora." }]);
     } finally {
