@@ -431,10 +431,16 @@ export default function ImageFusion() {
                     <div className="p-2 text-[11px]">
                       <div className="text-gold-300 font-semibold truncate">{v.preset.group} · {v.preset.name}</div>
                       <div className="text-nude-500">{v.preset.w} × {v.preset.h}</div>
-                      <button onClick={() => downloadOne(v)}
-                        className="mt-1.5 w-full text-[10px] py-1 rounded bg-gold-600/20 hover:bg-gold-500/30 text-gold-200 flex items-center justify-center gap-1">
-                        <Download className="w-3 h-3" /> Baixar
-                      </button>
+                      <div className="mt-1.5 grid grid-cols-2 gap-1">
+                        <button onClick={() => downloadOne(v)}
+                          className="text-[10px] py-1 rounded bg-gold-600/20 hover:bg-gold-500/30 text-gold-200 flex items-center justify-center gap-1">
+                          <Download className="w-3 h-3" /> Baixar
+                        </button>
+                        <button onClick={() => openSchedule(v)}
+                          className="text-[10px] py-1 rounded bg-gold-600/20 hover:bg-gold-500/30 text-gold-200 flex items-center justify-center gap-1">
+                          <CalendarClock className="w-3 h-3" /> Agendar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
