@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 /**
  * DebugErrorThrower
  *
- * Escuta "lovable-debug-error" sem derrubar o app. As instruções ficam salvas
- * em localStorage para depuração, mas não são relançadas como erro fatal.
+ * Escuta "lovable-debug-error" e RELANÇA a mensagem como Error fatal em render,
+ * para que o overlay global "Try to Fix" da Lovable apareça.
+ *
+ * IMPORTANTE: deve ficar FORA de qualquer ErrorBoundary/Suspense.
  */
 export const DebugErrorThrower = () => {
-  const [, setLastMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -18,13 +20,16 @@ export const DebugErrorThrower = () => {
         } catch {
           // ignore
         }
-        setLastMessage(detail);
-        console.info("Instrução de desenvolvimento registrada sem interromper a aplicação.", detail);
+        setMessage(detail);
       }
     };
     window.addEventListener("lovable-debug-error", handler as EventListener);
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
+
+  if (message) {
+    throw new Error(message);
+  }
 
   return null;
 };

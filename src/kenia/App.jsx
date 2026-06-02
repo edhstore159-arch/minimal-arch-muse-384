@@ -37,7 +37,7 @@ function Protected({ children }) {
 function App() {
   return (
     <div className="App">
-      {/* Captura instruções de debug sem causar tela branca */}
+      {/* DebugErrorThrower DEVE ficar fora de qualquer ErrorBoundary/Suspense */}
       <DebugErrorThrower />
       <ErrorDebugPopup />
       <AuthProvider>
