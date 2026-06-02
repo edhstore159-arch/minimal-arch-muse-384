@@ -10,19 +10,24 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
+function cleanMime(mime: string): string {
+  return String(mime || "audio/webm").split(";")[0].trim().toLowerCase();
+}
+
 function pickExtension(mime: string): string {
-  const mt = (mime || "").toLowerCase();
+  const mt = cleanMime(mime);
   if (mt.includes("wav")) return "wav";
   if (mt.includes("mp3") || mt.includes("mpeg")) return "mp3";
-  if (mt.includes("ogg")) return "ogg";
-  if (mt.includes("mp4") || mt.includes("m4a")) return "m4a";
+  if (mt.includes("ogg") || mt.includes("opus")) return "ogg";
+  if (mt.includes("mp4") || mt.includes("m4a") || mt.includes("aac")) return "m4a";
   return "webm";
 }
 
 async function transcribeWithElevenLabs(bytes: Uint8Array, mime: string): Promise<string> {
   if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY ausente");
-  const ext = pickExtension(mime);
-  const blob = new Blob([bytes], { type: mime || "audio/webm" });
+  const cleaned = cleanMime(mime);
+  const ext = pickExtension(cleaned);
+  const blob = new Blob([bytes], { type: cleaned });
   const form = new FormData();
   form.append("file", blob, `audio.${ext}`);
   form.append("model_id", "scribe_v2");

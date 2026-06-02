@@ -118,10 +118,13 @@ Deno.serve(async (req) => {
 
     if (!userText && numMedia > 0) {
       const mediaUrl = String(form.get("MediaUrl0") || "");
-      const mediaType = String(form.get("MediaContentType0") || "audio/ogg");
+      const mediaTypeRaw = String(form.get("MediaContentType0") || "audio/ogg");
+      const mediaType = mediaTypeRaw.split(";")[0].trim().toLowerCase();
       if (mediaUrl && mediaType.startsWith("audio")) {
         const { buffer, contentType } = await fetchTwilioMedia(mediaUrl);
-        userText = await transcribe(buffer, contentType);
+        const cleanCt = (contentType || mediaType).split(";")[0].trim().toLowerCase();
+        userText = await transcribe(buffer, cleanCt);
+        console.log("[whatsapp] áudio transcrito", { mediaType, cleanCt, chars: userText.length });
       }
     }
 

@@ -7,6 +7,7 @@ import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
 import { toast } from "sonner";
 import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, Info } from "lucide-react";
+import SocialConnections from "@/kenia/components/SocialConnections";
 
 // Presets oficiais para redes sociais (px)
 const SOCIAL_PRESETS = [
@@ -237,6 +238,9 @@ export default function ImageFusion() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
+        <div className="max-w-5xl mx-auto mb-5">
+          <SocialConnections />
+        </div>
         <div className="max-w-5xl mx-auto grid lg:grid-cols-[1fr_1fr_1.2fr] gap-5">
           <Card className="p-4 bg-nude-900/60 border-gold-900/40">
             <ImagePicker value={img1} onChange={setImg1} label="Imagem 1" testidPrefix="img1" />
