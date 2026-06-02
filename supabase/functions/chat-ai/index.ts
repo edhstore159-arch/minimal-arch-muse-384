@@ -209,6 +209,37 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     const appointment = parseAppointmentBlock(rawReply);
     const reply = stripAppointmentBlock(rawReply);
 
+    // Análise técnica do caso (chamada paralela à IA pedindo JSON estruturado)
+    let analysis: any = { acertividade: 70, qualificacao: "necessita_mais_info" };
+    try {
+      const convoText = [...history.slice(-10), { role: "user", content: userMessage }, { role: "assistant", content: reply }]
+        .map((m) => `${m.role}: ${m.content}`)
+        .join("\n");
+      const aResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            {
+              role: "system",
+              content:
+                "Você analisa conversas jurídicas e responde APENAS um JSON válido (sem markdown) com os campos: area (string), resumo (string curta), motivo (string), acertividade (0-100), chance_exito (0-100), qualificacao (\"qualificado\"|\"necessita_mais_info\"|\"desqualificado\"), proxima_pergunta (string), fundamentos (array de strings com base legal).",
+            },
+            { role: "user", content: `Conversa:\n${convoText}\n\nGere o JSON de análise.` },
+          ],
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (aResp.ok) {
+        const aJson = await aResp.json();
+        const parsed = JSON.parse(aJson?.choices?.[0]?.message?.content || "{}");
+        analysis = { ...analysis, ...parsed };
+      }
+    } catch (err) {
+      console.error("Erro ao gerar análise:", err);
+    }
+
     // Gera áudio (TTS ElevenLabs) se o cliente pediu
     const wantAudio = body.want_audio !== false; // default true
     const audio_base64 = wantAudio ? await synthesizeSpeech(reply) : null;
