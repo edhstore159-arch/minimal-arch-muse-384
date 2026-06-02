@@ -8,7 +8,7 @@ import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/kenia/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kenia/components/ui/select";
-import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2 } from "lucide-react";
+import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2, Upload, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Creatives() {
@@ -16,10 +16,23 @@ export default function Creatives() {
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [refImage, setRefImage] = useState(null); // data URL
   const [form, setForm] = useState({
     title: "", network: "instagram", format: "post",
     topic: "", tone: "profissional", case_type: "",
   });
+
+  const onPickImage = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 8MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setRefImage(String(reader.result));
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => { load(); }, []);
   const load = async () => {
@@ -39,7 +52,10 @@ export default function Creatives() {
     }
     setGenerating(true);
     try {
-      const { data } = await api.post("/creatives/generate", form);
+      const { data } = await api.post("/creatives/generate", {
+        ...form,
+        reference_image_base64: refImage || null,
+      });
       if (data?.image_b64) {
         toast.success("Criativo gerado!");
       } else {
@@ -48,6 +64,7 @@ export default function Creatives() {
       setPreview(data);
       setOpen(false);
       setForm({ title: "", network: "instagram", format: "post", topic: "", tone: "profissional", case_type: "" });
+      setRefImage(null);
       load();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao gerar");
@@ -152,6 +169,31 @@ export default function Creatives() {
                 </div>
               </div>
               <div><Label>Tema / Mensagem Principal</Label><Textarea rows={3} placeholder="Sobre o que é o post? Qual a mensagem chave?" value={form.topic} onChange={e => setForm({ ...form, topic: e.target.value })} data-testid="creative-topic" /></div>
+
+              <div>
+                <Label>Imagem de referência (opcional)</Label>
+                <p className="text-xs text-nude-500 mb-1.5">Envie uma foto para a IA usar como base/inspiração visual.</p>
+                {refImage ? (
+                  <div className="relative inline-block">
+                    <img src={refImage} alt="ref" className="h-28 w-28 object-cover rounded-md border border-nude-200" />
+                    <button
+                      type="button"
+                      onClick={() => setRefImage(null)}
+                      className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow"
+                      data-testid="creative-remove-ref"
+                      aria-label="Remover imagem"
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 h-24 border-2 border-dashed border-nude-300 rounded-md cursor-pointer hover:bg-nude-50 text-sm text-nude-600" data-testid="creative-upload-ref">
+                    <Upload className="w-4 h-4" />
+                    Clique para enviar imagem (JPG/PNG, até 8MB)
+                    <input type="file" accept="image/*" className="hidden" onChange={onPickImage} />
+                  </label>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button onClick={generate} disabled={generating} className="bg-nude-900 hover:bg-nude-800" data-testid="creative-generate">
