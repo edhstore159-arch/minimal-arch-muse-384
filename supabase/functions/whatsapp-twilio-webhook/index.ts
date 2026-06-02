@@ -75,7 +75,7 @@ async function transcribe(buffer: ArrayBuffer, mime: string): Promise<string> {
   return d.text || d.transcript || "";
 }
 
-async function callChatAI(userText: string, sessionId: string): Promise<string> {
+async function callChatAI(userText: string, sessionId: string, wantAudio: boolean): Promise<{ reply: string; audio_base64: string | null }> {
   const r = await fetch(`${SUPABASE_URL}/functions/v1/chat-ai`, {
     method: "POST",
     headers: {
@@ -83,14 +83,46 @@ async function callChatAI(userText: string, sessionId: string): Promise<string> 
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       apikey: SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ message: userText, want_audio: false, session_id: sessionId }),
+    body: JSON.stringify({ message: userText, want_audio: wantAudio, session_id: sessionId }),
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`chat-ai ${r.status}: ${JSON.stringify(d)}`);
-  return d.response || d.reply || "Desculpe, não consegui processar agora.";
+  return {
+    reply: d.response || d.reply || "Desculpe, não consegui processar agora.",
+    audio_base64: d.audio_base64 || null,
+  };
 }
 
-async function sendTwilioMessage(from: string, to: string, body: string) {
+async function uploadAudioPublic(audioB64: string): Promise<string | null> {
+  try {
+    const bin = atob(audioB64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const path = `wa-tts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp3`;
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${AUDIO_BUCKET}/${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        "Content-Type": "audio/mpeg",
+        "x-upsert": "true",
+      },
+      body: bytes,
+    });
+    if (!r.ok) {
+      console.error("[whatsapp] upload áudio falhou", r.status, await r.text());
+      return null;
+    }
+    return `${SUPABASE_URL}/storage/v1/object/public/${AUDIO_BUCKET}/${path}`;
+  } catch (e) {
+    console.error("[whatsapp] upload exceção", e);
+    return null;
+  }
+}
+
+async function sendTwilioMessage(from: string, to: string, body: string, mediaUrl?: string | null) {
+  const params: Record<string, string> = { From: from, To: to, Body: body };
+  if (mediaUrl) params.MediaUrl = mediaUrl;
   const r = await fetch(`${GATEWAY_URL}/Messages.json`, {
     method: "POST",
     headers: {
@@ -98,7 +130,7 @@ async function sendTwilioMessage(from: string, to: string, body: string) {
       "X-Connection-Api-Key": TWILIO_API_KEY,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams({ From: from, To: to, Body: body }),
+    body: new URLSearchParams(params),
   });
   if (!r.ok) {
     const t = await r.text();
