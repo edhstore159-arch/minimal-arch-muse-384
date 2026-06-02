@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          case_summary: string | null
+          city: string | null
+          client_name: string
+          created_at: string
+          email: string | null
+          id: string
+          legal_area: string | null
+          phone: string | null
+          raw_payload: Json
+          session_id: string | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          case_summary?: string | null
+          city?: string | null
+          client_name: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          legal_area?: string | null
+          phone?: string | null
+          raw_payload?: Json
+          session_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          case_summary?: string | null
+          city?: string | null
+          client_name?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          legal_area?: string | null
+          phone?: string | null
+          raw_payload?: Json
+          session_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       calls: {
         Row: {
           caller_avatar: string | null
