@@ -349,10 +349,14 @@ export default function Creatives() {
                         <Download className="w-3 h-3 mr-1" /> PNG
                       </Button>
                     )}
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openSchedule(item)} data-testid={`schedule-${item.id}`}>
+                      <CalendarClock className="w-3 h-3 mr-1" /> Agendar
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500" onClick={() => remove(item.id)} data-testid={`delete-creative-${item.id}`}>
                       <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
+
                 </div>
               </Card>
             ))}
