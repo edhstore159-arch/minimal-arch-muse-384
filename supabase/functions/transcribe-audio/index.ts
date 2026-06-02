@@ -19,13 +19,13 @@ function pickExtension(mime: string): string {
   return "webm";
 }
 
-async function transcribeWithElevenLabs(bytes: Uint8Array, mime: string): Promise<string> {
+async function transcribeWithElevenLabs(bytes: Uint8Array, mime: string, modelId: string): Promise<string> {
   if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY ausente");
   const ext = pickExtension(mime);
   const blob = new Blob([bytes], { type: mime || "audio/webm" });
   const form = new FormData();
   form.append("file", blob, `audio.${ext}`);
-  form.append("model_id", "scribe_v2");
+  form.append("model_id", modelId);
   form.append("language_code", "por");
   form.append("tag_audio_events", "false");
   form.append("diarize", "false");
@@ -38,7 +38,7 @@ async function transcribeWithElevenLabs(bytes: Uint8Array, mime: string): Promis
 
   if (!resp.ok) {
     const detail = await resp.text();
-    console.error("❌ ElevenLabs STT error", { status: resp.status, detail: detail.slice(0, 300) });
+    console.error("❌ ElevenLabs STT error", { model: modelId, status: resp.status, detail: detail.slice(0, 300) });
     throw new Error(`ElevenLabs STT ${resp.status}: ${detail.slice(0, 200)}`);
   }
 
