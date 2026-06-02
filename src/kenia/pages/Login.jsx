@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/kenia/contexts/AuthContext";
 import { api } from "@/kenia/lib/api";
 import { lovable } from "@/integrations/lovable";
+import { shouldUseExternalGoogleOAuth, signInWithExternalGoogleOAuth } from "@/kenia/lib/externalGoogleOAuth";
 import { Button } from "@/kenia/components/ui/button";
 import { Input } from "@/kenia/components/ui/input";
 import { Label } from "@/kenia/components/ui/label";
@@ -42,9 +43,11 @@ export default function Login() {
   const handleOAuth = async (provider) => {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: `${window.location.origin}/app`,
-      });
+      const result = provider === "google" && shouldUseExternalGoogleOAuth()
+        ? await signInWithExternalGoogleOAuth()
+        : await lovable.auth.signInWithOAuth(provider, {
+            redirect_uri: `${window.location.origin}/app`,
+          });
       if (result?.error) throw result.error;
       if (result?.redirected) return;
       const done = localStorage.getItem("onboarding_done");
