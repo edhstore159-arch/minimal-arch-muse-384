@@ -10,12 +10,16 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
+function cleanMime(mime: string): string {
+  return String(mime || "audio/webm").split(";")[0].trim().toLowerCase();
+}
+
 function pickExtension(mime: string): string {
-  const mt = (mime || "").toLowerCase();
+  const mt = cleanMime(mime);
   if (mt.includes("wav")) return "wav";
   if (mt.includes("mp3") || mt.includes("mpeg")) return "mp3";
-  if (mt.includes("ogg")) return "ogg";
-  if (mt.includes("mp4") || mt.includes("m4a")) return "m4a";
+  if (mt.includes("ogg") || mt.includes("opus")) return "ogg";
+  if (mt.includes("mp4") || mt.includes("m4a") || mt.includes("aac")) return "m4a";
   return "webm";
 }
 
