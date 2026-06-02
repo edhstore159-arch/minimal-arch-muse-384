@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/kenia/contexts/AuthContext";
 import { api } from "@/kenia/lib/api";
@@ -19,7 +19,7 @@ const LOGO_IMG =
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, register } = useAuth();
+  const { login, register, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loginData, setLoginData] = useState({
     email: "admin@kenia-garcia.com.br",
@@ -40,13 +40,22 @@ export default function Login() {
       toast.error(err?.message || "Erro ao entrar");
     } finally { setLoading(false); }
   };
+  // Após o callback do Google, o lovable SDK detecta os tokens na URL e dispara
+  // onAuthStateChange. Quando o user ficar disponível, encaminhamos para /app.
+  useEffect(() => {
+    if (user) {
+      const done = localStorage.getItem("onboarding_done");
+      navigate(done ? "/app" : "/app/onboarding", { replace: true });
+    }
+  }, [user, navigate]);
+
   const handleOAuth = async (provider) => {
     setLoading(true);
     try {
       const result = provider === "google" && shouldUseExternalGoogleOAuth()
         ? await signInWithExternalGoogleOAuth()
         : await lovable.auth.signInWithOAuth(provider, {
-            redirect_uri: `${window.location.origin}/app`,
+            redirect_uri: `${window.location.origin}/login`,
           });
       if (result?.error) throw result.error;
       if (result?.redirected) return;

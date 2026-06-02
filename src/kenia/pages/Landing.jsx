@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/kenia/contexts/AuthContext";
 import { Button } from "@/kenia/components/ui/button";
 import { Input } from "@/kenia/components/ui/input";
 import { Textarea } from "@/kenia/components/ui/textarea";
@@ -18,6 +19,16 @@ export default function Landing() {
   const [form, setForm] = useState({ name: "", phone: "", email: "", case_type: "", description: "" });
   const [sending, setSending] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Se o usuário voltou autenticado (ex: callback Google sem path), encaminha para /app
+  useEffect(() => {
+    if (user) {
+      const done = localStorage.getItem("onboarding_done");
+      navigate(done ? "/app" : "/app/onboarding", { replace: true });
+    }
+  }, [user, navigate]);
+
 
   const submit = async (e) => {
     e.preventDefault();
