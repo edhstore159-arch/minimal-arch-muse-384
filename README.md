@@ -66,6 +66,8 @@ Simply open [Lovable](https://lovable.dev/projects/09a14ae7-bd4a-415b-b22e-66bbe
 
 For Render deployment, use `MANUAL_DEPLOY_RENDER.md`.
 
+For manual social media publishing instructions, use `docs/MANUAL_PUBLICACAO_REDES_SOCIAIS.md`.
+
 If you cannot access the external troubleshooting docs, use `TROUBLESHOOTING_LOCAL.md` inside this repository.
 
 ## Can I connect a custom domain to my Lovable project?
