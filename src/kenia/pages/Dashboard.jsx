@@ -213,9 +213,9 @@ export default function Dashboard() {
       </div>
 
       {/* 3-column layout */}
-      <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 p-4 overflow-hidden">
         {/* LEFT - WhatsApp Contacts */}
-        <Card className="col-span-3 flex flex-col overflow-hidden border-nude-200" data-testid="whatsapp-panel">
+        <Card className={`${activeContact ? "hidden md:flex" : "flex"} md:col-span-4 lg:col-span-3 flex-col overflow-hidden border-nude-200`} data-testid="whatsapp-panel">
           <div className="p-4 border-b border-nude-200">
             <div className="flex items-center gap-2 mb-3">
               <MessageSquare className="w-4 h-4 text-gold-600" />
