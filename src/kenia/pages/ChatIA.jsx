@@ -201,6 +201,64 @@ export default function ChatIA() {
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const typingTimerRef = useRef(null);
+
+  // Simula digitação humana: insere a mensagem do assistente caractere por caractere,
+  // com pequenas pausas naturais em pontuação. Resolve quando termina.
+  const typeAssistantMessage = (fullText, audioB64 = null) =>
+    new Promise((resolve) => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      const text = String(fullText || "");
+      // velocidade alvo ~ 35-55 chars/s (humano), com leve variação
+      const baseDelay = 22; // ms por caractere base
+      let idx = 0;
+
+      // adiciona placeholder vazio
+      setMessages((prev) => [...prev, { role: "assistant", content: "", audio_base64: null, typing: true }]);
+
+      const step = () => {
+        idx += 1;
+        const partial = text.slice(0, idx);
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last && last.role === "assistant") {
+            copy[copy.length - 1] = { ...last, content: partial };
+          }
+          return copy;
+        });
+
+        if (idx >= text.length) {
+          // finaliza, anexa áudio
+          setMessages((prev) => {
+            const copy = [...prev];
+            const last = copy[copy.length - 1];
+            if (last && last.role === "assistant") {
+              copy[copy.length - 1] = { ...last, content: text, audio_base64: audioB64, typing: false };
+            }
+            return copy;
+          });
+          typingTimerRef.current = null;
+          resolve();
+          return;
+        }
+
+        const ch = text[idx - 1];
+        let delay = baseDelay + Math.random() * 30;
+        if (/[\.!\?]/.test(ch)) delay += 350; // pausa em final de frase
+        else if (/[,;:]/.test(ch)) delay += 160; // pausa em vírgula
+        else if (ch === "\n") delay += 250;
+        typingTimerRef.current = setTimeout(step, delay);
+      };
+
+      // pequeno atraso inicial pra parecer que "está pensando + digitando"
+      typingTimerRef.current = setTimeout(step, 400);
+    });
+
+  useEffect(() => () => {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+  }, []);
+
 
   const startRecording = async () => {
     try {
