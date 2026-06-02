@@ -539,12 +539,42 @@ liveApi.interceptors.response.use(
 const cloudFirstGetPaths = new Set(["/appointments", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
 const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments"]);
 
+// Caminhos que, quando o backend live (Render) falha ou devolve lista vazia,
+// caem para os dados estáticos de demonstração — assim o painel nunca aparece
+// "vazio" no ambiente publicado (Render) caso o backend ainda não tenha
+// populado leads/contatos/processos/etc.
+const fallbackToStaticGetPaths = new Set([
+  "/leads",
+  "/whatsapp/contacts",
+  "/processes",
+  "/finance/transactions",
+  "/crm/stages",
+  "/dashboard/metrics",
+  "/admin/case-analyses",
+]);
+
+const isEmptyPayload = (data) => {
+  if (data == null) return true;
+  if (Array.isArray(data)) return data.length === 0;
+  if (typeof data === "object" && "items" in data) return !data.items || data.items.length === 0;
+  return false;
+};
+
 export const api = HAS_BACKEND
   ? {
-      get: (url, config) => {
+      get: async (url, config) => {
         const [path] = String(url).split("?");
         if (cloudFirstGetPaths.has(path)) return staticGet(url, config);
-        return liveApi.get(url, config);
+        try {
+          const res = await liveApi.get(url, config);
+          if (fallbackToStaticGetPaths.has(path) && isEmptyPayload(res?.data)) {
+            return staticGet(url, config);
+          }
+          return res;
+        } catch (err) {
+          if (fallbackToStaticGetPaths.has(path)) return staticGet(url, config);
+          throw err;
+        }
       },
       post: (url, body, config) => {
         const [path] = String(url).split("?");
