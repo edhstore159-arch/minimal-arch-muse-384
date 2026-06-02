@@ -25,16 +25,13 @@ Deno.serve(async (req) => {
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { "Lovable-API-Key": key, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: `Banner de capa horizontal panorâmico, cinematográfico, estilo profissional para perfil de prestador de serviços. Tema: ${prompt}. Sem texto, sem letras.`,
-          },
-        ],
-        modalities: ["image", "text"],
+        model: "openai/gpt-image-2",
+        prompt: `Arte quadrada profissional para redes sociais de um escritório de advocacia brasileiro. Tema: ${prompt}. Visual elegante, jurídico, humano, sem texto, sem letras, sem marcas d'água.`,
+        quality: "low",
+        size: "1024x1024",
+        stream: false,
       }),
     });
 

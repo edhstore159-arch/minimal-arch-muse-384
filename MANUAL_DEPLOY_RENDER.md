@@ -64,6 +64,8 @@ VITE_SUPABASE_PROJECT_ID=kzlxysxvvlupjtrmxqmb
 
 Não adicione `VITE_BACKEND_URL` no deploy estático. Se essa variável for adicionada apontando para uma API inexistente, o painel pode voltar a mostrar erro de backend offline.
 
+> Chat IA, agenda e gerador de imagens usam as funções do Lovable Cloud diretamente no frontend. Se você mantiver `VITE_BACKEND_URL` para o backend do WhatsApp/Baileys, publique também a versão mais recente do frontend e do backend para que o Render receba as novas rotas e prompts.
+
 ## 5. Rewrites para React Router
 
 O Render precisa redirecionar todas as rotas para `index.html`, porque o app usa rotas como `/app/whatsapp`.

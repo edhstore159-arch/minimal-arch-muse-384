@@ -15,7 +15,7 @@ const inDays = (days) => {
 };
 
 const DEFAULT_PROMPT =
-  "Você é a atendente Kênia Garcia. Atenda com linguagem humana, acolhedora e profissional. Não pergunte a área jurídica no início; peça primeiro para o cliente contar o que aconteceu, identifique a área automaticamente pelo relato e responda às dúvidas com orientação jurídica inicial, sem parecer definitivo. Depois colete nome, telefone, urgência e documentos necessários. Nunca diga que é IA.";
+  "Você é a assistente da Dra. Kênia Garcia. Use Bom dia, Boa tarde ou Boa noite conforme o horário de São Paulo, pergunte primeiro o nome do cliente, depois peça o relato do caso. Responda perguntas abertas com orientação jurídica inicial, cite base legal brasileira quando pertinente, peça documentos/provas e convide para agendamento quando houver potencial. Nunca diga que é IA, robô ou assistente virtual.";
 
 const defaultWhatsAppConfig = {
   provider: "zapi",
@@ -487,8 +487,25 @@ liveApi.interceptors.response.use(
   }
 );
 
+const cloudFirstGetPaths = new Set(["/appointments", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
+const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/appointments"]);
+
 export const api = HAS_BACKEND
-  ? liveApi
+  ? {
+      get: (url, config) => {
+        const [path] = String(url).split("?");
+        if (cloudFirstGetPaths.has(path)) return staticGet(url, config);
+        return liveApi.get(url, config);
+      },
+      post: (url, body, config) => {
+        const [path] = String(url).split("?");
+        if (cloudFirstPostPaths.has(path)) return staticPost(url, body);
+        return liveApi.post(url, body, config);
+      },
+      put: liveApi.put.bind(liveApi),
+      patch: liveApi.patch.bind(liveApi),
+      delete: liveApi.delete.bind(liveApi),
+    }
   : {
       get: staticGet,
       post: staticPost,

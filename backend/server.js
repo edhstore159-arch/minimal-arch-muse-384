@@ -114,27 +114,30 @@ const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
 const AI_SYSTEM_PROMPT =
   process.env.AI_SYSTEM_PROMPT ||
   [
-    "Você é a Kenia, assistente virtual de atendimento jurídico do escritório de advocacia.",
-    "Sua função é realizar o PRIMEIRO ATENDIMENTO automático no WhatsApp em português brasileiro, de forma cordial, profissional, empática e com raciocínio jurídico inicial, sem dizer que é IA.",
+    "Você é a assistente da Dra. Kênia Garcia, advogada brasileira (OAB). Atende pelo WhatsApp em primeira pessoa como assistente humana do escritório, com tom cordial, profissional e raciocínio jurídico inicial. NUNCA diga que é IA, robô, modelo ou assistente virtual.",
     "",
-    "FLUXO DE ATENDIMENTO (siga em ordem, uma pergunta por vez):",
-    "1. Cumprimente pelo nome e se apresente como assistente do escritório.",
-    "2. NÃO pergunte a área jurídica primeiro. Pergunte: 'Me conta o que aconteceu?'.",
-    "3. Pelo relato, identifique internamente a área provável (Trabalhista, Cível, Família, Criminal, Previdenciário, Consumidor, Empresarial, Tributário, Imobiliário ou outra) e responda às dúvidas do cliente com orientação inicial clara.",
-    "4. Só pergunte a área jurídica se o relato continuar ambíguo; caso contrário, conduza pelo problema narrado.",
-    "5. Pergunte a URGÊNCIA (há prazo, audiência marcada, notificação recebida?).",
-    "6. Pergunte a CIDADE/ESTADO do cliente.",
-    "7. Confirme os dados e informe que um advogado do escritório entrará em contato para agendar uma consulta.",
+    "SAUDAÇÃO INICIAL: na primeira mensagem, use Bom dia, Boa tarde ou Boa noite conforme o CONTEXTO TEMPORAL, apresente-se como assistente da Dra. Kênia Garcia e pergunte o nome do cliente.",
+    "Depois que o cliente informar o nome, trate pelo primeiro nome e pergunte: 'Me conta o que aconteceu?'.",
+    "Identifique internamente a área provável pelo relato. Só pergunte a área se ainda estiver ambíguo.",
+    "Responda perguntas abertas naturalmente, como apoio jurídico inicial, sem cair em roteiro fixo.",
+    "Analise o caso em linguagem simples: direito provável, base legal, documentos/provas, próximos passos e por que vale uma consulta.",
+    "Quando houver interesse em agendar, colete uma informação por vez: nome completo, telefone, e-mail, cidade/estado, data e horário.",
     "",
     "REGRAS:",
-    "- Respostas CURTAS (no máximo 3 frases).",
-    "- NUNCA prometa resultado jurídico, valores de indenização ou prazos de processo.",
-    "- Responda como um ChatGPT jurídico: explique possibilidades, próximos passos e documentos, mas NUNCA dê parecer/consulta jurídica definitiva.",
-    "- Se o cliente pedir valor de honorários, diga que será informado pelo advogado responsável.",
-    "- Se o caso for urgente (prisão, audiência em 24h, prazo vencendo), avise que vai sinalizar a equipe imediatamente.",
-    "- Use linguagem simples, evite juridiquês.",
+    "- Nunca prometa resultado jurídico, valores de indenização ou prazos de processo.",
+    "- Use 'geralmente', 'a depender do caso' e 'a análise completa cabe à advogada na consulta'.",
+    "- Cite base legal quando pertinente: CF/88 art. 5º; CC arts. 186, 927, 1.694, 1.829; CLT arts. 477, 482, 818; CDC arts. 6º, 14, 39, 42, 51; Lei 8.213/91; Lei Maria da Penha; CP/CPP conforme o caso.",
+    "- Urgências como prisão, flagrante, violência doméstica, audiência em 48h ou bloqueio judicial devem ser sinalizadas imediatamente.",
+    "- Use linguagem simples, respostas objetivas e emojis com moderação.",
   ].join("\n");
 const aiHistory = new Map(); // jid -> [{role, content}]
+
+function saoPauloTemporalContext() {
+  const now = new Date();
+  const date = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const time = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(now);
+  return `CONTEXTO TEMPORAL: hoje é ${date}; hora atual ${time} (America/Sao_Paulo). Use isso para saudação e para calcular hoje, amanhã e próximas datas.`;
+}
 
 async function callAI(messagesPayload) {
   const providers = [
@@ -200,6 +203,25 @@ async function callAI(messagesPayload) {
   }
 
   return { ok: false, error: "Todos os provedores de IA configurados falharam.", attempts, ...attempts[attempts.length - 1] };
+}
+
+async function generateCreativeImage(prompt) {
+  if (!LOVABLE_API_KEY) return { ok: false, error: "LOVABLE_API_KEY ausente no backend do Render." };
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+    method: "POST",
+    headers: { "Lovable-API-Key": LOVABLE_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "openai/gpt-image-2",
+      prompt: `Arte quadrada profissional para redes sociais de um escritório de advocacia brasileiro. Tema: ${prompt}. Visual elegante, jurídico, humano, sem texto, sem letras, sem marcas d'água.`,
+      quality: "low",
+      size: "1024x1024",
+      stream: false,
+    }),
+  });
+  const data = await resp.json().catch(async () => ({ error: await resp.text().catch(() => "Erro desconhecido") }));
+  if (!resp.ok) return { ok: false, status: resp.status, error: data?.error || JSON.stringify(data) };
+  const b64 = data?.data?.[0]?.b64_json;
+  return b64 ? { ok: true, b64_json: b64 } : { ok: false, error: "Sem imagem gerada." };
 }
 
 const autoReplyDebug = { last: null, history: [] };
@@ -333,7 +355,7 @@ async function autoReply(jid, userText, contactName) {
   }
   const history = aiHistory.get(jid) || [];
   const messagesPayload = [
-    { role: "system", content: `${AI_SYSTEM_PROMPT}\nNome do contato: ${contactName || "Cliente"}.` },
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nNome do contato: ${contactName || "Cliente"}.` },
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
@@ -807,6 +829,46 @@ app.get("/api/whatsapp/messages/:id", (req, res) => {
     if (jidToPhone(jid).endsWith(digits.slice(-8))) return res.json(list);
   }
   res.json([]);
+});
+
+const creativesStore = [];
+
+app.get("/api/creatives", (_req, res) => {
+  res.json(creativesStore);
+});
+
+app.post("/api/creatives/generate", async (req, res) => {
+  const topic = req.body?.topic || req.body?.title || req.body?.prompt || "post jurídico";
+  const result = await generateCreativeImage(topic).catch((e) => ({ ok: false, error: e?.message || String(e) }));
+  const item = {
+    id: `creative-${Date.now()}`,
+    title: req.body?.title || topic,
+    network: req.body?.network || "instagram",
+    format: req.body?.format || "post",
+    caption: `Post sugerido: ${topic}.\n\nExplique o direito com clareza, cite documentos importantes e finalize convidando para atendimento com a Dra. Kênia Garcia.`,
+    image_b64: result.ok ? result.b64_json : "",
+    ...(result.ok ? {} : { error: result.error || "Imagem não gerada" }),
+  };
+  creativesStore.unshift(item);
+  res.status(201).json(item);
+});
+
+app.post("/api/chat/message", async (req, res) => {
+  const message = String(req.body?.message || req.body?.text || "").trim();
+  if (!message) return res.status(400).json({ error: "message vazio" });
+  const history = Array.isArray(req.body?.history) ? req.body.history.slice(-20) : [];
+  const result = await callAI([
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}` },
+    ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") })),
+    { role: "user", content: message },
+  ]);
+  const reply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
+  res.json({
+    session_id: req.body?.session_id || `session-${Date.now()}`,
+    response: reply,
+    audio_base64: null,
+    analysis: { acertividade: result.ok ? 90 : 70, qualificacao: result.ok ? "ok" : "fallback" },
+  });
 });
 
 // ---- Fallback /api/* ----
