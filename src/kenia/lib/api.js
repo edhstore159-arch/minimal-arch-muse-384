@@ -374,11 +374,32 @@ const staticPost = (url, body = {}) => {
   }
   if (path === "/processes") return insertItem("processes", seedProcesses, "proc", body);
   if (path === "/creatives/generate") {
-    const item = { id: nextId("creative"), ...body, caption: `Post sugerido: ${body.topic}.\n\nExplique o direito com clareza, convide o cliente a separar documentos e finalize com chamada para atendimento.`, image_b64: "" };
-    const items = read("creatives", seedCreatives);
-    items.unshift(item);
-    write("creatives", items);
-    return response(item, 201);
+    return (async () => {
+      const topic = body.topic || body.title || body.prompt || "post jurídico";
+      let b64 = "";
+      let genError = null;
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-cover-image", {
+          body: { prompt: topic },
+        });
+        if (error) throw error;
+        b64 = data?.b64_json || "";
+        if (!b64 && data?.error) genError = data.error;
+      } catch (e) {
+        genError = e?.message || String(e);
+      }
+      const item = {
+        id: nextId("creative"),
+        ...body,
+        caption: `Post sugerido: ${topic}.\n\nExplique o direito com clareza, convide o cliente a separar documentos e finalize com chamada para atendimento.`,
+        image_b64: b64,
+        ...(genError ? { error: genError } : {}),
+      };
+      const items = read("creatives", seedCreatives);
+      items.unshift(item);
+      write("creatives", items);
+      return response(item, 201);
+    })();
   }
   if (path === "/debug/instruction") {
     const items = read("debug_instructions", []);
