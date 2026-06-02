@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/kenia/components/ui/
 import { Card } from "@/kenia/components/ui/card";
 import { Gem, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { lovable } from "@/integrations/lovable/index";
 
 const HERO_IMG =
   "https://customer-assets.emergentagent.com/job_nude-gold-dashboard/artifacts/3q8ey4x2_5.IMG_8848.jpg";
