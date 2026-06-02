@@ -160,12 +160,20 @@ Deno.serve(async (req) => {
     }).format(now);
     const isoSp = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).toISOString();
 
+    const hourSp = parseInt(
+      new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(now),
+      10,
+    );
+    const saudacao =
+      hourSp >= 5 && hourSp < 12 ? "Bom dia" : hourSp >= 12 && hourSp < 18 ? "Boa tarde" : "Boa noite";
+
     const systemContent = `${extraPrompt}
 
 CONTEXTO TEMPORAL (use sempre como referência, NUNCA invente datas):
 - Hoje é ${fmtDate}
 - Hora atual: ${fmtTime} (America/Sao_Paulo)
 - ISO local: ${isoSp}
+- SAUDAÇÃO CORRETA AGORA (use EXATAMENTE esta na primeira mensagem, nunca outra): "${saudacao}"
 
 Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir da data acima.`;
 
