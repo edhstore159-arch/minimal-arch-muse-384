@@ -56,6 +56,22 @@ export default function Login() {
     } finally { setLoading(false); }
   };
 
+  const handleOAuth = async (provider) => {
+    try {
+      const result = await lovable.auth.signInWithOAuth(provider, {
+        redirect_uri: window.location.origin + "/app",
+      });
+      if (result.error) {
+        toast.error(`Erro ao entrar com ${provider}: ${result.error.message || result.error}`);
+        return;
+      }
+      if (result.redirected) return;
+      navigate("/app");
+    } catch (err) {
+      toast.error(err?.message || `Erro ao entrar com ${provider}`);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background flex" data-testid="login-page">
