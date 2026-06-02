@@ -411,7 +411,23 @@ const staticPost = (url, body = {}) => {
   if (path === "/whatsapp/test-connection") return response({ connected: false, provider: "static", error: "STATIC_MODE", hint: "Site publicado como estático; conexão real de WhatsApp exige backend externo." });
   if (path.startsWith("/whatsapp/")) return response({ ok: false, connected: false, fallback: true, state: "offline", error: "STATIC_MODE" });
   if (path === "/legislation/refresh" || path === "/seed/demo") return response({ ok: true });
-  if (path === "/creatives/fuse-images") return response({ ok: false, error: "Modo estático: geração de imagem exige backend." });
+  if (path === "/creatives/fuse-images") {
+    return (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("fuse-images", {
+          body: {
+            image1_base64: body.image1_base64,
+            image2_base64: body.image2_base64,
+            prompt: body.prompt || "",
+          },
+        });
+        if (error) throw error;
+        return response(data);
+      } catch (e) {
+        return response({ ok: false, error: e?.message || String(e) });
+      }
+    })();
+  }
   if (path === "/public/consulta") return response({ found: true, processes: seedProcesses, client_name: "Cliente demonstração" });
   return response({ ok: false, fallback: true, error: "STATIC_MODE" });
 };
@@ -488,7 +504,7 @@ liveApi.interceptors.response.use(
 );
 
 const cloudFirstGetPaths = new Set(["/appointments", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
-const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/appointments"]);
+const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments"]);
 
 export const api = HAS_BACKEND
   ? {
