@@ -201,6 +201,21 @@ const write = (key, value) => localStorage.setItem(`static_api_${key}`, JSON.str
 const response = (data, status = 200, headers = {}) => Promise.resolve({ data: clone(data), status, statusText: "OK", headers, config: {} });
 const nextId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+const normalizeAppointment = (item) => {
+  const startsAt = item.starts_at || (item.appointment_date && item.appointment_time
+    ? new Date(`${item.appointment_date}T${String(item.appointment_time).slice(0, 5)}:00`).toISOString()
+    : nowIso());
+  return {
+    ...item,
+    title: item.title || `Consulta — ${item.legal_area || "Atendimento jurídico"} · ${item.client_name || "Cliente"}`,
+    starts_at: startsAt,
+    duration_min: item.duration_min || 60,
+    location: item.location || "Google Meet",
+    notes: item.notes || [item.phone ? `WhatsApp: ${item.phone}` : "", item.case_summary].filter(Boolean).join(" · "),
+    status: item.status === "scheduled" ? "confirmado" : item.status || "confirmado",
+  };
+};
+
 const getMetrics = () => {
   const leads = read("leads", seedLeads);
   const processes = read("processes", seedProcesses);
@@ -229,7 +244,21 @@ const staticGet = (url, config = {}) => {
   if (path === "/dashboard/metrics") return response(getMetrics());
   if (path === "/processes") return response(read("processes", seedProcesses));
   if (path === "/finance/transactions") return response(read("transactions", seedTransactions));
-  if (path === "/appointments") return response(read("appointments", seedAppointments));
+  if (path === "/appointments") {
+    return (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("*")
+          .order("appointment_date", { ascending: true })
+          .order("appointment_time", { ascending: true });
+        if (error) throw error;
+        return response((data || []).map(normalizeAppointment));
+      } catch {
+        return response(read("appointments", seedAppointments).map(normalizeAppointment));
+      }
+    })();
+  }
   if (path === "/creatives") return response(read("creatives", seedCreatives));
   if (path === "/settings") return response({ using_default_text: true, using_default_image: true, llm_text_key_masked: "Emergent padrão", llm_image_key_masked: "Emergent padrão" });
   if (path === "/whatsapp/diagnostics") return response({ ok: true, static_mode: true, checks: [
@@ -274,11 +303,14 @@ const staticPost = (url, body = {}) => {
   if (path === "/chat/message") {
     return (async () => {
       try {
+        const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: null }));
         const { data, error } = await supabase.functions.invoke("chat-ai", {
           body: {
             message: body.message || body.text || "",
             history: body.history || [],
             system_prompt: body.system_prompt,
+            session_id: body.session_id,
+            user_id: authData?.user?.id || null,
           },
         });
         if (error) throw error;
@@ -287,6 +319,7 @@ const staticPost = (url, body = {}) => {
             session_id: body.session_id || nextId("session"),
             response: data?.response || "Sem resposta da IA.",
             audio_base64: data?.audio_base64 || null,
+            appointment: data?.appointment || null,
             analysis: data?.analysis || { acertividade: 80, qualificacao: "ok" },
             server_time: data?.server_time,
           },
@@ -310,7 +343,35 @@ const staticPost = (url, body = {}) => {
   }
 
   if (path === "/finance/transactions") return insertItem("transactions", seedTransactions, "tx", body);
-  if (path === "/appointments") return insertItem("appointments", seedAppointments, "appt", body);
+  if (path === "/appointments") {
+    return (async () => {
+      try {
+        const start = body.starts_at ? new Date(body.starts_at) : new Date();
+        const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: null }));
+        const { data, error } = await supabase
+          .from("appointments")
+          .insert({
+            user_id: authData?.user?.id || null,
+            client_name: body.client_name || "Cliente",
+            phone: body.phone || null,
+            email: body.email || null,
+            legal_area: body.area || body.legal_area || body.title || "Atendimento jurídico",
+            case_summary: body.notes || null,
+            appointment_date: start.toISOString().slice(0, 10),
+            appointment_time: start.toTimeString().slice(0, 5),
+            source: body.source || "panel",
+            status: body.status === "confirmado" ? "scheduled" : body.status || "scheduled",
+            raw_payload: body,
+          })
+          .select("*")
+          .single();
+        if (error) throw error;
+        return response(normalizeAppointment({ ...body, ...data }), 201);
+      } catch {
+        return insertItem("appointments", seedAppointments, "appt", normalizeAppointment(body));
+      }
+    })();
+  }
   if (path === "/processes") return insertItem("processes", seedProcesses, "proc", body);
   if (path === "/creatives/generate") {
     const item = { id: nextId("creative"), ...body, caption: `Post sugerido: ${body.topic}.\n\nExplique o direito com clareza, convide o cliente a separar documentos e finalize com chamada para atendimento.`, image_b64: "" };
