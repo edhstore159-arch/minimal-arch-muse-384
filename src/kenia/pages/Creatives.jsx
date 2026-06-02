@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/kenia/components/ui/select";
 import { Sparkles, Instagram, Facebook, Linkedin, Trash2, Download, Copy, Wand2, Upload, X as XIcon, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
+import SocialConnections from "@/kenia/components/SocialConnections";
 
 const PLATFORMS = [
   { id: "instagram", label: "Instagram" },
