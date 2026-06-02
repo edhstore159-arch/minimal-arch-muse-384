@@ -103,15 +103,18 @@ Deno.serve(async (req) => {
     let provider = "";
     let lastError: string | null = null;
 
-    // Primary: ElevenLabs Scribe (reliable for short audio in PT-BR)
+    // Primary: ElevenLabs Scribe — tenta scribe_v1 (estável) e cai para scribe_v2 se falhar
     if (ELEVENLABS_API_KEY) {
-      try {
-        const bytes = base64ToBytes(audio_base64);
-        text = await transcribeWithElevenLabs(bytes, mt);
-        provider = "elevenlabs";
-      } catch (err) {
-        lastError = String((err as Error)?.message || err);
-        console.warn("⚠️ ElevenLabs falhou, tentando fallback:", lastError);
+      const bytes = base64ToBytes(audio_base64);
+      for (const model of ["scribe_v1", "scribe_v2"]) {
+        try {
+          text = await transcribeWithElevenLabs(bytes, mt, model);
+          provider = `elevenlabs:${model}`;
+          if (text) break;
+        } catch (err) {
+          lastError = String((err as Error)?.message || err);
+          console.warn(`⚠️ ElevenLabs ${model} falhou:`, lastError);
+        }
       }
     }
 
