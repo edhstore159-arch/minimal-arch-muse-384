@@ -611,35 +611,23 @@ export default function ChatIA() {
     const scheduleIntent = extractScheduleIntent(msg);
     if (scheduleIntent) {
       try {
-        const { human, meetUrl, duration } = await createAppointment({
+        const result = await createAppointment({
           ...scheduleIntent,
           area: analysis?.area || "Atendimento jurídico",
         });
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: `✅ Consulta agendada para ${human} (${duration} min) por Google Meet.\n\n🔗 Link: ${meetUrl}\n\nO agendamento já aparece no painel da Agenda${phone ? ` e o WhatsApp será notificado.` : "."}`,
-            audio_base64: null,
-          },
-        ]);
         toast.success("Agendamento criado no painel da Agenda");
         upsertLead({ stage: "em_negociacao", urgency: "alta" });
         setScheduler(null);
+        setThinking(false);
+        await typeAssistantMessage(buildAppointmentMessage(result));
       } catch (err) {
         console.error("Erro ao agendar automaticamente:", err);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "Não consegui salvar automaticamente agora. Abra o botão Agendar consulta e confirme o horário manualmente.",
-            audio_base64: null,
-          },
-        ]);
+        setThinking(false);
+        await typeAssistantMessage(
+          "Não consegui salvar automaticamente agora. Abra o botão Agendar consulta e confirme o horário manualmente."
+        );
         openScheduler(analysis?.area || "Atendimento jurídico");
         toast.error("Não consegui criar o agendamento automaticamente");
-      } finally {
-        setThinking(false);
       }
       return;
     }
@@ -659,34 +647,26 @@ export default function ChatIA() {
         { timeout: 90000 }
       );
       setSessionId(data.session_id);
-      const newMsg = {
-        role: "assistant",
-        content: data.response,
-        audio_base64: data.audio_base64,
-      };
-      setMessages((prev) => [...prev, newMsg]);
       if (data.appointment) {
         toast.success("Consulta salva automaticamente na Agenda");
       }
       if (data.analysis) setAnalysis(data.analysis);
       upsertLead({ description: msg });
+      setThinking(false);
+      await typeAssistantMessage(data.response, data.audio_base64 || null);
       if (autoplay && data.audio_base64) {
-        setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 250);
+        setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 200);
       }
     } catch (err) {
       console.error("Erro ao conversar com a IA:", err);
       toast.error("Erro ao conversar com a IA. Tente novamente.");
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Desculpe, tive uma instabilidade aqui. Pode repetir sua mensagem? 🙏",
-        },
-      ]);
+      setThinking(false);
+      await typeAssistantMessage("Desculpe, tive uma instabilidade aqui. Pode repetir sua mensagem? 🙏");
     } finally {
       setThinking(false);
     }
   };
+
 
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
