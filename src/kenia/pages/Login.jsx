@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/kenia/contexts/AuthContext";
 import { api } from "@/kenia/lib/api";
@@ -19,7 +19,7 @@ const LOGO_IMG =
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, register } = useAuth();
+  const { login, register, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loginData, setLoginData] = useState({
     email: "admin@kenia-garcia.com.br",
