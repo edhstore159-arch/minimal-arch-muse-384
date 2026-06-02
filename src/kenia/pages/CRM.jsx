@@ -35,13 +35,19 @@ export default function CRM() {
   const [form, setForm] = useState({ name: "", phone: "", email: "", case_type: "", description: "" });
 
   useEffect(() => {
-    api.get("/crm/stages").then((r) => setStages(r.data)).catch(() => {});
+    api.get("/crm/stages")
+      .then((r) => setStages(Array.isArray(r?.data) ? r.data : []))
+      .catch(() => setStages([]));
     load();
   }, []);
 
   const load = async () => {
-    const { data } = await api.get("/leads");
-    setLeads(data);
+    try {
+      const { data } = await api.get("/leads");
+      setLeads(Array.isArray(data) ? data : Array.isArray(data?.leads) ? data.leads : []);
+    } catch {
+      setLeads([]);
+    }
   };
 
   const create = async () => {
