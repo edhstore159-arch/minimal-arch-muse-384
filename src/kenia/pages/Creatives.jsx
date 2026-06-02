@@ -57,7 +57,7 @@ export default function Creatives() {
   };
 
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadScheduled(); }, []);
   const load = async () => {
     try {
       const { data } = await api.get("/creatives");
@@ -67,6 +67,85 @@ export default function Creatives() {
       setItems([]);
     }
   };
+
+  const loadScheduled = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("scheduled_posts")
+        .select("*")
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .limit(50);
+      if (error) throw error;
+      setScheduled(data || []);
+    } catch {
+      setScheduled([]);
+    }
+  };
+
+  const openSchedule = (item) => {
+    setScheduleTarget(item);
+    setScheduleForm({
+      caption: item.caption || "",
+      hashtags: "",
+      scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
+      platforms: [item.network || "instagram"],
+    });
+    setScheduleOpen(true);
+  };
+
+  const togglePlatform = (id) => {
+    setScheduleForm((s) => ({
+      ...s,
+      platforms: s.platforms.includes(id)
+        ? s.platforms.filter((p) => p !== id)
+        : [...s.platforms, id],
+    }));
+  };
+
+  const saveSchedule = async () => {
+    if (!scheduleTarget) return;
+    if (!scheduleForm.platforms.length) {
+      toast.error("Selecione pelo menos uma rede");
+      return;
+    }
+    if (!scheduleForm.scheduled_for) {
+      toast.error("Defina data e hora");
+      return;
+    }
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        toast.error("Faça login para agendar publicações");
+        return;
+      }
+      const { error } = await supabase.from("scheduled_posts").insert({
+        user_id: userId,
+        creative_id: scheduleTarget.id,
+        title: scheduleTarget.title,
+        caption: scheduleForm.caption,
+        hashtags: scheduleForm.hashtags || null,
+        image_b64: scheduleTarget.image_b64 || null,
+        platforms: scheduleForm.platforms,
+        scheduled_for: new Date(scheduleForm.scheduled_for).toISOString(),
+        status: "scheduled",
+      });
+      if (error) throw error;
+      toast.success("Publicação agendada! As redes conectadas serão postadas automaticamente.", { duration: 6000 });
+      setScheduleOpen(false);
+      setScheduleTarget(null);
+      loadScheduled();
+    } catch (e) {
+      toast.error(`Não foi possível agendar: ${e.message || e}`);
+    }
+  };
+
+  const cancelScheduled = async (id) => {
+    if (!confirm("Cancelar este agendamento?")) return;
+    await supabase.from("scheduled_posts").delete().eq("id", id);
+    loadScheduled();
+  };
+
 
   const generate = async () => {
     if (!form.title || !form.topic) {
