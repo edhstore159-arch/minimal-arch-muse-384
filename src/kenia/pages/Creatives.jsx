@@ -52,7 +52,10 @@ export default function Creatives() {
     }
     setGenerating(true);
     try {
-      const { data } = await api.post("/creatives/generate", form);
+      const { data } = await api.post("/creatives/generate", {
+        ...form,
+        reference_image_base64: refImage || null,
+      });
       if (data?.image_b64) {
         toast.success("Criativo gerado!");
       } else {
@@ -61,6 +64,7 @@ export default function Creatives() {
       setPreview(data);
       setOpen(false);
       setForm({ title: "", network: "instagram", format: "post", topic: "", tone: "profissional", case_type: "" });
+      setRefImage(null);
       load();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao gerar");
