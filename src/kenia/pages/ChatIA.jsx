@@ -18,10 +18,20 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
 
+// Gera link de videoconferência (Jitsi — funciona como Google Meet, sem necessidade de login)
+// Pode ser substituído por integração oficial com Google Calendar API no futuro.
 const getMeetLink = () => {
   const room = `KeniaGarcia-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   return `https://meet.jit.si/${room}`;
 };
+
+// Monta link wa.me para enviar o agendamento ao cliente via WhatsApp
+const buildWhatsAppShare = (phone, text) => {
+  const digits = String(phone || "").replace(/\D/g, "");
+  const base = digits ? `https://wa.me/${digits}` : `https://wa.me/`;
+  return `${base}?text=${encodeURIComponent(text)}`;
+};
+
 
 const renderMessageContent = (text) => {
   const parts = String(text).split(/(https?:\/\/[^\s)]+)/g);
