@@ -1,17 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 /**
- * DebugErrorThrower
+ * DebugErrorThrower (neutralizado)
  *
- * Escuta "lovable-debug-error" e RELANÇA a mensagem como Error fatal em render,
- * para que o overlay global "Try to Fix" da Lovable apareça.
- *
- * IMPORTANTE: deve ficar FORA de qualquer ErrorBoundary/Suspense.
+ * Antes lançava as instruções como Error fatal e causava tela branca.
+ * Agora apenas armazena a instrução no localStorage e dispara um evento
+ * informativo. NUNCA lança erro em render.
  */
 export const DebugErrorThrower = () => {
-  const [message, setMessage] = useState<string | null>(null);
-
   useEffect(() => {
+    // Limpa qualquer instrução antiga que poderia voltar a derrubar a tela.
+    try {
+      localStorage.removeItem("last_lovable_debug_instruction");
+    } catch {
+      // ignore
+    }
+
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
@@ -20,16 +24,13 @@ export const DebugErrorThrower = () => {
         } catch {
           // ignore
         }
-        setMessage(detail);
+        // Apenas log — não derruba a aplicação.
+        console.info("[DebugErrorThrower] instrução recebida:", detail);
       }
     };
     window.addEventListener("lovable-debug-error", handler as EventListener);
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
-
-  if (message) {
-    throw new Error(message);
-  }
 
   return null;
 };
