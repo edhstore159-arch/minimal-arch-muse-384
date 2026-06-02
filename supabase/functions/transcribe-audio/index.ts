@@ -25,8 +25,9 @@ function pickExtension(mime: string): string {
 
 async function transcribeWithElevenLabs(bytes: Uint8Array, mime: string): Promise<string> {
   if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY ausente");
-  const ext = pickExtension(mime);
-  const blob = new Blob([bytes], { type: mime || "audio/webm" });
+  const cleaned = cleanMime(mime);
+  const ext = pickExtension(cleaned);
+  const blob = new Blob([bytes], { type: cleaned });
   const form = new FormData();
   form.append("file", blob, `audio.${ext}`);
   form.append("model_id", "scribe_v2");
