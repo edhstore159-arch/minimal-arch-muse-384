@@ -169,6 +169,31 @@ export default function Creatives() {
                 </div>
               </div>
               <div><Label>Tema / Mensagem Principal</Label><Textarea rows={3} placeholder="Sobre o que é o post? Qual a mensagem chave?" value={form.topic} onChange={e => setForm({ ...form, topic: e.target.value })} data-testid="creative-topic" /></div>
+
+              <div>
+                <Label>Imagem de referência (opcional)</Label>
+                <p className="text-xs text-nude-500 mb-1.5">Envie uma foto para a IA usar como base/inspiração visual.</p>
+                {refImage ? (
+                  <div className="relative inline-block">
+                    <img src={refImage} alt="ref" className="h-28 w-28 object-cover rounded-md border border-nude-200" />
+                    <button
+                      type="button"
+                      onClick={() => setRefImage(null)}
+                      className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow"
+                      data-testid="creative-remove-ref"
+                      aria-label="Remover imagem"
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 h-24 border-2 border-dashed border-nude-300 rounded-md cursor-pointer hover:bg-nude-50 text-sm text-nude-600" data-testid="creative-upload-ref">
+                    <Upload className="w-4 h-4" />
+                    Clique para enviar imagem (JPG/PNG, até 8MB)
+                    <input type="file" accept="image/*" className="hidden" onChange={onPickImage} />
+                  </label>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button onClick={generate} disabled={generating} className="bg-nude-900 hover:bg-nude-800" data-testid="creative-generate">
