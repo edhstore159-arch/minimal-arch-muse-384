@@ -380,7 +380,10 @@ const staticPost = (url, body = {}) => {
       let genError = null;
       try {
         const { data, error } = await supabase.functions.invoke("generate-cover-image", {
-          body: { prompt: topic },
+          body: {
+            prompt: topic,
+            reference_image_base64: body.reference_image_base64 || null,
+          },
         });
         if (error) throw error;
         b64 = data?.b64_json || "";
