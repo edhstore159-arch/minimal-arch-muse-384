@@ -7,7 +7,7 @@ import { Badge } from "@/kenia/components/ui/badge";
 import { ScrollArea } from "@/kenia/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/kenia/components/ui/avatar";
 import { Separator } from "@/kenia/components/ui/separator";
-import { Search, Send, Phone, MoreVertical, Bot, Sparkles, Paperclip, Mail, MessageSquare, FileText, Flame, Tag, Calendar, AlertTriangle } from "lucide-react";
+import { Search, Send, Phone, MoreVertical, Bot, Sparkles, Paperclip, Mail, MessageSquare, FileText, Flame, Tag, Calendar, AlertTriangle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 const URG_COLORS = {
@@ -213,9 +213,9 @@ export default function Dashboard() {
       </div>
 
       {/* 3-column layout */}
-      <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 p-4 overflow-hidden">
         {/* LEFT - WhatsApp Contacts */}
-        <Card className="col-span-3 flex flex-col overflow-hidden border-nude-200" data-testid="whatsapp-panel">
+        <Card className={`${activeContact ? "hidden md:flex" : "flex"} md:col-span-4 lg:col-span-3 flex-col overflow-hidden border-nude-200`} data-testid="whatsapp-panel">
           <div className="p-4 border-b border-nude-200">
             <div className="flex items-center gap-2 mb-3">
               <MessageSquare className="w-4 h-4 text-gold-600" />
@@ -268,10 +268,20 @@ export default function Dashboard() {
         </Card>
 
         {/* CENTER - Active Chat + AI */}
-        <Card className="col-span-6 flex flex-col overflow-hidden border-nude-200" data-testid="chat-panel">
+        <Card className={`${activeContact ? "flex" : "hidden md:flex"} md:col-span-8 lg:col-span-6 flex-col overflow-hidden border-nude-200`} data-testid="chat-panel">
           {activeContact ? (
             <>
               <div className="px-5 py-3 border-b border-nude-200 flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 md:hidden"
+                  onClick={() => setActiveContact(null)}
+                  data-testid="back-to-contacts"
+                  aria-label="Voltar"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
                 <Avatar className={`w-9 h-9 ${activeContact.avatar_color}`}>
                   <AvatarFallback className="bg-transparent text-white text-xs font-semibold">
                     {initials(activeContact.name)}
@@ -407,7 +417,7 @@ export default function Dashboard() {
         </Card>
 
         {/* RIGHT - Client Data */}
-        <Card className="col-span-3 flex flex-col overflow-hidden border-nude-200" data-testid="client-panel">
+        <Card className="hidden lg:flex lg:col-span-3 flex-col overflow-hidden border-nude-200" data-testid="client-panel">
           <div className="p-4 border-b border-nude-200">
             <h2 className="font-display font-semibold text-sm">Dados do Cliente</h2>
           </div>
