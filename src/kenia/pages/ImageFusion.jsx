@@ -199,12 +199,13 @@ export default function ImageFusion() {
 
   const openSchedule = (target = null) => {
     const targetPlatforms = target?.preset?.group ? [platformFromGroup(target.preset.group)] : ["instagram"];
+    const platforms = targetPlatforms.filter((p) => PLATFORMS.some((item) => item.id === p));
     setScheduleTarget(target || { dataUrl: result, preset: { group: "Fusão", name: "Original" } });
     setScheduleForm({
       caption: prompt || "Imagem criada no Estúdio de Fusão.",
       hashtags: "",
       scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
-      platforms: targetPlatforms.filter((p) => PLATFORMS.some((item) => item.id === p)),
+      platforms: platforms.length ? platforms : ["instagram"],
     });
     setScheduleOpen(true);
   };
