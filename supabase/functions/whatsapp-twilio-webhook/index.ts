@@ -205,10 +205,15 @@ Deno.serve(async (req) => {
       return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
     }
 
-    const reply = await callChatAI(userText, from.replace(/[^\d+]/g, ""));
+    const { reply, audio_base64 } = await callChatAI(userText, from.replace(/[^\d+]/g, ""), inboundWasAudio);
     await sleep(1000 + Math.floor(Math.random() * 2000));
+    let mediaUrl: string | null = null;
+    if (inboundWasAudio && audio_base64) {
+      mediaUrl = await uploadAudioPublic(audio_base64);
+      console.log("[whatsapp] resposta em áudio", { hasUrl: !!mediaUrl });
+    }
     // From e To invertidos para responder
-    await sendTwilioMessage(to, from, reply);
+    await sendTwilioMessage(to, from, reply, mediaUrl);
 
     return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
   } catch (e) {
