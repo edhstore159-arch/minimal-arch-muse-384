@@ -16,6 +16,27 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY")!;
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function getSaoPauloHour() {
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  return Number(parts.find((p) => p.type === "hour")?.value || "0");
+}
+
+function isBusinessHours() {
+  const hour = getSaoPauloHour();
+  return hour >= 8 && hour < 20;
+}
+
+function isOptOut(text: string) {
+  return /\b(sair|parar|cancelar|stop|remover)\b/i.test(text);
+}
+
 async function fetchTwilioMedia(mediaUrl: string): Promise<{ buffer: ArrayBuffer; contentType: string }> {
   // MediaUrl no formato: https://api.twilio.com/2010-04-01/Accounts/{Sid}/Messages/{MSid}/Media/{MeSid}
   // Reescrevemos para o gateway: /Messages/{MSid}/Media/{MeSid}
@@ -52,7 +73,7 @@ async function transcribe(buffer: ArrayBuffer, mime: string): Promise<string> {
   return d.text || d.transcript || "";
 }
 
-async function callChatAI(userText: string): Promise<string> {
+async function callChatAI(userText: string, sessionId: string): Promise<string> {
   const r = await fetch(`${SUPABASE_URL}/functions/v1/chat-ai`, {
     method: "POST",
     headers: {
@@ -60,7 +81,7 @@ async function callChatAI(userText: string): Promise<string> {
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       apikey: SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ message: userText, want_audio: false }),
+    body: JSON.stringify({ message: userText, want_audio: false, session_id: sessionId }),
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`chat-ai ${r.status}: ${JSON.stringify(d)}`);
@@ -109,7 +130,18 @@ Deno.serve(async (req) => {
       return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
     }
 
-    const reply = await callChatAI(userText);
+    if (isOptOut(userText)) {
+      await sendTwilioMessage(to, from, "Tudo bem, atendimento automático pausado. Se precisar falar conosco novamente, envie uma nova mensagem. ✨");
+      return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
+    }
+
+    if (!isBusinessHours()) {
+      await sendTwilioMessage(to, from, "Recebi sua mensagem. Nosso atendimento funciona das 8h às 20h, e retornaremos no próximo horário útil. ✨");
+      return new Response("<Response/>", { headers: { "Content-Type": "text/xml" }, status: 200 });
+    }
+
+    const reply = await callChatAI(userText, from.replace(/[^\d+]/g, ""));
+    await sleep(1000 + Math.floor(Math.random() * 2000));
     // From e To invertidos para responder
     await sendTwilioMessage(to, from, reply);
 

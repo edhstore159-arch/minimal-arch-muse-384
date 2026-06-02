@@ -68,6 +68,11 @@ const extractScheduleIntent = (text) => {
 
   let date = null;
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  const hasRelativeDate = /\b(hoje|amanh[ãa]|depois de amanh[ãa])\b/i.test(lower);
+  const timeMatch = lower.match(/\b(\d{1,2})(?::|h)(\d{2})?\b/i);
+
+  if (!dateMatch && !hasRelativeDate) return null;
+  if (!timeMatch) return null;
 
   if (/\bhoje\b/i.test(lower)) {
     date = formatLocalDate(today);
@@ -93,7 +98,6 @@ const extractScheduleIntent = (text) => {
     date = formatLocalDate(t);
   }
 
-  const timeMatch = lower.match(/(\d{1,2})(?::|h)(\d{2})?/i);
   const time = timeMatch
     ? `${pad2(timeMatch[1])}:${pad2(timeMatch[2] || "00")}`
     : "10:00";
@@ -584,6 +588,9 @@ export default function ChatIA() {
         audio_base64: data.audio_base64,
       };
       setMessages((prev) => [...prev, newMsg]);
+      if (data.appointment) {
+        toast.success("Consulta salva automaticamente na Agenda");
+      }
       if (data.analysis) setAnalysis(data.analysis);
       upsertLead({ description: msg });
       if (autoplay && data.audio_base64) {
