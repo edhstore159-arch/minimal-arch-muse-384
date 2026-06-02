@@ -144,7 +144,11 @@ export default function Dashboard() {
       });
       // Backend retorna {message, provider_result} — extrai a mensagem pura
       const msg = data?.message || data;
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        if (!msg) return prev;
+        const exists = prev.some((p) => p.id && msg.id && p.id === msg.id);
+        return exists ? prev : [...prev, msg];
+      });
       setDraft("");
       loadContacts();
       // Recarrega mensagens do servidor em 1s para pegar resposta do bot
