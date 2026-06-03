@@ -282,11 +282,23 @@ export default function ImageFusion() {
         </div>
 
         <Card className="max-w-5xl mx-auto p-5 bg-nude-900/60 border-gold-900/40 mt-5">
-          <Label className="text-gold-200">Instrução adicional (opcional)</Label>
-          <Textarea rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ex: Mescle as duas imagens em estilo dourado elegante"
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <Label className="text-gold-200">Instrução adicional (opcional)</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + REJUVENATE_PROMPT)}
+              className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
+              data-testid="fusion-rejuvenate-preset"
+            >
+              <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Preset: rejuvenescer rosto (preservar identidade)
+            </Button>
+          </div>
+          <Textarea rows={4} value={prompt} onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Ex: Mescle as duas imagens em estilo dourado elegante. Use o botão acima para aplicar o preset de rejuvenescimento facial."
             data-testid="fusion-prompt"
-            className="bg-nude-950 border-gold-900/40 text-gold-100 placeholder:text-nude-600 mt-1.5" />
+            className="bg-nude-950 border-gold-900/40 text-gold-100 placeholder:text-nude-600 mt-2" />
           <div className="flex justify-end mt-4">
             <Button onClick={fuse} disabled={loading || !img1 || !img2}
               className="bg-gradient-to-r from-gold-500 to-gold-700 hover:from-gold-400 hover:to-gold-600 text-nude-950 font-semibold"
