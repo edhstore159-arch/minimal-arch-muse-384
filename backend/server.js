@@ -776,6 +776,34 @@ const baileysRuntimeStatus = () => {
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
 app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
 
+// ---- Alexa Skill webhook ----
+app.post(["/api/alexa", "/api/alexa/webhook"], async (req, res) => {
+  try {
+    const utterance = extractAlexaUtterance(req.body || {});
+    const lower = utterance.toLowerCase();
+    if (!utterance || lower === "encerrar") {
+      return res.json(alexaJsonResponse("Atendimento encerrado. Quando precisar, é só chamar o escritório.", true));
+    }
+
+    const result = await callAI([
+      { role: "system", content: `${ALEXA_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}` },
+      { role: "user", content: utterance },
+    ]);
+    const reply = result.ok
+      ? result.reply
+      : buildLocalLegalReply(`alexa-${Date.now()}`, utterance, "cliente");
+
+    res.json(alexaJsonResponse(reply, false));
+  } catch (e) {
+    console.error("[alexa-webhook]", e?.message || e);
+    res.json(alexaJsonResponse("Não consegui consultar a IA agora. Posso registrar seu pedido pelo atendimento do escritório.", false));
+  }
+});
+
+app.get("/api/alexa/health", (_req, res) => {
+  res.json(ok({ webhook: "/api/alexa/webhook", has_lovable_key: Boolean(LOVABLE_API_KEY), model: AI_MODEL }));
+});
+
 app.get("/api/debug/instructions", (_req, res) => {
   res.json(debugInstructions.slice(0, 50));
 });
