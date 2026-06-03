@@ -92,9 +92,47 @@ export const ErrorDebugPopup = () => {
 
   const buildMessage = () => buildDebugInstructionMessage(text, files);
 
-  const fire = () => {
+  const saveFallback = async (message: string) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    const payload = {
+      user_id: user?.id ?? null,
+      user_email: user?.email ?? null,
+      instruction: message,
+      attachments: files,
+      status: "pending",
+    };
+
+    const { error } = await supabase.from("debug_instructions").insert(payload);
+    if (!error) return;
+
+    if (/user_email|schema cache|column/i.test(error.message || "")) {
+      const { error: retryError } = await supabase.from("debug_instructions").insert({
+        user_id: user?.id ?? null,
+        instruction: message,
+        attachments: files,
+        status: "pending",
+      });
+      if (retryError) throw retryError;
+      return;
+    }
+
+    throw error;
+  };
+
+  const fire = async () => {
     if (!text.trim() && files.length === 0) return;
-    deliverLovableDebugInstruction(buildMessage());
+    const message = buildMessage();
+    const delivery = deliverLovableDebugInstruction(message);
+    if (delivery === "skipped") {
+      try {
+        await saveFallback(message);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        alert(`Falha ao salvar instrução: ${msg}`);
+        return;
+      }
+    }
     setText("");
     setFiles([]);
   };
