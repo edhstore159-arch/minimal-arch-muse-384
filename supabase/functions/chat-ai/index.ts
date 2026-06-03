@@ -214,28 +214,20 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
       { role: "user", content: userMessage },
     ];
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": LOVABLE_API_KEY,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages,
-      }),
+    const aiResult = await chatCompletion({
+      model: "google/gemini-3-flash-preview",
+      messages,
     });
 
-    if (!aiResp.ok) {
-      const errText = await aiResp.text();
-      const status = aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 502;
+    if (!aiResult.ok) {
+      const status = aiResult.status === 429 || aiResult.status === 402 ? aiResult.status : 502;
       return new Response(
-        JSON.stringify({ error: "AI Gateway error", status: aiResp.status, detail: errText }),
+        JSON.stringify({ error: "AI Gateway error", status: aiResult.status, detail: aiResult.error }),
         { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const data = await aiResp.json();
+    const data = aiResult.data;
     const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
     const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
     const appointment = parseAppointmentBlock(rawReply);
