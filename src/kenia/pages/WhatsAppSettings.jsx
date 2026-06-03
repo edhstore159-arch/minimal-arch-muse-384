@@ -1193,6 +1193,9 @@ export default function WhatsAppSettings() {
                       fd.append("audio_file", voiceCloneFile);
                       const { data } = await api.post("/whatsapp/elevenlabs/clone", fd);
                       const voiceId = data?.voice_id || data?.voiceId || data?.id || "";
+                      if (data?.error === "STATIC_MODE" || data?.fallback) {
+                        throw new Error("Backend do WhatsApp não está conectado. Para clonar a voz é preciso configurar VITE_BACKEND_URL apontando para o servidor Node (Render) — sem ele o ElevenLabs não pode ser chamado a partir do navegador.");
+                      }
                       if (!voiceId) {
                         throw new Error(data?.detail || data?.error || "Resposta sem voice_id — verifique a ELEVENLABS_API_KEY e o áudio enviado.");
                       }
@@ -1201,8 +1204,8 @@ export default function WhatsAppSettings() {
                       await load();
                       setVoiceCloneFile(null);
                     } catch (e) {
-                      const detail = e?.response?.data?.detail || e.message;
-                      toast.error("Erro ao clonar: " + detail, { duration: 7000 });
+                      const detail = e?.response?.data?.detail || e?.response?.data?.error || e.message;
+                      toast.error("Erro ao clonar: " + detail, { duration: 9000 });
                     } finally {
                       setCloning(false);
                     }
