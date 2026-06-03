@@ -85,10 +85,12 @@ export default function DebugTool() {
   const saveInstructionToCloud = async (message) => {
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
+    const instructionWithUser = user?.email
+      ? `${message}\n\n---\nUSUÁRIO CONECTADO: ${user.email}`
+      : message;
     const payload = {
       user_id: user?.id ?? null,
-      user_email: user?.email ?? null,
-      instruction: message,
+      instruction: instructionWithUser,
       attachments,
       status: "pending",
     };
@@ -96,10 +98,10 @@ export default function DebugTool() {
     const { error } = await supabase.from("debug_instructions").insert(payload);
     if (!error) return;
 
-    if (/user_email|schema cache|column/i.test(error.message || "")) {
+    if (/schema cache|column/i.test(error.message || "")) {
       const { error: retryError } = await supabase.from("debug_instructions").insert({
         user_id: user?.id ?? null,
-        instruction: message,
+        instruction: instructionWithUser,
         attachments,
         status: "pending",
       });
