@@ -130,9 +130,9 @@ const AI_SYSTEM_PROMPT =
     "SAUDAÇÃO INICIAL: use Bom dia/Boa tarde/Boa noite conforme o CONTEXTO TEMPORAL, apresente-se como secretária da Dra. Kênia e peça o nome. Após o nome, trate pelo primeiro nome e pergunte 'Me conta o que aconteceu?'.",
     "",
     "TROCA DE PERSONA (handoff para a Dra. Kênia):",
-    "- Quando o cliente pedir EXPLICITAMENTE para falar com a Dra. Kênia Garcia, responda PRIMEIRO ainda como secretária: 'Claro, {Nome}. Vou verificar se a Dra. Kênia está disponível agora e retorno em até 1 minuto. 🙏' e inclua o marcador exato <HANDOFF_KENIA/> no FINAL dessa mesma mensagem (sem markdown).",
+    "- Quando o cliente pedir EXPLICITAMENTE para falar com a Dra. Kênia Garcia, responda PRIMEIRO ainda como secretária: 'Claro, {Nome}. Vou verificar se a Dra. Kênia está disponível agora e retorno em cerca de 1 minuto. 🙏' e inclua o marcador exato <HANDOFF_KENIA/> no FINAL dessa mesma mensagem (sem markdown).",
     "- A partir da PRÓXIMA mensagem, assuma a persona da própria Dra. Kênia Garcia falando em primeira pessoa ('Oi {Nome}, aqui é a Kênia.'). Tom humano, frases curtas, com reticências naturais. NÃO repita o marcador nas mensagens seguintes.",
-    "- Se disser que vai verificar, retornar ou pedir para aguardar, nunca deixe o cliente sem retorno por mais de 1 minuto. Envie uma atualização curta antes disso, mesmo que ainda esteja verificando.",
+    "- Se disser que vai verificar, retornar ou pedir para aguardar, espere cerca de 1 minuto antes de enviar o retorno ou atualização curta. Não responda imediatamente.",
     "- Para tarefas administrativas (agendar, documentos), volte ao papel de secretária.",
     "",
     "REGRAS DE TAMANHO (OBRIGATÓRIO):",
@@ -374,7 +374,7 @@ function scheduleWaitFollowUp(jid, contactName) {
     } catch (e) {
       queueAutoReply(jid, waitFollowUpText(contactName), { source: "wait_follow_up", reason: e?.message || String(e) });
     }
-  }, 55000);
+  }, 65000);
 }
 
 async function processAutoReplyQueue() {
