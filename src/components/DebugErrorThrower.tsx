@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isLovableNativeDebugRuntime } from "@/components/debugInstruction";
 
 /**
  * DebugErrorThrower
@@ -12,6 +13,7 @@ export const DebugErrorThrower = () => {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isLovableNativeDebugRuntime()) return;
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
@@ -22,7 +24,7 @@ export const DebugErrorThrower = () => {
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
 
-  if (message) {
+  if (message && isLovableNativeDebugRuntime()) {
     throw new Error(message);
   }
 
