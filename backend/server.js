@@ -866,11 +866,15 @@ app.post("/api/chat/message", async (req, res) => {
     ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") })),
     { role: "user", content: message },
   ]);
-  const reply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
+  const rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
+  const handoff = /<HANDOFF_KENIA\s*\/?>/i.test(rawReply);
+  const reply = rawReply.replace(/<HANDOFF_KENIA\s*\/?>/gi, "").trim();
   res.json({
     session_id: req.body?.session_id || `session-${Date.now()}`,
     response: reply,
     audio_base64: null,
+    handoff,
+    speaker: handoff ? "Dra. Kênia Garcia" : "Secretária",
     analysis: { acertividade: result.ok ? 90 : 70, qualificacao: result.ok ? "ok" : "fallback" },
   });
 });
