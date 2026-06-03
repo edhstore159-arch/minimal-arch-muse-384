@@ -106,16 +106,32 @@ async function callLovableGateway(opts: NanoBananaOptions): Promise<{ url: strin
 export async function generateWithNanoBanana(
   opts: NanoBananaOptions,
 ): Promise<{ url: string | null; provider: string; error?: string }> {
+  let emergentError = "";
   // Try Emergent first
   if (Deno.env.get("EMERGENT_API_KEY")) {
     const r = await callEmergent(opts);
     if (r.url) return { url: r.url, provider: "emergent" };
-    console.warn("⚠️ Emergent falhou, tentando Lovable Gateway:", r.error);
+    emergentError = r.error || "Emergent falhou";
+    console.warn("⚠️ Emergent falhou, tentando Lovable Gateway:", emergentError);
   }
   const r2 = await callLovableGateway(opts);
   if (r2.url) return { url: r2.url, provider: "lovable" };
-  return { url: null, provider: "none", error: r2.error };
+
+  // Friendly error when Lovable returns 402 (no credits)
+  const lovableErr = r2.error || "";
+  if (/\b402\b|payment_required|Not enough credits/i.test(lovableErr)) {
+    return {
+      url: null,
+      provider: "none",
+      error:
+        "Créditos da Lovable AI esgotados e provedor alternativo (Emergent) também falhou. " +
+        "Adicione créditos em Lovable → Settings → Cloud & AI balance ou verifique a EMERGENT_API_KEY. " +
+        `Detalhe Emergent: ${emergentError || "n/a"}`,
+    };
+  }
+  return { url: null, provider: "none", error: lovableErr || emergentError || "Sem provedor disponível" };
 }
+
 
 export function stripDataUrl(url: string): string {
   const m = url.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.+)$/);
