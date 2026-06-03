@@ -8,7 +8,13 @@ const SUPPRESSED_DEBUG_INSTRUCTION_PATTERNS = [
   /payment_required/i,
   /cr[eé]ditos? da lovable ai esgotados/i,
   /conectar em outra conta/i,
+  /conecte em outra conta/i,
+  /outra conta da lovable/i,
   /outra conta para ter acesso a cr[eé]ditos?/i,
+  /budget[_ ]exceeded/i,
+  /budget has been exceeded/i,
+  /emergent 400/i,
+  /edge function returned 502/i,
 ];
 
 export const shouldSuppressLovableDebugInstruction = (message: string) => {
