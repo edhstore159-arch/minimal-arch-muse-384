@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { buildDebugInstructionMessage } from "@/components/debugInstruction";
+import { buildDebugInstructionMessage, dispatchLovableDebugError, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
 
 /**
  * ErrorDebugPopup
@@ -94,7 +94,10 @@ export const ErrorDebugPopup = () => {
 
   const fire = () => {
     if (!text.trim() && files.length === 0) return;
-    window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: buildMessage() }));
+    if (!dispatchLovableDebugError(buildMessage())) {
+      alert("O envio para Try to Fix só funciona no preview/editor da Lovable. Na Render/publicado, use esta tela apenas para registrar/copiar instruções.");
+      return;
+    }
     setText("");
     setFiles([]);
   };
@@ -148,6 +151,12 @@ export const ErrorDebugPopup = () => {
             rows={5}
             className="w-full text-xs p-2 border border-gray-300 rounded resize-y font-mono text-gray-900"
           />
+
+          {!isLovableNativeDebugRuntime() && (
+            <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
+              Try to Fix só recebe instruções no preview/editor da Lovable; em Render/publicado não há configuração para isso.
+            </div>
+          )}
 
           {files.length > 0 && (
             <ul className="space-y-1 max-h-28 overflow-y-auto text-[11px]">
