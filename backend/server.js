@@ -710,6 +710,48 @@ const buildDeadlineNotice = (item) => {
   ].join("\n");
 };
 
+const ALEXA_SYSTEM_PROMPT =
+  process.env.ALEXA_SYSTEM_PROMPT ||
+  [
+    "Você responde pela Skill Alexa do escritório da Dra. Kênia Garcia.",
+    "Responda em português do Brasil, de forma natural para ser falada em voz alta.",
+    "Use no máximo 2 frases curtas. Se for caso jurídico concreto, diga que vai registrar e orientar o envio pelo WhatsApp ou atendimento do escritório.",
+    "Não use markdown, emojis, links longos ou listas extensas.",
+  ].join(" ");
+
+function extractAlexaUtterance(body = {}) {
+  const direct = body.text || body.message || body.query || body.utterance || body.input;
+  if (direct) return String(direct).trim();
+
+  const request = body.request || {};
+  if (request.type === "LaunchRequest") return "Abrir atendimento por voz do escritório.";
+  if (request.type === "SessionEndedRequest") return "";
+
+  const intent = request.intent || {};
+  const slots = Object.values(intent.slots || {});
+  const slotValue = slots.map((slot) => slot?.value).find(Boolean);
+  if (slotValue) return String(slotValue).trim();
+
+  if (intent.name === "AMAZON.HelpIntent") return "Explique como posso falar com o escritório.";
+  if (intent.name === "AMAZON.CancelIntent" || intent.name === "AMAZON.StopIntent") return "encerrar";
+  return String(intent.name || "atendimento jurídico").trim();
+}
+
+function alexaJsonResponse(text, shouldEndSession = false) {
+  const speech = cleanRepeatedText(text || "Não consegui responder agora. Tente novamente em instantes.")
+    .replace(/https?:\/\/\S+/g, "")
+    .slice(0, 7600)
+    .trim();
+  return {
+    version: "1.0",
+    response: {
+      outputSpeech: { type: "PlainText", text: speech },
+      card: { type: "Simple", title: "Dra. Kênia Garcia", content: speech },
+      shouldEndSession,
+    },
+  };
+}
+
 const baileysRuntimeStatus = () => {
   const connected = connectionState === "open" || Boolean(sock?.user && connectionState !== "logged_out");
   const qrAgeMs = currentQRAt ? Date.now() - currentQRAt : null;
@@ -733,6 +775,34 @@ const baileysRuntimeStatus = () => {
 // ---- Healthcheck ----
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
 app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
+
+// ---- Alexa Skill webhook ----
+app.post(["/api/alexa", "/api/alexa/webhook"], async (req, res) => {
+  try {
+    const utterance = extractAlexaUtterance(req.body || {});
+    const lower = utterance.toLowerCase();
+    if (!utterance || lower === "encerrar") {
+      return res.json(alexaJsonResponse("Atendimento encerrado. Quando precisar, é só chamar o escritório.", true));
+    }
+
+    const result = await callAI([
+      { role: "system", content: `${ALEXA_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}` },
+      { role: "user", content: utterance },
+    ]);
+    const reply = result.ok
+      ? result.reply
+      : buildLocalLegalReply(`alexa-${Date.now()}`, utterance, "cliente");
+
+    res.json(alexaJsonResponse(reply, false));
+  } catch (e) {
+    console.error("[alexa-webhook]", e?.message || e);
+    res.json(alexaJsonResponse("Não consegui consultar a IA agora. Posso registrar seu pedido pelo atendimento do escritório.", false));
+  }
+});
+
+app.get("/api/alexa/health", (_req, res) => {
+  res.json(ok({ webhook: "/api/alexa/webhook", has_lovable_key: Boolean(LOVABLE_API_KEY), model: AI_MODEL }));
+});
 
 app.get("/api/debug/instructions", (_req, res) => {
   res.json(debugInstructions.slice(0, 50));

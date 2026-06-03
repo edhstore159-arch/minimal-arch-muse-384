@@ -44,3 +44,19 @@ Depois rode **Manual Deploy → Clear build cache & deploy** no frontend (variá
 - `GET  /api/whatsapp/qr/image`     → PNG
 - `POST /api/whatsapp/send`         → `{ to, message }`
 - `POST /api/whatsapp/logout`
+
+## Webhook Alexa
+
+Configure a Skill Alexa com endpoint HTTPS apontando para:
+
+```
+https://SEU-BACKEND-RENDER.onrender.com/api/alexa/webhook
+```
+
+O webhook aceita tanto payload nativo da Alexa (`request.intent.slots`) quanto JSON simples:
+
+```json
+{ "text": "quero falar com a advogada sobre um prazo" }
+```
+
+Resposta retornada no formato da Alexa (`version`, `response.outputSpeech`, `shouldEndSession`) usando a IA configurada no backend e fallback local se a IA estiver indisponível.
