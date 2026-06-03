@@ -1,7 +1,9 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { chatCompletion } from "../_shared/llm.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const EMERGENT_API_KEY = Deno.env.get("EMERGENT_API_KEY");
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "EXAVITQu4vr4xnSDxMaL"; // Sarah (PT-BR natural)
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -153,9 +155,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    if (!LOVABLE_API_KEY) {
+    if (!LOVABLE_API_KEY && !EMERGENT_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY ausente" }),
+        JSON.stringify({ error: "Nenhuma chave de IA configurada (LOVABLE_API_KEY ou EMERGENT_API_KEY)" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -212,28 +214,20 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
       { role: "user", content: userMessage },
     ];
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": LOVABLE_API_KEY,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages,
-      }),
+    const aiResult = await chatCompletion({
+      model: "google/gemini-3-flash-preview",
+      messages,
     });
 
-    if (!aiResp.ok) {
-      const errText = await aiResp.text();
-      const status = aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 502;
+    if (!aiResult.ok) {
+      const status = aiResult.status === 429 || aiResult.status === 402 ? aiResult.status : 502;
       return new Response(
-        JSON.stringify({ error: "AI Gateway error", status: aiResp.status, detail: errText }),
+        JSON.stringify({ error: "AI Gateway error", status: aiResult.status, detail: aiResult.error }),
         { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const data = await aiResp.json();
+    const data = aiResult.data;
     const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
     const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
     const appointment = parseAppointmentBlock(rawReply);
@@ -245,25 +239,20 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
       const convoText = [...history.slice(-10), { role: "user", content: userMessage }, { role: "assistant", content: reply }]
         .map((m) => `${m.role}: ${m.content}`)
         .join("\n");
-      const aResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            {
-              role: "system",
-              content:
-                "Você analisa conversas jurídicas e responde APENAS um JSON válido (sem markdown) com os campos: area (string), resumo (string curta), motivo (string), acertividade (0-100), chance_exito (0-100), qualificacao (\"qualificado\"|\"necessita_mais_info\"|\"desqualificado\"), proxima_pergunta (string), fundamentos (array de strings com base legal).",
-            },
-            { role: "user", content: `Conversa:\n${convoText}\n\nGere o JSON de análise.` },
-          ],
-          response_format: { type: "json_object" },
-        }),
+      const aResp = await chatCompletion({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você analisa conversas jurídicas e responde APENAS um JSON válido (sem markdown) com os campos: area (string), resumo (string curta), motivo (string), acertividade (0-100), chance_exito (0-100), qualificacao (\"qualificado\"|\"necessita_mais_info\"|\"desqualificado\"), proxima_pergunta (string), fundamentos (array de strings com base legal).",
+          },
+          { role: "user", content: `Conversa:\n${convoText}\n\nGere o JSON de análise.` },
+        ],
+        response_format: { type: "json_object" },
       });
       if (aResp.ok) {
-        const aJson = await aResp.json();
-        const parsed = JSON.parse(aJson?.choices?.[0]?.message?.content || "{}");
+        const parsed = JSON.parse(aResp.data?.choices?.[0]?.message?.content || "{}");
         analysis = { ...analysis, ...parsed };
       }
     } catch (err) {
