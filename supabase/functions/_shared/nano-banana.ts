@@ -52,6 +52,16 @@ function buildContent({ prompt, imageUrls }: NanoBananaOptions): Content[] {
   return parts;
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("EMERGENT_API_KEY");
   if (!key) return { url: null, error: "EMERGENT_API_KEY ausente" };
@@ -63,7 +73,7 @@ async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | nu
   const errors: string[] = [];
   try {
     if (!opts.imageUrls?.length) {
-      const resp = await fetch(`${cleanBaseUrl}/images/generations`, {
+      const resp = await fetchWithTimeout(`${cleanBaseUrl}/images/generations`, {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: imageModel, prompt: opts.prompt, size: "1024x1024", n: 1 }),
@@ -80,7 +90,7 @@ async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | nu
     }
 
     for (const model of [...new Set(chatModels)]) {
-      const resp = await fetch(`${cleanBaseUrl}/chat/completions`, {
+      const resp = await fetchWithTimeout(`${cleanBaseUrl}/chat/completions`, {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({
