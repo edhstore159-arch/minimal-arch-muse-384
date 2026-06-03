@@ -389,6 +389,28 @@ async function autoReply(jid, userText, contactName) {
   }
 }
 
+function scheduleReconnect(reason = "unknown") {
+  if (reconnectTimer || starting || connectionState === "logged_out") return;
+  reconnectAttempt += 1;
+  const delay = Math.min(RECONNECT_DELAY_MS * reconnectAttempt, MAX_RECONNECT_DELAY_MS);
+  recordAutoReply({ step: "schedule_reconnect", reason, attempt: reconnectAttempt, delay_ms: delay, connectionState });
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    startSock().catch((e) => { lastError = e?.message || String(e); scheduleReconnect("start_failed"); });
+  }, delay);
+}
+
+async function waitForOpen(timeoutMs = SEND_RECONNECT_WAIT_MS) {
+  if (connectionState === "open" && sock) return true;
+  scheduleReconnect("wait_for_open");
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (connectionState === "open" && sock) return true;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return false;
+}
+
 async function closeSock() {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   reconnectTimer = null;
