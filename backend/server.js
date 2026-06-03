@@ -160,6 +160,8 @@ function saoPauloTemporalContext() {
 
 function cleanRepeatedText(text) {
   const noRepeatedWords = String(text || "")
+    .replace(/<?\/?\s*HANDOFF[_\s-]*K[EÊ]NIA\s*\/?>/giu, "")
+    .replace(/`{1,3}\s*HANDOFF[_\s-]*K[EÊ]NIA\s*`{1,3}/giu, "")
     .replace(/\b((?:[\p{L}\p{N}]{2,}\s+){1,3}[\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
     .replace(/\b([\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
     .replace(/([^.!?\n]{8,}[.!?])(?:\s+\1)+/giu, "$1")
@@ -965,8 +967,8 @@ app.post("/api/chat/message", async (req, res) => {
     { role: "user", content: message },
   ]);
   const rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
-  const handoff = /<HANDOFF_KENIA\s*\/?>/i.test(rawReply);
-  const reply = cleanRepeatedText(rawReply.replace(/<HANDOFF_KENIA\s*\/?>/gi, "").trim());
+  const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
+  const reply = cleanRepeatedText(rawReply).trim();
   res.json({
     session_id: req.body?.session_id || `session-${Date.now()}`,
     response: reply,
