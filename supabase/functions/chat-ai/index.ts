@@ -126,6 +126,18 @@ function parseAppointmentBlock(text: string) {
   }
 }
 
+function normalizeAnalysis(input: any, defaults: any) {
+  const out = { ...defaults, ...(input || {}) };
+  out.acertividade = Math.max(0, Math.min(100, Number(out.acertividade) || 0));
+  out.chance_exito = Math.max(0, Math.min(100, Number(out.chance_exito) || 0));
+  if (out.qualificacao === "desqualificado") out.qualificacao = "nao_qualificado";
+  if (!["qualificado", "necessita_mais_info", "nao_qualificado"].includes(out.qualificacao)) {
+    out.qualificacao = out.acertividade >= 75 ? "qualificado" : "necessita_mais_info";
+  }
+  if (!Array.isArray(out.fundamentos)) out.fundamentos = [];
+  return out;
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -190,6 +202,8 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
       { role: "user", content: userMessage },
     ];
 
+    let rawReply = "";
+    let aiGatewayError: any = null;
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -204,15 +218,13 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
-      const status = aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 502;
-      return new Response(
-        JSON.stringify({ error: "AI Gateway error", status: aiResp.status, detail: errText }),
-        { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      aiGatewayError = { status: aiResp.status, detail: errText.slice(0, 500) };
+      console.error("AI Gateway resposta principal falhou:", aiGatewayError);
+      rawReply = "Instabilidade na análise.\n- relato recebido\n- preciso de mais detalhes\n- envie provas/documentos\n- posso seguir analisando";
+    } else {
+      const data = await aiResp.json();
+      rawReply = data?.choices?.[0]?.message?.content ?? "";
     }
-
-    const data = await aiResp.json();
-    const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
     const appointment = parseAppointmentBlock(rawReply);
     const reply = stripAppointmentBlock(rawReply);
 
