@@ -586,15 +586,20 @@ async function startSock() {
 }
 
 async function restartSock({ resetAuth = false } = {}) {
+  manualLogoutRequested = Boolean(resetAuth);
   await closeSock();
   currentQR = null;
   currentQRAt = null;
   lastError = null;
+  lastDisconnectCode = null;
+  reconnectAttempts = 0;
+  reconnectingSince = null;
   connectionState = "connecting";
   if (resetAuth) {
     await rm(AUTH_DIR, { recursive: true, force: true });
     await mkdir(AUTH_DIR, { recursive: true });
   }
+  manualLogoutRequested = false;
   await startSock();
   return {
     connected: connectionState === "open",
@@ -846,6 +851,7 @@ app.post("/api/whatsapp/baileys/restart", async (_req, res) => {
 // ---- Logout ----
 app.post("/api/whatsapp/logout", async (_req, res) => {
   try {
+    manualLogoutRequested = true;
     if (sock && connectionState === "open") await sock.logout();
     const status = await restartSock({ resetAuth: true });
     res.json(ok(status));
@@ -856,6 +862,7 @@ app.post("/api/whatsapp/logout", async (_req, res) => {
 
 app.post("/api/whatsapp/baileys/logout", async (req, res) => {
   try {
+    manualLogoutRequested = true;
     if (sock && connectionState === "open") await sock.logout();
     const status = await restartSock({ resetAuth: true });
     res.json(ok(status));
