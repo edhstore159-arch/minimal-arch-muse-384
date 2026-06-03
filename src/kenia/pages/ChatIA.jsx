@@ -674,6 +674,10 @@ export default function ChatIA() {
   const send = async (text) => {
     const msg = (text ?? input).trim();
     if (!msg) return;
+    if (waitFollowUpTimerRef.current) {
+      clearTimeout(waitFollowUpTimerRef.current);
+      waitFollowUpTimerRef.current = null;
+    }
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     setThinking(true);
