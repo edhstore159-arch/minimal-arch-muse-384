@@ -100,6 +100,31 @@ export default function DebugTool() {
     }
   };
 
+  // Salva a instrução silenciosamente no banco (sem throw / sem blank screen).
+  // Útil em produção (Render) onde o overlay "Try to Fix" da Lovable não existe.
+  const saveInstructionSilently = async () => {
+    const txt = instruction.trim();
+    if (!txt && attachments.length === 0) {
+      toast.error("Digite uma instrução ou anexe um arquivo");
+      return;
+    }
+    const message = buildInstructionMessage(txt);
+    try {
+      const { error } = await supabase.from("debug_instructions").insert({
+        instruction: message,
+        attachments: attachments,
+        status: "pending",
+      });
+      if (error) throw error;
+      toast.success("Atualizações salvas");
+      setInstruction("");
+      setAttachments([]);
+    } catch (e) {
+      toast.error(`Falha ao salvar: ${e?.message || e}`);
+    }
+  };
+
+
   const toDataUrl = (file) => new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(r.result);
