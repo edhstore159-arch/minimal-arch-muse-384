@@ -1178,28 +1178,39 @@ export default function WhatsAppSettings() {
                     }
                     setCloning(true);
                     try {
-                      // FIX: salva a config ANTES de chamar /clone — o backend
-                      // /elevenlabs/clone lê a api_key do MongoDB, e se o usuario
-                      // só colou a key na UI sem clicar "Salvar" no topo, a key
-                      // ainda não foi persistida e o endpoint rejeita.
-                      const cfgPayload = { ...cfg };
-                      delete cfgPayload.owner_id;
-                      delete cfgPayload.updated_at;
-                      await api.put("/whatsapp/config", cfgPayload);
+                      // Tenta salvar config (não bloqueia clone se backend offline)
+                      try {
+                        const cfgPayload = { ...cfg };
+                        delete cfgPayload.owner_id;
+                        delete cfgPayload.updated_at;
+                        await api.put("/whatsapp/config", cfgPayload);
+                      } catch {}
 
+                      // Chama diretamente a edge function (sem depender do backend Node)
                       const fd = new FormData();
                       fd.append("voice_name", voiceCloneName);
                       fd.append("description", `Voz clonada — ${voiceCloneName}`);
                       fd.append("audio_file", voiceCloneFile);
-                      const { data } = await api.post("/whatsapp/elevenlabs/clone", fd);
-                      const voiceId = data?.voice_id || data?.voiceId || data?.id || "";
-                      if (data?.error === "STATIC_MODE" || data?.fallback) {
-                        throw new Error("Backend do WhatsApp não está conectado. Para clonar a voz é preciso configurar VITE_BACKEND_URL apontando para o servidor Node (Render) — sem ele o ElevenLabs não pode ser chamado a partir do navegador.");
+                      if (cfg.elevenlabs_api_key) {
+                        fd.append("api_key", cfg.elevenlabs_api_key.trim());
                       }
+
+                      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+                      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+                      const resp = await fetch(`${SUPABASE_URL}/functions/v1/elevenlabs-clone-voice`, {
+                        method: "POST",
+                        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+                        body: fd,
+                      });
+                      const data = await resp.json();
+
+                      const voiceId = data?.voice_id || "";
                       if (!voiceId) {
                         throw new Error(data?.detail || data?.error || "Resposta sem voice_id — verifique a ELEVENLABS_API_KEY e o áudio enviado.");
                       }
-                      if (cfg) setCfg({ ...cfg, elevenlabs_voice_id: voiceId });
+                      const newCfg = { ...cfg, elevenlabs_voice_id: voiceId, elevenlabs_voice_name: voiceCloneName, voice_provider: "elevenlabs" };
+                      setCfg(newCfg);
+                      try { await api.put("/whatsapp/config", newCfg); } catch {}
                       toast.success(`Voz clonada! voice_id: ${voiceId.slice(0, 14)}...`);
                       await load();
                       setVoiceCloneFile(null);
