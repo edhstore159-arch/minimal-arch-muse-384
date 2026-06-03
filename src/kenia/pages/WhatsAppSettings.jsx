@@ -107,6 +107,8 @@ export default function WhatsAppSettings() {
 
 
   const baileysLogout = async () => {
+    const confirmed = window.confirm("Isso desconecta o WhatsApp e apaga a sessão atual. Deseja realmente gerar um novo QR Code?");
+    if (!confirmed) return;
     setBaileysLoggingOut(true);
     try {
       await api.post("/whatsapp/baileys/logout");

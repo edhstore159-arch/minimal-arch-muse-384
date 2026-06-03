@@ -11,6 +11,7 @@ import { rm, mkdir } from "node:fs/promises";
 import {
   default as makeWASocket,
   useMultiFileAuthState,
+  makeCacheableSignalKeyStore,
   DisconnectReason,
   fetchLatestBaileysVersion,
   downloadMediaMessage,
@@ -46,6 +47,7 @@ const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
 const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || 60000);
 const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS || 20000);
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 2000);
+const RECONNECT_MAX_DELAY_MS = Number(process.env.RECONNECT_MAX_DELAY_MS || 60000);
 const SERVER_STARTED_AT = Date.now();
 const AUTO_REPLY_RECENT_WINDOW_MS = Number(process.env.AUTO_REPLY_RECENT_WINDOW_MS || 180000);
 const logger = pino({ level: "warn" });
@@ -62,6 +64,11 @@ let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
 let starting = false;
 let reconnectTimer = null;
+let reconnectAttempts = 0;
+let reconnectingSince = null;
+let lastOpenAt = null;
+let lastDisconnectCode = null;
+let manualLogoutRequested = false;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
 // ---- Armazenamento em memória de contatos e mensagens ----
@@ -396,6 +403,10 @@ async function closeSock() {
 
 async function startSock() {
   if (starting) return;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   starting = true;
   connectionState = "connecting";
   let state;
@@ -414,7 +425,10 @@ async function startSock() {
   sock = makeWASocket({
     version,
     logger,
-    auth: state,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, logger),
+    },
     printQRInTerminal: false,
     browser: ["Ubuntu", "Chrome", "120.0.0.0"],
     qrTimeout: QR_TIMEOUT_MS,
@@ -444,6 +458,11 @@ async function startSock() {
       currentQR = null;
       currentQRAt = null;
       lastError = null;
+      lastDisconnectCode = null;
+      lastOpenAt = Date.now();
+      reconnectAttempts = 0;
+      reconnectingSince = null;
+      manualLogoutRequested = false;
       starting = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -452,22 +471,21 @@ async function startSock() {
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode || new Boom(lastDisconnect?.error)?.output?.statusCode;
       lastError = lastDisconnect?.error?.message || null;
-      // Só NÃO reconectar se o usuário deslogou de fato pelo celular.
-      // connectionReplaced/restartRequired/timedOut/loggedOut→ tratar:
+      lastDisconnectCode = code || null;
       const loggedOut = code === DisconnectReason.loggedOut;
       const replaced = code === DisconnectReason.connectionReplaced;
-      // Em "connectionReplaced" a sessão foi assumida por outro dispositivo;
-      // ainda assim tentamos reconectar (o app é o único cliente esperado).
-      const shouldReconnect = !loggedOut;
-      // Em restartRequired reconecta imediato; demais com backoff curto
-      const delay = code === DisconnectReason.restartRequired ? 250 : RECONNECT_DELAY_MS;
+      const transientLoggedOut = loggedOut && !manualLogoutRequested && lastOpenAt && Date.now() - lastOpenAt < 30000;
+      const shouldReconnect = !manualLogoutRequested && (!loggedOut || transientLoggedOut);
+      reconnectAttempts = shouldReconnect ? reconnectAttempts + 1 : 0;
+      if (shouldReconnect && !reconnectingSince) reconnectingSince = Date.now();
+      const backoff = Math.min(RECONNECT_DELAY_MS * Math.max(1, reconnectAttempts), RECONNECT_MAX_DELAY_MS);
+      const delay = code === DisconnectReason.restartRequired ? 250 : replaced ? 5000 : backoff;
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
       currentQR = null;
       currentQRAt = null;
-      if (loggedOut) {
-        // limpar credenciais para forçar novo QR
+      if (!shouldReconnect && loggedOut) {
         try {
           const fs = await import("node:fs/promises");
           await fs.rm(AUTH_DIR, { recursive: true, force: true });
@@ -568,15 +586,20 @@ async function startSock() {
 }
 
 async function restartSock({ resetAuth = false } = {}) {
+  manualLogoutRequested = Boolean(resetAuth);
   await closeSock();
   currentQR = null;
   currentQRAt = null;
   lastError = null;
+  lastDisconnectCode = null;
+  reconnectAttempts = 0;
+  reconnectingSince = null;
   connectionState = "connecting";
   if (resetAuth) {
     await rm(AUTH_DIR, { recursive: true, force: true });
     await mkdir(AUTH_DIR, { recursive: true });
   }
+  manualLogoutRequested = false;
   await startSock();
   return {
     connected: connectionState === "open",
@@ -622,6 +645,10 @@ const baileysRuntimeStatus = () => {
     connected,
     state: connected ? "open" : connectionState,
     last_error: connected ? null : lastError,
+    last_disconnect_code: lastDisconnectCode,
+    reconnect_attempts: reconnectAttempts,
+    reconnecting_for_s: reconnectingSince ? Math.floor((Date.now() - reconnectingSince) / 1000) : 0,
+    last_open_at: lastOpenAt ? new Date(lastOpenAt).toISOString() : null,
     me: sock?.user || null,
     qr_available: Boolean(currentQR),
     qr_age_ms: qrAgeMs,
@@ -824,6 +851,7 @@ app.post("/api/whatsapp/baileys/restart", async (_req, res) => {
 // ---- Logout ----
 app.post("/api/whatsapp/logout", async (_req, res) => {
   try {
+    manualLogoutRequested = true;
     if (sock && connectionState === "open") await sock.logout();
     const status = await restartSock({ resetAuth: true });
     res.json(ok(status));
@@ -834,6 +862,7 @@ app.post("/api/whatsapp/logout", async (_req, res) => {
 
 app.post("/api/whatsapp/baileys/logout", async (req, res) => {
   try {
+    manualLogoutRequested = true;
     if (sock && connectionState === "open") await sock.logout();
     const status = await restartSock({ resetAuth: true });
     res.json(ok(status));
