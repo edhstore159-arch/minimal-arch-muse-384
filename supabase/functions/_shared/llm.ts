@@ -72,7 +72,7 @@ async function chatEmergent(opts: ChatOptions) {
     });
     if (resp.ok) return { ok: true as const, data: await resp.json(), provider: "emergent", model };
     last = { status: resp.status, error: `Emergent[${model}] ${resp.status}: ${(await resp.text()).slice(0, 400)}` };
-    if (resp.status === 401 || resp.status === 403) break;
+    if (resp.status === 401 || resp.status === 403 || /budget_exceeded|Budget has been exceeded/i.test(last.error)) break;
   }
   return { ok: false as const, ...last };
 }
@@ -128,7 +128,7 @@ async function imageEmergent(opts: ImageOptions) {
     }
     if (!resp.ok) {
       last = `Emergent[${model}] ${resp.status}: ${(await resp.text()).slice(0, 300)}`;
-      if (resp.status === 401 || resp.status === 403) break;
+      if (resp.status === 401 || resp.status === 403 || /budget_exceeded|Budget has been exceeded/i.test(last)) break;
       continue;
     }
     const data = await resp.json();
