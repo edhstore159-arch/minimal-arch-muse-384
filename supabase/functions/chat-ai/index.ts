@@ -155,9 +155,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    if (!LOVABLE_API_KEY) {
+    if (!LOVABLE_API_KEY && !EMERGENT_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY ausente" }),
+        JSON.stringify({ error: "Nenhuma chave de IA configurada (LOVABLE_API_KEY ou EMERGENT_API_KEY)" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
