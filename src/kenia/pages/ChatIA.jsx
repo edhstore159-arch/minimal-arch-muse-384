@@ -205,16 +205,16 @@ export default function ChatIA() {
 
   // Simula digitação humana: insere a mensagem do assistente caractere por caractere,
   // com pequenas pausas naturais em pontuação. Resolve quando termina.
-  const typeAssistantMessage = (fullText, audioB64 = null) =>
+  const typeAssistantMessage = (fullText, audioB64 = null, speaker = null) =>
     new Promise((resolve) => {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       const text = String(fullText || "");
-      // velocidade alvo ~ 35-55 chars/s (humano), com leve variação
-      const baseDelay = 22; // ms por caractere base
+      const isKenia = speaker && /k[eê]nia/i.test(speaker);
+      // pausas mais longas quando é a própria Dra. Kênia digitando (parece humano)
+      const baseDelay = isKenia ? 38 : 22;
       let idx = 0;
 
-      // adiciona placeholder vazio
-      setMessages((prev) => [...prev, { role: "assistant", content: "", audio_base64: null, typing: true }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "", audio_base64: null, typing: true, speaker }]);
 
       const step = () => {
         idx += 1;
@@ -229,12 +229,11 @@ export default function ChatIA() {
         });
 
         if (idx >= text.length) {
-          // finaliza, anexa áudio
           setMessages((prev) => {
             const copy = [...prev];
             const last = copy[copy.length - 1];
             if (last && last.role === "assistant") {
-              copy[copy.length - 1] = { ...last, content: text, audio_base64: audioB64, typing: false };
+              copy[copy.length - 1] = { ...last, content: text, audio_base64: audioB64, typing: false, speaker };
             }
             return copy;
           });
@@ -244,15 +243,14 @@ export default function ChatIA() {
         }
 
         const ch = text[idx - 1];
-        let delay = baseDelay + Math.random() * 30;
-        if (/[\.!\?]/.test(ch)) delay += 350; // pausa em final de frase
-        else if (/[,;:]/.test(ch)) delay += 160; // pausa em vírgula
-        else if (ch === "\n") delay += 250;
+        let delay = baseDelay + Math.random() * (isKenia ? 60 : 30);
+        if (/[\.!\?]/.test(ch)) delay += isKenia ? 650 : 350;
+        else if (/[,;:]/.test(ch)) delay += isKenia ? 280 : 160;
+        else if (ch === "\n") delay += isKenia ? 450 : 250;
         typingTimerRef.current = setTimeout(step, delay);
       };
 
-      // pequeno atraso inicial pra parecer que "está pensando + digitando"
-      typingTimerRef.current = setTimeout(step, 400);
+      typingTimerRef.current = setTimeout(step, isKenia ? 900 : 400);
     });
 
   useEffect(() => () => {
@@ -655,7 +653,21 @@ export default function ChatIA() {
       if (data.analysis) setAnalysis(data.analysis);
       upsertLead({ description: msg });
       setThinking(false);
-      await typeAssistantMessage(data.response, data.audio_base64 || null);
+      if (data.handoff) {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = "sine"; o.frequency.value = 880;
+          g.gain.setValueAtTime(0.0001, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+          o.start(); o.stop(ctx.currentTime + 0.5);
+        } catch {}
+        toast.success("Dra. Kênia foi notificada e está entrando na conversa", { duration: 4000 });
+      }
+      await typeAssistantMessage(data.response, data.audio_base64 || null, data.speaker || null);
       if (autoplay && data.audio_base64) {
         setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 200);
       }
@@ -823,9 +835,10 @@ export default function ChatIA() {
                           : "bg-white border border-nude-200 text-nude-900 rounded-bl-sm"
                       }`}
                     >
-                      {m.role === "assistant" && i === 0 && (
+                      {m.role === "assistant" && (m.speaker || i === 0) && (
                         <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-semibold tracking-widest uppercase text-gold-600">
-                          <Sparkles className="w-3 h-3" /> Ana · secretária
+                          <Sparkles className="w-3 h-3" />
+                          {m.speaker ? m.speaker : "Ana · secretária"}
                         </div>
                       )}
                       <div className="text-sm leading-relaxed whitespace-pre-wrap">{renderMessageContent(m.content)}</div>
