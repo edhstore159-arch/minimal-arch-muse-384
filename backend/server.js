@@ -137,6 +137,7 @@ const AI_SYSTEM_PROMPT =
     "REGRAS DE TAMANHO (OBRIGATÓRIO):",
     "- MÁXIMO 2 frases curtas OU 3 bullets de 1 linha cada. NUNCA mais que 4 linhas no total.",
     "- Proibido parágrafos longos, listas extensas, explicações detalhadas. Vá direto ao ponto.",
+    "- Não repita palavras, frases, perguntas ou saudações já usadas na resposta. Se perceber repetição, reescreva de forma mais curta.",
     "- Para 'como posso ajudar': 1 frase só (ex.: 'Me conta o que aconteceu, {Nome}?').",
     "- Documentos: só liste o essencial em bullets ultracurtos.",
     "OUTRAS REGRAS:",
@@ -153,6 +154,20 @@ function saoPauloTemporalContext() {
   const date = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
   const time = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(now);
   return `CONTEXTO TEMPORAL: hoje é ${date}; hora atual ${time} (America/Sao_Paulo). Use isso para saudação e para calcular hoje, amanhã e próximas datas.`;
+}
+
+function cleanRepeatedText(text) {
+  const noRepeatedWords = String(text || "")
+    .replace(/\b([\p{L}\p{N}]{2,})(?:\s+\1\b)+/giu, "$1")
+    .replace(/[ \t]{2,}/g, " ");
+  const lines = noRepeatedWords.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const uniqueLines = [];
+  for (const line of lines) {
+    const normalized = line.toLowerCase().replace(/[^\p{L}\p{N}]+/giu, " ").trim();
+    const previous = uniqueLines[uniqueLines.length - 1]?.toLowerCase().replace(/[^\p{L}\p{N}]+/giu, " ").trim();
+    if (normalized && normalized !== previous) uniqueLines.push(line);
+  }
+  return uniqueLines.join("\n").trim();
 }
 
 async function callAI(messagesPayload) {
@@ -207,7 +222,7 @@ async function callAI(messagesPayload) {
         recordAutoReply({ step: "ai_provider_fail", provider: cfg.provider, error: failed.error });
         continue;
       }
-      return { ok: true, provider: cfg.provider, endpoint: cfg.endpoint, model: cfg.model, reply, attempts };
+      return { ok: true, provider: cfg.provider, endpoint: cfg.endpoint, model: cfg.model, reply: cleanRepeatedText(reply), attempts };
     } catch (e) {
       const timedOut = e?.name === "AbortError";
       const failed = { ok: false, provider: cfg.provider, endpoint: cfg.endpoint, model: cfg.model, error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta da IA.` : e?.message || String(e) };
