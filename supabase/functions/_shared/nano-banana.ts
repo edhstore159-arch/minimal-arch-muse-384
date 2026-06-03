@@ -68,7 +68,7 @@ async function callLovableGateway(opts: NanoBananaOptions): Promise<{ url: strin
 async function callGeminiDirect(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return { url: null, error: "GEMINI_API_KEY ausente" };
-  const model = "gemini-2.5-flash-image-preview";
+  const model = "gemini-2.5-flash-image";
   const parts: any[] = [{ text: opts.prompt }];
   for (const u of opts.imageUrls || []) {
     const m = String(u).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
@@ -105,10 +105,10 @@ async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | nu
   const key = Deno.env.get("EMERGENT_API_KEY");
   if (!key) return { url: null, error: "EMERGENT_API_KEY ausente" };
   const models = [
-    "gemini-2.5-flash-image-preview",
     "gemini-2.5-flash-image",
     "google/gemini-2.5-flash-image",
-    "gemini-2.0-flash-exp-image-generation",
+    "gemini-3.1-flash-image-preview",
+    "google/gemini-3.1-flash-image-preview",
   ];
   let lastError = "";
   for (const model of models) {
