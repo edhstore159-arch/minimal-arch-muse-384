@@ -94,12 +94,7 @@ export const ErrorDebugPopup = () => {
 
   const fire = () => {
     if (!text.trim() && files.length === 0) return;
-    const result = deliverLovableDebugInstruction(buildMessage());
-    if (result === "editor") {
-      alert("Copiei a instrução e abri o projeto na Lovable. Cole no chat ou use o fluxo Try to Fix no editor.");
-    } else if (result === "redirect") {
-      alert("Copiei a instrução e vou redirecionar para o projeto na Lovable.");
-    }
+    deliverLovableDebugInstruction(buildMessage());
     setText("");
     setFiles([]);
   };
