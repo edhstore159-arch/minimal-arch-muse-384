@@ -43,20 +43,17 @@ function buildContent({ prompt, imageUrls }: NanoBananaOptions): Content[] {
 async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("EMERGENT_API_KEY");
   if (!key) return { url: null, error: "EMERGENT_API_KEY ausente" };
-  const baseUrl = (Deno.env.get("EMERGENT_BASE_URL") || "https://integrations.emergentagent.com/llm/v1").replace(/\/$/, "");
   // Try several model identifiers since Emergent's universal LLM accepts a few variants.
   const models = [
-    Deno.env.get("EMERGENT_IMAGE_MODEL"),
     "gemini-2.5-flash-image-preview",
     "gemini-2.5-flash-image",
     "google/gemini-2.5-flash-image",
-    "gpt-image-1",
     "gemini-2.0-flash-exp-image-generation",
-  ].filter(Boolean) as string[];
+  ];
   let lastError = "";
   for (const model of models) {
     try {
-      const resp = await fetch(`${baseUrl}/chat/completions`, {
+      const resp = await fetch("https://integrations.emergentagent.com/llm/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -67,7 +64,6 @@ async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | nu
       });
       if (!resp.ok) {
         lastError = `Emergent[${model}] ${resp.status}: ${(await resp.text()).slice(0, 160)}`;
-        if (resp.status === 401 || resp.status === 403) break;
         continue;
       }
       const data = await resp.json();

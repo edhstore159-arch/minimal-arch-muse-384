@@ -220,18 +220,10 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     });
 
     if (!aiResult.ok) {
+      const status = aiResult.status === 429 || aiResult.status === 402 ? aiResult.status : 502;
       return new Response(
-        JSON.stringify({
-          response: "No momento o provedor de IA está indisponível por limite de créditos/orçamento. Verifique a chave e o orçamento da Emergent ou recarregue créditos da Lovable AI.",
-          appointment: null,
-          audio_base64: null,
-          handoff: false,
-          speaker: "Sistema",
-          analysis: { acertividade: 0, qualificacao: "necessita_mais_info", motivo: "IA indisponível" },
-          provider_error: { status: aiResult.status, detail: aiResult.error },
-          server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "AI Gateway error", status: aiResult.status, detail: aiResult.error }),
+        { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 

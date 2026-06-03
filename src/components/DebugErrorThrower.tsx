@@ -25,7 +25,7 @@ export const DebugErrorThrower = () => {
   }, []);
 
   if (message) {
-    console.error(message);
+    throw new Error(message);
   }
 
   return null;

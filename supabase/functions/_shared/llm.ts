@@ -19,29 +19,6 @@ export interface ImageOptions {
 
 const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
 const EMERGENT_KEY = Deno.env.get("EMERGENT_API_KEY");
-const EMERGENT_BASE_URL = (Deno.env.get("EMERGENT_BASE_URL") || "https://integrations.emergentagent.com/llm/v1").replace(/\/$/, "");
-const EMERGENT_CHAT_MODELS = [Deno.env.get("EMERGENT_MODEL"), "gpt-4o-mini", "gpt-4o"].filter(Boolean) as string[];
-const EMERGENT_IMAGE_MODELS = [Deno.env.get("EMERGENT_IMAGE_MODEL"), "gpt-image-1", "dall-e-3"].filter(Boolean) as string[];
-
-async function imageUrlToBase64(url: string) {
-  if (url.startsWith("data:image/")) return url.replace(/^data:image\/[^;]+;base64,/, "");
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Falha ao baixar imagem da Emergent: ${resp.status}`);
-  const bytes = new Uint8Array(await resp.arrayBuffer());
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 45000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
 
 // ---------- chat completions ----------
 
@@ -58,23 +35,21 @@ async function chatLovable(opts: ChatOptions) {
 
 async function chatEmergent(opts: ChatOptions) {
   if (!EMERGENT_KEY) return { ok: false as const, status: 0, error: "EMERGENT_API_KEY ausente" };
-  let last = { status: 502, error: "Emergent falhou" };
-  for (const model of EMERGENT_CHAT_MODELS) {
-    const resp = await fetch(`${EMERGENT_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${EMERGENT_KEY}` },
-      body: JSON.stringify({
-        model,
-        messages: opts.messages,
-        ...(opts.response_format ? { response_format: opts.response_format } : {}),
-        ...(typeof opts.temperature === "number" ? { temperature: opts.temperature } : {}),
-      }),
-    });
-    if (resp.ok) return { ok: true as const, data: await resp.json(), provider: "emergent", model };
-    last = { status: resp.status, error: `Emergent[${model}] ${resp.status}: ${(await resp.text()).slice(0, 400)}` };
-    if (resp.status === 401 || resp.status === 403 || /budget_exceeded|Budget has been exceeded/i.test(last.error)) break;
-  }
-  return { ok: false as const, ...last };
+  // Emergent universal LLM endpoint (OpenAI-compatible)
+  const resp = await fetch("https://integrations.emergentagent.com/llm/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${EMERGENT_KEY}` },
+    body: JSON.stringify({
+      model: opts.model?.startsWith("openai/") || opts.model?.startsWith("google/")
+        ? opts.model
+        : "gpt-4o-mini",
+      messages: opts.messages,
+      ...(opts.response_format ? { response_format: opts.response_format } : {}),
+      ...(typeof opts.temperature === "number" ? { temperature: opts.temperature } : {}),
+    }),
+  });
+  if (!resp.ok) return { ok: false as const, status: resp.status, error: await resp.text() };
+  return { ok: true as const, data: await resp.json(), provider: "emergent" };
 }
 
 export async function chatCompletion(opts: ChatOptions) {
@@ -113,32 +88,21 @@ async function imageLovable(opts: ImageOptions) {
 
 async function imageEmergent(opts: ImageOptions) {
   if (!EMERGENT_KEY) return { ok: false as const, error: "EMERGENT_API_KEY ausente" };
-  let last = "Emergent image falhou";
-  for (const model of EMERGENT_IMAGE_MODELS) {
-    let resp: Response;
-    try {
-      resp = await fetchWithTimeout(`${EMERGENT_BASE_URL}/images/generations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${EMERGENT_KEY}` },
-      body: JSON.stringify({ model, prompt: opts.prompt, size: opts.size || "1024x1024", n: 1 }),
-      });
-    } catch (e) {
-      last = `Emergent[${model}] timeout/erro: ${(e as Error)?.message || e}`;
-      continue;
-    }
-    if (!resp.ok) {
-      last = `Emergent[${model}] ${resp.status}: ${(await resp.text()).slice(0, 300)}`;
-      if (resp.status === 401 || resp.status === 403 || /budget_exceeded|Budget has been exceeded/i.test(last)) break;
-      continue;
-    }
-    const data = await resp.json();
-    const b64 = data?.data?.[0]?.b64_json;
-    const url = data?.data?.[0]?.url;
-    if (b64) return { ok: true as const, b64, provider: "emergent", model };
-    if (url) return { ok: true as const, b64: await imageUrlToBase64(url), provider: "emergent", model };
-    last = `Emergent[${model}] não retornou imagem`;
-  }
-  return { ok: false as const, error: last };
+  const resp = await fetch("https://integrations.emergentagent.com/llm/images/generations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${EMERGENT_KEY}` },
+    body: JSON.stringify({
+      model: "gpt-image-1",
+      prompt: opts.prompt,
+      size: opts.size || "1024x1024",
+      n: 1,
+    }),
+  });
+  if (!resp.ok) return { ok: false as const, error: `Emergent ${resp.status}: ${(await resp.text()).slice(0, 200)}` };
+  const data = await resp.json();
+  const b64 = data?.data?.[0]?.b64_json;
+  if (!b64) return { ok: false as const, error: "Emergent não retornou imagem" };
+  return { ok: true as const, b64, provider: "emergent" };
 }
 
 export async function generateImage(opts: ImageOptions) {

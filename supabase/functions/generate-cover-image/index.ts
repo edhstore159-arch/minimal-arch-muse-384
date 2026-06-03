@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     const img = await generateImage({ prompt: fullPrompt, size: "1024x1024", quality: "low" });
     if (!img.ok) {
       return new Response(JSON.stringify({ error: img.error }), {
-        status: 200,
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
