@@ -393,7 +393,7 @@ async function autoReply(jid, userText, contactName) {
   recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
   const result = await callAI(messagesPayload);
   const usedFallback = !result.ok;
-  const reply = usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply;
+  const reply = cleanRepeatedText(usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply);
   if (usedFallback) recordAutoReply({ step: "ai_fail_local_fallback", jid, result, reply: reply.slice(0, 200) });
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
@@ -939,7 +939,7 @@ app.post("/api/chat/message", async (req, res) => {
   ]);
   const rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
   const handoff = /<HANDOFF_KENIA\s*\/?>/i.test(rawReply);
-  const reply = rawReply.replace(/<HANDOFF_KENIA\s*\/?>/gi, "").trim();
+  const reply = cleanRepeatedText(rawReply.replace(/<HANDOFF_KENIA\s*\/?>/gi, "").trim());
   res.json({
     session_id: req.body?.session_id || `session-${Date.now()}`,
     response: reply,
