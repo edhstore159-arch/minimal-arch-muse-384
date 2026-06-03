@@ -1,7 +1,9 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { chatCompletion } from "../_shared/llm.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const EMERGENT_API_KEY = Deno.env.get("EMERGENT_API_KEY");
 const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "EXAVITQu4vr4xnSDxMaL"; // Sarah (PT-BR natural)
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
