@@ -4,10 +4,8 @@ import { isLovableNativeDebugRuntime } from "./debugInstruction";
 /**
  * DebugErrorThrower
  *
- * Escuta "lovable-debug-error" e só lança o erro no runtime de preview/editor
- * da Lovable, onde existe o overlay nativo "Try to Fix".
- *
- * NÃO envolver em ErrorBoundary/Suspense. NÃO substituir por console/toast.
+ * Escuta "lovable-debug-error" sem derrubar a tela do aplicativo.
+ * A instrução continua visível no console, mas não causa tela branca.
  */
 export const DebugErrorThrower = () => {
   const [message, setMessage] = useState<string | null>(null);
@@ -17,6 +15,7 @@ export const DebugErrorThrower = () => {
       if (!isLovableNativeDebugRuntime()) return;
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
+        console.error(new Error(detail));
         setMessage(detail);
       }
     };
@@ -24,9 +23,11 @@ export const DebugErrorThrower = () => {
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
 
-  if (message) {
-    throw new Error(message);
-  }
+  useEffect(() => {
+    if (!message) return;
+    const timeout = window.setTimeout(() => setMessage(null), 0);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
 
   return null;
 };
