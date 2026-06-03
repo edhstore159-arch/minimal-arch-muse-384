@@ -56,24 +56,51 @@ async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | nu
   const key = Deno.env.get("EMERGENT_API_KEY");
   if (!key) return { url: null, error: "EMERGENT_API_KEY ausente" };
   const baseUrl = Deno.env.get("EMERGENT_BASE_URL") || "https://integrations.emergentagent.com/llm/v1";
-  const model = Deno.env.get("EMERGENT_IMAGE_MODEL") || "gemini-2.5-flash-image";
+  const cleanBaseUrl = baseUrl.replace(/\/$/, "");
+  const preferredModel = Deno.env.get("EMERGENT_IMAGE_MODEL");
+  const imageModel = preferredModel || "gpt-image-1";
+  const chatModels = [preferredModel, "gpt-image-1", "gemini-2.5-flash-image", "gemini-2.5-flash-image-preview"].filter(Boolean) as string[];
+  const errors: string[] = [];
   try {
-    const resp = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        modalities: ["image", "text"],
-        messages: [{ role: "user", content: buildContent(opts) }],
-      }),
-    });
-    if (!resp.ok) {
-      const txt = await resp.text();
-      return { url: null, error: `Emergent ${resp.status}: ${txt.slice(0, 200)}` };
+    if (!opts.imageUrls?.length) {
+      const resp = await fetch(`${cleanBaseUrl}/images/generations`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: imageModel, prompt: opts.prompt, size: "1024x1024", n: 1 }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const url = extractImageFromResponse(data);
+        if (url) return { url };
+        errors.push("Emergent images/generations não retornou imagem");
+      } else {
+        const txt = await resp.text();
+        errors.push(`Emergent images/generations ${resp.status}: ${txt.slice(0, 200)}`);
+      }
     }
-    const data = await resp.json();
-    const url = extractImageFromResponse(data);
-    return { url, error: url ? undefined : "Emergent não retornou imagem" };
+
+    for (const model of [...new Set(chatModels)]) {
+      const resp = await fetch(`${cleanBaseUrl}/chat/completions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          modalities: ["image", "text"],
+          messages: [{ role: "user", content: buildContent(opts) }],
+        }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const url = extractImageFromResponse(data);
+        if (url) return { url };
+        errors.push(`Emergent chat ${model}: não retornou imagem`);
+      } else {
+        const txt = await resp.text();
+        errors.push(`Emergent chat ${model} ${resp.status}: ${txt.slice(0, 200)}`);
+      }
+    }
+
+    return { url: null, error: errors.join(" | ") || "Emergent não retornou imagem" };
   } catch (e) {
     return { url: null, error: `Emergent erro: ${(e as Error)?.message || e}` };
   }
