@@ -168,11 +168,6 @@ export default function DebugTool() {
               <div className="text-sm text-nude-500 mb-3">
                 Registra uma instrução técnica (apenas referência interna).
               </div>
-              {!isLovableNativeDebugRuntime() && (
-                <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  O botão copia a instrução e abre o projeto na Lovable. Envio automático ao Try to Fix a partir da Render não é suportado pela Lovable.
-                </div>
-              )}
 
               {/* DROPZONE DE IMAGEM — em destaque no topo */}
               <Label className="flex items-center gap-2 text-rose-700">
