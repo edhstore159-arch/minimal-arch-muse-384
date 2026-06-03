@@ -149,11 +149,6 @@ export const ErrorDebugPopup = () => {
             className="w-full text-xs p-2 border border-gray-300 rounded resize-y font-mono text-gray-900"
           />
 
-          {!isLovableNativeDebugRuntime() && (
-            <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
-              O botão copia a instrução e abre o projeto na Lovable; o envio automático ao Try to Fix não é suportado fora do editor.
-            </div>
-          )}
 
           {files.length > 0 && (
             <ul className="space-y-1 max-h-28 overflow-y-auto text-[11px]">
