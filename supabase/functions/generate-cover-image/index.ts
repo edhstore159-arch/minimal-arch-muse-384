@@ -1,4 +1,5 @@
 import { generateWithNanoBanana, stripDataUrl } from '../_shared/nano-banana.ts';
+import { generateImage } from '../_shared/llm.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
