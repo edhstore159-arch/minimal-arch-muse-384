@@ -109,7 +109,7 @@ export const ErrorDebugPopup = () => {
     if (!error) return;
 
     if (/schema cache|column/i.test(error.message || "")) {
-      const { error: retryError } = await supabase.from("debug_instructions").insert({
+      const { error: retryError } = await (supabase.from("debug_instructions") as any).insert({
         user_id: user?.id ?? null,
         instruction: instructionWithUser,
         attachments: files,
