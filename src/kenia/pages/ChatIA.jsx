@@ -54,6 +54,7 @@ const renderMessageContent = (text) => {
 
 const cleanRepeatedText = (text) => {
   const noRepeatedWords = String(text || "")
+    .replace(/\b((?:[\p{L}\p{N}]{2,}\s+){1,3}[\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
     .replace(/\b([\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
     .replace(/([^.!?\n]{8,}[.!?])(?:\s+\1)+/giu, "$1")
     .replace(/[ \t]{2,}/g, " ");
