@@ -3,13 +3,22 @@ export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE 
 export const isLovableNativeDebugRuntime = () => {
   if (typeof window === "undefined") return false;
   const hostname = window.location.hostname;
-  return hostname.includes("lovableproject.com") || hostname.startsWith("id-preview--");
+  const isLovablePreviewHost = hostname.includes("lovableproject.com") || hostname.startsWith("id-preview--");
+  if (!isLovablePreviewHost) return false;
+
+  // O overlay nativo "Try to Fix" só existe quando o preview está dentro do editor da Lovable.
+  // Em links diretos, app publicado ou Render, lançar erro apenas causa tela branca sem entregar comando.
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
 };
 
 /**
- * Dispara o CustomEvent que vira erro fatal global, acionando o overlay
- * "Try to Fix" da Lovable apenas no preview/editor. Em produção/Render,
- * esse overlay não existe; nesses ambientes o fluxo deve salvar a instrução.
+ * Dispara o CustomEvent que vira erro fatal global apenas quando o app está
+ * renderizado dentro do editor da Lovable, onde o overlay "Try to Fix" existe.
+ * Fora desse contexto o fluxo deve salvar a instrução sem derrubar a tela.
  */
 export const dispatchLovableDebugError = (message: string) => {
   if (typeof window === "undefined") return false;
