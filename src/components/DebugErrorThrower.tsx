@@ -4,10 +4,10 @@ import { isLovableNativeDebugRuntime } from "./debugInstruction";
 /**
  * DebugErrorThrower
  *
- * Escuta "lovable-debug-error" e só lança o erro no runtime de preview/editor
- * da Lovable, onde existe o overlay nativo "Try to Fix".
+ * Escuta "lovable-debug-error" e só lança o erro quando o modo nativo foi
+ * habilitado manualmente em um preview/editor da Lovable.
  *
- * NÃO envolver em ErrorBoundary/Suspense. NÃO substituir por console/toast.
+ * Mantido isolado para impedir que o Debug Tool cause tela branca em uso normal.
  */
 export const DebugErrorThrower = () => {
   const [message, setMessage] = useState<string | null>(null);
