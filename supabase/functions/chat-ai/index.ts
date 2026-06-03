@@ -102,6 +102,8 @@ NUNCA invente datas. Use o CONTEXTO TEMPORAL abaixo para calcular "hoje", "amanh
 function stripAppointmentBlock(text: string): string {
   return String(text || "")
     .replace(/<AGENDAMENTO>[\s\S]*?<\/AGENDAMENTO>/g, "")
+    .replace(/<?\/?\s*HANDOFF[_\s-]*K[EÊ]NIA\s*\/?>/giu, "")
+    .replace(/`{1,3}\s*HANDOFF[_\s-]*K[EÊ]NIA\s*`{1,3}/giu, "")
     .trim();
 }
 
@@ -233,6 +235,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
 
     const data = await aiResp.json();
     const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
+    const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
     const appointment = parseAppointmentBlock(rawReply);
     const reply = cleanRepeatedText(stripAppointmentBlock(rawReply));
 
@@ -298,6 +301,8 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
         response: reply,
         appointment,
         audio_base64,
+        handoff,
+        speaker: handoff ? "Dra. Kênia Garcia" : "Secretária",
         analysis,
         server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
       }),
