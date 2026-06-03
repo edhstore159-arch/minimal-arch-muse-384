@@ -222,6 +222,7 @@ export default function ChatIA() {
   const [scheduling, setScheduling] = useState(false);
   const [leadId, setLeadId] = useState(null);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(true);
+  const [activeSpeaker, setActiveSpeaker] = useState("Secretária");
   const audioRef = useRef(null);
   const scrollRef = useRef(null);
   const [recording, setRecording] = useState(false);
@@ -729,6 +730,7 @@ export default function ChatIA() {
       upsertLead({ description: msg });
       setThinking(false);
       if (data.handoff) {
+        setActiveSpeaker("Dra. Kênia Garcia");
         try {
           const ctx = new (window.AudioContext || window.webkitAudioContext)();
           const o = ctx.createOscillator();
@@ -743,12 +745,12 @@ export default function ChatIA() {
         toast.success("Dra. Kênia foi notificada e está entrando na conversa", { duration: 4000 });
       }
       const responseText = cleanRepeatedText(data.response);
-      const speaker = data.handoff ? "Dra. Kênia Garcia" : data.speaker || null;
+      const speaker = data.handoff || activeSpeaker === "Dra. Kênia Garcia" ? "Dra. Kênia Garcia" : data.speaker || null;
       await typeAssistantMessage(responseText, data.audio_base64 || null, speaker);
       if (shouldScheduleWaitFollowUp(data.response)) {
         if (waitFollowUpTimerRef.current) clearTimeout(waitFollowUpTimerRef.current);
         waitFollowUpTimerRef.current = setTimeout(() => {
-          typeAssistantMessage(buildWaitFollowUpText(name), null, data.handoff ? "Dra. Kênia Garcia" : "Secretária");
+          typeAssistantMessage(buildWaitFollowUpText(name), null, speaker || "Secretária");
           waitFollowUpTimerRef.current = null;
         }, WAIT_FOLLOW_UP_MS);
       }
