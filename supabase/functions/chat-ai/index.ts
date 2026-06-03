@@ -126,18 +126,6 @@ function parseAppointmentBlock(text: string) {
   }
 }
 
-function normalizeAnalysis(input: any, defaults: any) {
-  const out = { ...defaults, ...(input || {}) };
-  out.acertividade = Math.max(0, Math.min(100, Number(out.acertividade) || 0));
-  out.chance_exito = Math.max(0, Math.min(100, Number(out.chance_exito) || 0));
-  if (out.qualificacao === "desqualificado") out.qualificacao = "nao_qualificado";
-  if (!["qualificado", "necessita_mais_info", "nao_qualificado"].includes(out.qualificacao)) {
-    out.qualificacao = out.acertividade >= 75 ? "qualificado" : "necessita_mais_info";
-  }
-  if (!Array.isArray(out.fundamentos)) out.fundamentos = [];
-  return out;
-}
-
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -202,8 +190,6 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
       { role: "user", content: userMessage },
     ];
 
-    let rawReply = "";
-    let aiGatewayError: any = null;
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -218,79 +204,48 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
-      aiGatewayError = { status: aiResp.status, detail: errText.slice(0, 500) };
-      console.error("AI Gateway resposta principal falhou:", aiGatewayError);
-      rawReply = "Instabilidade na análise.\n- relato recebido\n- preciso de mais detalhes\n- envie provas/documentos\n- posso seguir analisando";
-    } else {
-      const data = await aiResp.json();
-      rawReply = data?.choices?.[0]?.message?.content ?? "";
+      const status = aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 502;
+      return new Response(
+        JSON.stringify({ error: "AI Gateway error", status: aiResp.status, detail: errText }),
+        { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+
+    const data = await aiResp.json();
+    const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
     const appointment = parseAppointmentBlock(rawReply);
     const reply = stripAppointmentBlock(rawReply);
 
     // Análise técnica do caso (chamada paralela à IA pedindo JSON estruturado)
-    // Heurística mínima caso a IA falhe: cresce com tamanho/qualidade da conversa.
-    const historyForAnalysis = [...history.slice(-10), { role: "user", content: userMessage }, { role: "assistant", content: reply }];
-    const totalChars = historyForAnalysis.reduce((s, m) => s + (m.content?.length || 0), 0);
-    const baseScore = Math.min(95, 35 + Math.round(totalChars / 25));
-    let analysis: any = {
-      area: "Em análise",
-      resumo: "",
-      motivo: "",
-      acertividade: baseScore,
-      chance_exito: Math.max(20, baseScore - 15),
-      qualificacao: baseScore >= 75 ? "qualificado" : "necessita_mais_info",
-      proxima_pergunta: "",
-      fundamentos: [],
-    };
+    let analysis: any = { acertividade: 70, qualificacao: "necessita_mais_info" };
     try {
-      const convoText = historyForAnalysis.map((m) => `${m.role}: ${m.content}`).join("\n");
+      const convoText = [...history.slice(-10), { role: "user", content: userMessage }, { role: "assistant", content: reply }]
+        .map((m) => `${m.role}: ${m.content}`)
+        .join("\n");
       const aResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-3-flash-preview",
           messages: [
             {
               role: "system",
               content:
-                'Você analisa conversas jurídicas brasileiras. Responda APENAS com um JSON válido (sem markdown, sem crases, sem texto extra) no formato exato: {"area":"string curta","resumo":"frase","motivo":"frase","acertividade":0-100,"chance_exito":0-100,"qualificacao":"qualificado"|"necessita_mais_info"|"desqualificado","proxima_pergunta":"string","fundamentos":["base legal 1","base legal 2"]}. acertividade reflete o quanto você tem informações suficientes para qualificar o lead.',
+                "Você analisa conversas jurídicas e responde APENAS um JSON válido (sem markdown) com os campos: area (string), resumo (string curta), motivo (string), acertividade (0-100), chance_exito (0-100), qualificacao (\"qualificado\"|\"necessita_mais_info\"|\"desqualificado\"), proxima_pergunta (string), fundamentos (array de strings com base legal).",
             },
             { role: "user", content: `Conversa:\n${convoText}\n\nGere o JSON de análise.` },
           ],
           response_format: { type: "json_object" },
-          temperature: 0.3,
         }),
       });
       if (aResp.ok) {
         const aJson = await aResp.json();
-        let content: string = aJson?.choices?.[0]?.message?.content ?? "";
-        // remove cercas de markdown se vierem
-        content = content.replace(/```json|```/gi, "").trim();
-        // extrai o primeiro bloco {...}
-        const match = content.match(/\{[\s\S]*\}/);
-        if (match) {
-          try {
-            const parsed = JSON.parse(match[0]);
-            // normaliza tipos numéricos
-            if (parsed.acertividade != null) parsed.acertividade = Math.max(0, Math.min(100, Number(parsed.acertividade) || 0));
-            if (parsed.chance_exito != null) parsed.chance_exito = Math.max(0, Math.min(100, Number(parsed.chance_exito) || 0));
-            analysis = normalizeAnalysis(parsed, analysis);
-          } catch (parseErr) {
-            console.error("Análise: JSON inválido, mantendo heurística", parseErr, content.slice(0, 200));
-          }
-        } else {
-          console.error("Análise: sem bloco JSON na resposta", content.slice(0, 200));
-        }
-      } else {
-        console.error("Análise: gateway retornou", aResp.status, await aResp.text());
+        const parsed = JSON.parse(aJson?.choices?.[0]?.message?.content || "{}");
+        analysis = { ...analysis, ...parsed };
       }
     } catch (err) {
       console.error("Erro ao gerar análise:", err);
     }
-    analysis = normalizeAnalysis(aiGatewayError ? { ...analysis, fallback: true } : analysis, analysis);
-
-
 
     // Gera áudio (TTS ElevenLabs) se o cliente pediu
     const wantAudio = body.want_audio !== false; // default true
@@ -324,7 +279,6 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
         appointment,
         audio_base64,
         analysis,
-        fallback: Boolean(aiGatewayError),
         server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
