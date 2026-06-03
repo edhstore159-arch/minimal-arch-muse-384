@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/kenia/lib/api";
 import { supabase } from "@/integrations/supabase/client";
-import { buildDebugInstructionMessage } from "@/components/debugInstruction";
+import { buildDebugInstructionMessage, dispatchLovableDebugError, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Input } from "@/kenia/components/ui/input";
@@ -86,17 +86,15 @@ export default function DebugTool() {
     const txt = instruction.trim();
     if (!txt && attachments.length === 0) { toast.error("Digite uma instrução ou anexe um arquivo"); return; }
     const message = buildInstructionMessage(txt);
+    const sentToLovable = dispatchLovableDebugError(message);
     try {
       await api.post("/debug/instruction", { instruction: message });
-      toast.success("Instrução registrada");
+      toast.success(sentToLovable ? "Instrução enviada ao Try to Fix" : "Instrução registrada; Try to Fix só funciona no preview da Lovable");
       setInstruction("");
       setAttachments([]);
       loadHistory();
-      window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
     } catch {
-      // still dispatch even if api fails
-      window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
-      toast.error("Erro ao registrar (evento disparado mesmo assim)");
+      toast.error(sentToLovable ? "Evento disparado, mas falhou ao registrar histórico" : "Erro ao registrar; Try to Fix indisponível fora do preview Lovable");
     }
   };
 
@@ -168,6 +166,11 @@ export default function DebugTool() {
               <div className="text-sm text-nude-500 mb-3">
                 Registra uma instrução técnica (apenas referência interna).
               </div>
+              {!isLovableNativeDebugRuntime() && (
+                <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  O envio para o overlay Try to Fix só funciona no preview/editor da Lovable. Na Render/publicado não existe configuração para enviar ordens ao agente.
+                </div>
+              )}
 
               {/* DROPZONE DE IMAGEM — em destaque no topo */}
               <Label className="flex items-center gap-2 text-rose-700">
