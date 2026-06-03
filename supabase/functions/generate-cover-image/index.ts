@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { prompt, reference_image_base64 } = body || {};
+    const { prompt, reference_image_base64, logo_base64 } = body || {};
     if (!prompt || typeof prompt !== "string") {
       return new Response(JSON.stringify({ error: "Prompt obrigatório" }), {
         status: 400,
@@ -20,15 +20,26 @@ Deno.serve(async (req) => {
 
     const fullPrompt = `Arte quadrada profissional para redes sociais de um escritório de advocacia brasileiro. Tema: ${prompt}. Visual elegante, jurídico, humano, sem texto, sem letras, sem marcas d'água.`;
 
-    // With reference image: Gemini Nano Banana via Emergent (fallback Lovable Gateway)
-    if (reference_image_base64) {
-      const refUrl = reference_image_base64.startsWith("data:")
-        ? reference_image_base64
-        : `data:image/png;base64,${reference_image_base64}`;
+    const toDataUrl = (b64: string) =>
+      b64.startsWith("data:") ? b64 : `data:image/png;base64,${b64}`;
+
+    // With reference image and/or logo: Gemini Nano Banana
+    if (reference_image_base64 || logo_base64) {
+      const imageUrls: string[] = [];
+      const promptParts: string[] = [fullPrompt];
+
+      if (reference_image_base64) {
+        imageUrls.push(toDataUrl(reference_image_base64));
+        promptParts.push("Use a primeira imagem enviada como referência visual principal (mantenha tema, cores e elementos).");
+      }
+      if (logo_base64) {
+        imageUrls.push(toDataUrl(logo_base64));
+        promptParts.push("Incorpore o logo enviado (última imagem) de forma discreta e elegante em um dos cantos da arte, preservando suas cores e proporções originais, sem distorcer.");
+      }
 
       const result = await generateWithNanoBanana({
-        prompt: `${fullPrompt}\n\nUse a imagem enviada como referência visual principal (mantenha o tema, cores e elementos).`,
-        imageUrls: [refUrl],
+        prompt: promptParts.join("\n\n"),
+        imageUrls,
       });
 
       if (!result.url) {

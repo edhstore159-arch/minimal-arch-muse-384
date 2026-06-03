@@ -31,6 +31,7 @@ export default function Creatives() {
   const [generating, setGenerating] = useState(false);
   const [preview, setPreview] = useState(null);
   const [refImage, setRefImage] = useState(null); // data URL
+  const [logoImage, setLogoImage] = useState(null); // data URL (logo do escritório)
   const [form, setForm] = useState({
     title: "", network: "instagram", format: "post",
     topic: "", tone: "profissional", case_type: "",
@@ -54,6 +55,18 @@ export default function Creatives() {
     }
     const reader = new FileReader();
     reader.onload = () => setRefImage(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const onPickLogo = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Logo muito grande (máx 4MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setLogoImage(String(reader.result));
     reader.readAsDataURL(file);
   };
 
@@ -158,6 +171,7 @@ export default function Creatives() {
       const { data } = await api.post("/creatives/generate", {
         ...form,
         reference_image_base64: refImage || null,
+        logo_base64: logoImage || null,
       });
       if (data?.image_b64) {
         toast.success("Criativo gerado!");
@@ -168,6 +182,7 @@ export default function Creatives() {
       setOpen(false);
       setForm({ title: "", network: "instagram", format: "post", topic: "", tone: "profissional", case_type: "" });
       setRefImage(null);
+      setLogoImage(null);
       load();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao gerar");
@@ -294,6 +309,31 @@ export default function Creatives() {
                     <Upload className="w-4 h-4" />
                     Clique para enviar imagem (JPG/PNG, até 8MB)
                     <input type="file" accept="image/*" className="hidden" onChange={onPickImage} />
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <Label>Logo do escritório (opcional)</Label>
+                <p className="text-xs text-nude-500 mb-1.5">A IA aplicará seu logo discretamente no criativo gerado.</p>
+                {logoImage ? (
+                  <div className="relative inline-block">
+                    <img src={logoImage} alt="logo" className="h-20 w-20 object-contain rounded-md border border-nude-200 bg-white p-1" />
+                    <button
+                      type="button"
+                      onClick={() => setLogoImage(null)}
+                      className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow"
+                      data-testid="creative-remove-logo"
+                      aria-label="Remover logo"
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 h-20 border-2 border-dashed border-nude-300 rounded-md cursor-pointer hover:bg-nude-50 text-sm text-nude-600" data-testid="creative-upload-logo">
+                    <Upload className="w-4 h-4" />
+                    Enviar logo (PNG transparente preferível, até 4MB)
+                    <input type="file" accept="image/*" className="hidden" onChange={onPickLogo} />
                   </label>
                 )}
               </div>
