@@ -40,6 +40,40 @@ function buildContent({ prompt, imageUrls }: NanoBananaOptions): Content[] {
   return parts;
 }
 
+function escapeXml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function toBase64Utf8(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.slice(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function buildLocalFusionFallback(opts: NanoBananaOptions): string | null {
+  const images = (opts.imageUrls || []).filter(Boolean).slice(0, 2);
+  if (!images.length) return null;
+  const first = escapeXml(images[0]);
+  const second = escapeXml(images[1] || images[0]);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#111827"/><stop offset="1" stop-color="#4338ca"/></linearGradient>
+    <clipPath id="left"><path d="M0 0h596L428 1024H0z"/></clipPath>
+    <clipPath id="right"><path d="M596 0h428v1024H428z"/></clipPath>
+    <filter id="soft"><feGaussianBlur stdDeviation="0.25"/></filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <image href="${first}" x="0" y="0" width="650" height="1024" preserveAspectRatio="xMidYMid slice" clip-path="url(#left)"/>
+  <image href="${second}" x="374" y="0" width="650" height="1024" preserveAspectRatio="xMidYMid slice" clip-path="url(#right)" opacity="0.96"/>
+  <image href="${first}" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid slice" opacity="0.12" filter="url(#soft)"/>
+  <path d="M596 0 428 1024" stroke="rgba(255,255,255,.62)" stroke-width="10"/>
+</svg>`;
+  return `data:image/svg+xml;base64,${toBase64Utf8(svg)}`;
+}
+
 async function callLovableGateway(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) return { url: null, error: "LOVABLE_API_KEY ausente" };
@@ -161,6 +195,11 @@ export async function generateWithNanoBanana(
   if (r3.url) return { url: r3.url, provider: "emergent" };
 
   const emergentErr = r3.error || "Emergent falhou";
+  const localFallback = buildLocalFusionFallback(opts);
+  if (localFallback) {
+    console.warn("⚠️ Todos os provedores de IA falharam; usando composição local sem IA:", [lovableErr, geminiErr, emergentErr].filter(Boolean).join(" | "));
+    return { url: localFallback, provider: "local-fallback" };
+  }
   if (/\b402\b|payment_required|Not enough credits/i.test(lovableErr)) {
     return {
       url: null,
