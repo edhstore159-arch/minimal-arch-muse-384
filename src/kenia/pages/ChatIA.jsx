@@ -52,6 +52,20 @@ const renderMessageContent = (text) => {
   );
 };
 
+const cleanRepeatedText = (text) => {
+  const noRepeatedWords = String(text || "")
+    .replace(/\b([\p{L}\p{N}]{2,})(?:\s+\1\b)+/giu, "$1")
+    .replace(/[ \t]{2,}/g, " ");
+  const lines = noRepeatedWords.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const uniqueLines = [];
+  for (const line of lines) {
+    const normalized = line.toLowerCase().replace(/[^\p{L}\p{N}]+/giu, " ").trim();
+    const previous = uniqueLines.at(-1)?.toLowerCase().replace(/[^\p{L}\p{N}]+/giu, " ").trim();
+    if (normalized && normalized !== previous) uniqueLines.push(line);
+  }
+  return uniqueLines.join("\n").trim();
+};
+
 const pad2 = (n) => String(n).padStart(2, "0");
 const formatLocalDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
@@ -250,7 +264,7 @@ export default function ChatIA() {
   const typeAssistantMessage = (fullText, audioB64 = null, speaker = null) =>
     new Promise((resolve) => {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      const text = String(fullText || "");
+      const text = cleanRepeatedText(fullText);
       const isKenia = speaker && /k[eê]nia/i.test(speaker);
       // pausas mais longas quando é a própria Dra. Kênia digitando (parece humano)
       const baseDelay = isKenia ? 38 : 22;
