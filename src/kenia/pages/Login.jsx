@@ -28,6 +28,27 @@ export default function Login() {
 
   const [regData, setRegData] = useState({ name: "", email: "", password: "", oab: "" });
 
+  const handleForgotPassword = async () => {
+    const email = (loginData.email || "").trim();
+    if (!email) {
+      toast.error("Digite seu e-mail no campo acima para receber o link");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("E-mail de recuperação enviado. Verifique sua caixa de entrada.");
+    } catch (err) {
+      toast.error(err?.message || "Erro ao enviar e-mail");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
