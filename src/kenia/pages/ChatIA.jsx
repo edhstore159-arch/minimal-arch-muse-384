@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   Send, Volume2, VolumeX, Sparkles, Bot, Gauge, ShieldCheck,
   AlertTriangle, BookOpen, Loader2, RefreshCcw, Pause, Play,
-  CalendarPlus, CalendarCheck, X, Mic, MicOff,
+  CalendarPlus, CalendarCheck, X, Mic, MicOff, Paperclip, FileText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
