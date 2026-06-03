@@ -31,6 +31,7 @@ export default function Creatives() {
   const [generating, setGenerating] = useState(false);
   const [preview, setPreview] = useState(null);
   const [refImage, setRefImage] = useState(null); // data URL
+  const [logoImage, setLogoImage] = useState(null); // data URL (logo do escritório)
   const [form, setForm] = useState({
     title: "", network: "instagram", format: "post",
     topic: "", tone: "profissional", case_type: "",
@@ -54,6 +55,18 @@ export default function Creatives() {
     }
     const reader = new FileReader();
     reader.onload = () => setRefImage(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const onPickLogo = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Logo muito grande (máx 4MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setLogoImage(String(reader.result));
     reader.readAsDataURL(file);
   };
 
