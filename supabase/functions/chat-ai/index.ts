@@ -217,35 +217,67 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     const reply = stripAppointmentBlock(rawReply);
 
     // Análise técnica do caso (chamada paralela à IA pedindo JSON estruturado)
-    let analysis: any = { acertividade: 70, qualificacao: "necessita_mais_info" };
+    // Heurística mínima caso a IA falhe: cresce com tamanho/qualidade da conversa.
+    const historyForAnalysis = [...history.slice(-10), { role: "user", content: userMessage }, { role: "assistant", content: reply }];
+    const totalChars = historyForAnalysis.reduce((s, m) => s + (m.content?.length || 0), 0);
+    const baseScore = Math.min(95, 35 + Math.round(totalChars / 25));
+    let analysis: any = {
+      area: "Em análise",
+      resumo: "",
+      motivo: "",
+      acertividade: baseScore,
+      chance_exito: Math.max(20, baseScore - 15),
+      qualificacao: baseScore >= 75 ? "qualificado" : "necessita_mais_info",
+      proxima_pergunta: "",
+      fundamentos: [],
+    };
     try {
-      const convoText = [...history.slice(-10), { role: "user", content: userMessage }, { role: "assistant", content: reply }]
-        .map((m) => `${m.role}: ${m.content}`)
-        .join("\n");
+      const convoText = historyForAnalysis.map((m) => `${m.role}: ${m.content}`).join("\n");
       const aResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             {
               role: "system",
               content:
-                "Você analisa conversas jurídicas e responde APENAS um JSON válido (sem markdown) com os campos: area (string), resumo (string curta), motivo (string), acertividade (0-100), chance_exito (0-100), qualificacao (\"qualificado\"|\"necessita_mais_info\"|\"desqualificado\"), proxima_pergunta (string), fundamentos (array de strings com base legal).",
+                'Você analisa conversas jurídicas brasileiras. Responda APENAS com um JSON válido (sem markdown, sem crases, sem texto extra) no formato exato: {"area":"string curta","resumo":"frase","motivo":"frase","acertividade":0-100,"chance_exito":0-100,"qualificacao":"qualificado"|"necessita_mais_info"|"desqualificado","proxima_pergunta":"string","fundamentos":["base legal 1","base legal 2"]}. acertividade reflete o quanto você tem informações suficientes para qualificar o lead.',
             },
             { role: "user", content: `Conversa:\n${convoText}\n\nGere o JSON de análise.` },
           ],
           response_format: { type: "json_object" },
+          temperature: 0.3,
         }),
       });
       if (aResp.ok) {
         const aJson = await aResp.json();
-        const parsed = JSON.parse(aJson?.choices?.[0]?.message?.content || "{}");
-        analysis = { ...analysis, ...parsed };
+        let content: string = aJson?.choices?.[0]?.message?.content ?? "";
+        // remove cercas de markdown se vierem
+        content = content.replace(/```json|```/gi, "").trim();
+        // extrai o primeiro bloco {...}
+        const match = content.match(/\{[\s\S]*\}/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[0]);
+            // normaliza tipos numéricos
+            if (parsed.acertividade != null) parsed.acertividade = Math.max(0, Math.min(100, Number(parsed.acertividade) || 0));
+            if (parsed.chance_exito != null) parsed.chance_exito = Math.max(0, Math.min(100, Number(parsed.chance_exito) || 0));
+            analysis = { ...analysis, ...parsed };
+          } catch (parseErr) {
+            console.error("Análise: JSON inválido, mantendo heurística", parseErr, content.slice(0, 200));
+          }
+        } else {
+          console.error("Análise: sem bloco JSON na resposta", content.slice(0, 200));
+        }
+      } else {
+        console.error("Análise: gateway retornou", aResp.status, await aResp.text());
       }
     } catch (err) {
       console.error("Erro ao gerar análise:", err);
     }
+
+
 
     // Gera áudio (TTS ElevenLabs) se o cliente pediu
     const wantAudio = body.want_audio !== false; // default true
