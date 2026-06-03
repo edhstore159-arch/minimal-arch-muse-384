@@ -1192,11 +1192,7 @@ export default function WhatsAppSettings() {
                       fd.append("description", `Voz clonada — ${voiceCloneName}`);
                       fd.append("audio_file", voiceCloneFile);
                       const { data } = await api.post("/whatsapp/elevenlabs/clone", fd);
-                      const vid = data?.voice_id || data?.voiceId || data?.id || "";
-                      if (!vid) {
-                        throw new Error(data?.detail || data?.error || "resposta sem voice_id");
-                      }
-                      toast.success(`Voz clonada! voice_id: ${String(vid).slice(0, 14)}...`);
+                      toast.success(`Voz clonada! voice_id: ${data.voice_id.slice(0, 14)}...`);
                       await load();
                       setVoiceCloneFile(null);
                     } catch (e) {
