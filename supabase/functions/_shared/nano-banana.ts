@@ -1,5 +1,5 @@
 // Shared helper: call Gemini Nano Banana (image generation/editing)
-// Prefers the Emergent universal LLM key; falls back to the Lovable AI Gateway.
+// Fallback order: Lovable AI Gateway → Google Gemini (direct) → Emergent universal LLM.
 // Returns a data URL (e.g. "data:image/png;base64,...") or null on failure.
 
 type Content =
@@ -40,10 +40,70 @@ function buildContent({ prompt, imageUrls }: NanoBananaOptions): Content[] {
   return parts;
 }
 
+async function callLovableGateway(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) return { url: null, error: "LOVABLE_API_KEY ausente" };
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Lovable-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        modalities: ["image", "text"],
+        messages: [{ role: "user", content: buildContent(opts) }],
+      }),
+    });
+    if (!resp.ok) {
+      return { url: null, error: `Lovable Gateway ${resp.status}: ${(await resp.text()).slice(0, 200)}` };
+    }
+    const data = await resp.json();
+    const url = extractImageFromMessage(data?.choices?.[0]?.message);
+    return { url, error: url ? undefined : "Lovable Gateway não retornou imagem" };
+  } catch (e) {
+    return { url: null, error: `Lovable Gateway erro: ${(e as Error)?.message || e}` };
+  }
+}
+
+// Direct Google Generative Language API (Gemini) — uses GEMINI_API_KEY.
+async function callGeminiDirect(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
+  const key = Deno.env.get("GEMINI_API_KEY");
+  if (!key) return { url: null, error: "GEMINI_API_KEY ausente" };
+  const model = "gemini-2.5-flash-image-preview";
+  const parts: any[] = [{ text: opts.prompt }];
+  for (const u of opts.imageUrls || []) {
+    const m = String(u).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (m) parts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+  }
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+        }),
+      },
+    );
+    if (!resp.ok) {
+      return { url: null, error: `Gemini direto ${resp.status}: ${(await resp.text()).slice(0, 200)}` };
+    }
+    const data = await resp.json();
+    const out = data?.candidates?.[0]?.content?.parts || [];
+    const inline = out.find((p: any) => p?.inlineData?.data || p?.inline_data?.data);
+    const b64 = inline?.inlineData?.data || inline?.inline_data?.data;
+    const mime = inline?.inlineData?.mimeType || inline?.inline_data?.mime_type || "image/png";
+    if (!b64) return { url: null, error: "Gemini direto não retornou imagem" };
+    return { url: `data:${mime};base64,${b64}` };
+  } catch (e) {
+    return { url: null, error: `Gemini direto erro: ${(e as Error)?.message || e}` };
+  }
+}
+
 async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("EMERGENT_API_KEY");
   if (!key) return { url: null, error: "EMERGENT_API_KEY ausente" };
-  // Try several model identifiers since Emergent's universal LLM accepts a few variants.
   const models = [
     "gemini-2.5-flash-image-preview",
     "gemini-2.5-flash-image",
@@ -77,61 +137,45 @@ async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | nu
   return { url: null, error: lastError || "Emergent falhou" };
 }
 
-
-async function callLovableGateway(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) return { url: null, error: "LOVABLE_API_KEY ausente" };
-  try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Lovable-API-Key": key, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        modalities: ["image", "text"],
-        messages: [{ role: "user", content: buildContent(opts) }],
-      }),
-    });
-    if (!resp.ok) {
-      const txt = await resp.text();
-      return { url: null, error: `Lovable Gateway ${resp.status}: ${txt.slice(0, 200)}` };
-    }
-    const data = await resp.json();
-    const url = extractImageFromMessage(data?.choices?.[0]?.message);
-    return { url, error: url ? undefined : "Lovable Gateway não retornou imagem" };
-  } catch (e) {
-    return { url: null, error: `Lovable Gateway erro: ${(e as Error)?.message || e}` };
-  }
-}
-
 export async function generateWithNanoBanana(
   opts: NanoBananaOptions,
 ): Promise<{ url: string | null; provider: string; error?: string }> {
-  let emergentError = "";
-  // Try Emergent first
-  if (Deno.env.get("EMERGENT_API_KEY")) {
-    const r = await callEmergent(opts);
-    if (r.url) return { url: r.url, provider: "emergent" };
-    emergentError = r.error || "Emergent falhou";
-    console.warn("⚠️ Emergent falhou, tentando Lovable Gateway:", emergentError);
-  }
-  const r2 = await callLovableGateway(opts);
-  if (r2.url) return { url: r2.url, provider: "lovable" };
+  let lovableErr = "";
+  let geminiErr = "";
 
-  // Friendly error when Lovable returns 402 (no credits)
-  const lovableErr = r2.error || "";
+  if (Deno.env.get("LOVABLE_API_KEY")) {
+    const r = await callLovableGateway(opts);
+    if (r.url) return { url: r.url, provider: "lovable" };
+    lovableErr = r.error || "Lovable falhou";
+    console.warn("⚠️ Lovable falhou, tentando Gemini direto:", lovableErr);
+  }
+
+  if (Deno.env.get("GEMINI_API_KEY")) {
+    const r = await callGeminiDirect(opts);
+    if (r.url) return { url: r.url, provider: "gemini" };
+    geminiErr = r.error || "Gemini direto falhou";
+    console.warn("⚠️ Gemini direto falhou, tentando Emergent:", geminiErr);
+  }
+
+  const r3 = await callEmergent(opts);
+  if (r3.url) return { url: r3.url, provider: "emergent" };
+
+  const emergentErr = r3.error || "Emergent falhou";
   if (/\b402\b|payment_required|Not enough credits/i.test(lovableErr)) {
     return {
       url: null,
       provider: "none",
       error:
-        "Créditos da Lovable AI esgotados e provedor alternativo (Emergent) também falhou. " +
-        "Adicione créditos em Lovable → Settings → Cloud & AI balance ou verifique a EMERGENT_API_KEY. " +
-        `Detalhe Emergent: ${emergentError || "n/a"}`,
+        "Créditos da Lovable AI esgotados e fallbacks falharam. " +
+        `Gemini direto: ${geminiErr || "n/a"}. Emergent: ${emergentErr}.`,
     };
   }
-  return { url: null, provider: "none", error: lovableErr || emergentError || "Sem provedor disponível" };
+  return {
+    url: null,
+    provider: "none",
+    error: [lovableErr, geminiErr, emergentErr].filter(Boolean).join(" | ") || "Sem provedor disponível",
+  };
 }
-
 
 export function stripDataUrl(url: string): string {
   const m = url.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.+)$/);
