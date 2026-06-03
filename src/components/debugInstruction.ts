@@ -6,7 +6,7 @@ export const isLovableNativeDebugRuntime = () => {
 };
 
 /**
- * Só dispara o CustomEvent dentro do runtime nativo da Lovable.
+ * Só dispara o CustomEvent quando o modo nativo foi habilitado manualmente.
  * Em produção externa (ex.: Render), o fluxo deve salvar silenciosamente.
  */
 export const dispatchLovableDebugError = (message: string) => {
