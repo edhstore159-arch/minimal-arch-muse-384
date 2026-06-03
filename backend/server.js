@@ -781,10 +781,11 @@ app.get("/api/whatsapp/qr/image", async (_req, res) => {
 // ---- Enviar mensagem ----
 app.post("/api/whatsapp/send", async (req, res) => {
   try {
+    if (!sock || connectionState !== "open") await waitForOpen();
     if (!sock || connectionState !== "open") {
       return res
-        .status(503)
-        .json({ ok: false, error: "NOT_CONNECTED", state: connectionState });
+        .status(200)
+        .json({ ok: false, delivered: false, queued: false, fallback: true, error: "NOT_CONNECTED", state: connectionState });
     }
     const { to, phone, contact_phone, message, text } = req.body || {};
     const jid = normalizeRecipient(to || phone || contact_phone);
@@ -803,8 +804,9 @@ app.post("/api/whatsapp/send", async (req, res) => {
 
 app.post("/api/whatsapp/send-direct", async (req, res) => {
   try {
+    if (!sock || connectionState !== "open") await waitForOpen();
     if (!sock || connectionState !== "open") {
-      return res.status(503).json({ delivered: false, ok: false, error: "NOT_CONNECTED", state: connectionState });
+      return res.status(200).json({ delivered: false, ok: false, queued: false, fallback: true, error: "NOT_CONNECTED", state: connectionState });
     }
     const { phone, to, contact_phone, text, message } = req.body || {};
     const jid = normalizeRecipient(phone || to || contact_phone);
