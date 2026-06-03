@@ -24,6 +24,7 @@ import Settings from "@/kenia/pages/Settings";
 import DebugTool from "@/kenia/pages/DebugTool";
 import ChatIA from "@/kenia/pages/ChatIA";
 import AdminCases from "@/kenia/pages/AdminCases";
+import ResetPassword from "@/kenia/pages/ResetPassword";
 import AppLayout from "@/kenia/components/AppLayout";
 import ScrollToTop from "@/kenia/components/ScrollToTop";
 
