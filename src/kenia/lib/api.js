@@ -188,6 +188,28 @@ const seedAnalyses = [
   },
 ];
 
+const normalizeCaseAnalysis = (analysis = {}) => {
+  const acertividade = Math.max(0, Math.min(100, Math.round(Number(analysis.acertividade ?? 45) || 45)));
+  const chance_exito = Math.max(0, Math.min(100, Math.round(Number(analysis.chance_exito ?? Math.max(20, acertividade - 15)) || 20)));
+  const rawQualificacao = analysis.qualificacao === "desqualificado" ? "nao_qualificado" : analysis.qualificacao;
+  const qualificacao = ["qualificado", "necessita_mais_info", "nao_qualificado"].includes(rawQualificacao)
+    ? rawQualificacao
+    : acertividade >= 75
+      ? "qualificado"
+      : "necessita_mais_info";
+  return {
+    area: analysis.area || "Em análise",
+    resumo: analysis.resumo || "",
+    motivo: analysis.motivo || "",
+    acertividade,
+    chance_exito,
+    qualificacao,
+    proxima_pergunta: analysis.proxima_pergunta || "",
+    fundamentos: Array.isArray(analysis.fundamentos) ? analysis.fundamentos : [],
+    fallback: Boolean(analysis.fallback),
+  };
+};
+
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const read = (key, fallback) => {
   try {
@@ -315,7 +337,7 @@ const staticPost = (url, body = {}) => {
           },
         });
         if (error) throw error;
-        const analysis = data?.analysis || { acertividade: 80, qualificacao: "ok" };
+        const analysis = normalizeCaseAnalysis(data?.analysis);
         // Persist/upsert análise local para AdminCases mostrar nome/telefone/área reais
         try {
           const items = read("case_analyses", seedAnalyses);
@@ -361,9 +383,9 @@ const staticPost = (url, body = {}) => {
         return {
           data: {
             session_id: sessionId,
-            response: `Erro ao consultar IA: ${e?.message || e}. Verifique se a edge function chat-ai está publicada.`,
+            response: "Instabilidade na IA.\n- caso recebido\n- análise parcial salva\n- envie mais detalhes/provas",
             audio_base64: null,
-            analysis: { acertividade: 0, qualificacao: "erro" },
+            analysis: normalizeCaseAnalysis({ fallback: true, motivo: e?.message || String(e) }),
           },
           status: 200, statusText: "OK", headers: {}, config: {},
         };
