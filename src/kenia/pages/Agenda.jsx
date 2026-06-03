@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   Plus, Calendar, Clock, Video, User, Link2, Trash2,
   CheckCircle2, AlertCircle, XCircle, ChevronLeft, ChevronRight, Copy,
+  BellRing, RefreshCw, MessageSquare,
 } from "lucide-react";
 
 const STATUS_COLORS = {
@@ -22,6 +23,8 @@ const STATUS_COLORS = {
 
 export default function Agenda() {
   const [items, setItems] = useState([]);
+  const [deadlines, setDeadlines] = useState([]);
+  const [syncingDeadlines, setSyncingDeadlines] = useState(false);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState("list");
   const [cursor, setCursor] = useState(new Date());
@@ -30,7 +33,7 @@ export default function Agenda() {
     location: "Google Meet", notes: "", status: "confirmado",
   });
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadDeadlines(); }, []);
   const load = async () => {
     try {
       const { data } = await api.get("/appointments");
@@ -45,6 +48,44 @@ export default function Agenda() {
     } catch {
       setItems([]);
     }
+  };
+
+  const loadDeadlines = async () => {
+    try {
+      const { data } = await api.get("/legal-deadlines");
+      const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+      setDeadlines(list.sort((a, b) => new Date(a.due_at || 0) - new Date(b.due_at || 0)));
+    } catch {
+      setDeadlines([]);
+    }
+  };
+
+  const syncDeadlines = async () => {
+    setSyncingDeadlines(true);
+    try {
+      await api.post("/legal-deadlines/sync", { providers: ["escavador", "jusbrasil", "datalawyer"] });
+      toast.success("Prazos sincronizados com fallback ativo");
+      loadDeadlines();
+    } catch {
+      toast.error("Não foi possível sincronizar agora");
+    } finally {
+      setSyncingDeadlines(false);
+    }
+  };
+
+  const notifyDeadline = async (item) => {
+    try {
+      await api.post(`/legal-deadlines/${item.id}/notify`, { channel: "whatsapp", phone: item.client_phone });
+      toast.success("Aviso enviado ou salvo no app como fallback");
+      loadDeadlines();
+    } catch {
+      toast.error("Falha ao notificar");
+    }
+  };
+
+  const toggleDeadlineStatus = async (item, status) => {
+    await api.patch(`/legal-deadlines/${item.id}`, { status });
+    loadDeadlines();
   };
 
   const create = async () => {
