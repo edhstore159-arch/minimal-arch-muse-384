@@ -46,9 +46,6 @@ const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
 const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || 60000);
 const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS || 20000);
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 2000);
-const MAX_RECONNECT_DELAY_MS = Number(process.env.MAX_RECONNECT_DELAY_MS || 30000);
-const CONNECTION_WATCHDOG_INTERVAL_MS = Number(process.env.CONNECTION_WATCHDOG_INTERVAL_MS || 30000);
-const SEND_RECONNECT_WAIT_MS = Number(process.env.SEND_RECONNECT_WAIT_MS || 15000);
 const SERVER_STARTED_AT = Date.now();
 const AUTO_REPLY_RECENT_WINDOW_MS = Number(process.env.AUTO_REPLY_RECENT_WINDOW_MS || 180000);
 const logger = pino({ level: "warn" });
@@ -65,7 +62,6 @@ let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
 let starting = false;
 let reconnectTimer = null;
-let reconnectAttempt = 0;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
 // ---- Armazenamento em memória de contatos e mensagens ----
@@ -389,28 +385,6 @@ async function autoReply(jid, userText, contactName) {
   }
 }
 
-function scheduleReconnect(reason = "unknown") {
-  if (reconnectTimer || starting || connectionState === "logged_out") return;
-  reconnectAttempt += 1;
-  const delay = Math.min(RECONNECT_DELAY_MS * reconnectAttempt, MAX_RECONNECT_DELAY_MS);
-  recordAutoReply({ step: "schedule_reconnect", reason, attempt: reconnectAttempt, delay_ms: delay, connectionState });
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    startSock().catch((e) => { lastError = e?.message || String(e); scheduleReconnect("start_failed"); });
-  }, delay);
-}
-
-async function waitForOpen(timeoutMs = SEND_RECONNECT_WAIT_MS) {
-  if (connectionState === "open" && sock) return true;
-  scheduleReconnect("wait_for_open");
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    if (connectionState === "open" && sock) return true;
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  return false;
-}
-
 async function closeSock() {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   reconnectTimer = null;
@@ -464,7 +438,6 @@ async function startSock() {
       currentQRAt = null;
       lastError = null;
       starting = false;
-      reconnectAttempt = 0;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = null;
       processAutoReplyQueue().catch((e) => recordAutoReply({ step: "queue_process_error", error: e?.message || String(e) }));
@@ -478,7 +451,12 @@ async function startSock() {
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
       currentQR = null;
       currentQRAt = null;
-      if (shouldReconnect) scheduleReconnect(`connection_close_${code || "unknown"}`);
+      if (shouldReconnect && !reconnectTimer) {
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          startSock().catch((e) => { lastError = e?.message || String(e); });
+        }, RECONNECT_DELAY_MS);
+      }
     }
   });
 
@@ -592,24 +570,6 @@ startSock().catch((e) => {
 setInterval(() => {
   processAutoReplyQueue().catch((e) => recordAutoReply({ step: "queue_process_error", error: e?.message || String(e) }));
 }, AUTO_REPLY_RETRY_EVERY_MS);
-
-setInterval(() => {
-  if (connectionState !== "open" && connectionState !== "logged_out") {
-    scheduleReconnect("watchdog");
-  }
-}, CONNECTION_WATCHDOG_INTERVAL_MS);
-
-process.on("unhandledRejection", (e) => {
-  lastError = e?.message || String(e);
-  console.error("unhandledRejection:", e);
-  if (connectionState !== "logged_out") scheduleReconnect("unhandled_rejection");
-});
-
-process.on("uncaughtException", (e) => {
-  lastError = e?.message || String(e);
-  console.error("uncaughtException:", e);
-  if (connectionState !== "logged_out") scheduleReconnect("uncaught_exception");
-});
 
 // ---- Helpers ----
 const ok = (data = {}) => ({ ok: true, ...data });
@@ -781,11 +741,10 @@ app.get("/api/whatsapp/qr/image", async (_req, res) => {
 // ---- Enviar mensagem ----
 app.post("/api/whatsapp/send", async (req, res) => {
   try {
-    if (!sock || connectionState !== "open") await waitForOpen();
     if (!sock || connectionState !== "open") {
       return res
-        .status(200)
-        .json({ ok: false, delivered: false, queued: false, fallback: true, error: "NOT_CONNECTED", state: connectionState });
+        .status(503)
+        .json({ ok: false, error: "NOT_CONNECTED", state: connectionState });
     }
     const { to, phone, contact_phone, message, text } = req.body || {};
     const jid = normalizeRecipient(to || phone || contact_phone);
@@ -804,9 +763,8 @@ app.post("/api/whatsapp/send", async (req, res) => {
 
 app.post("/api/whatsapp/send-direct", async (req, res) => {
   try {
-    if (!sock || connectionState !== "open") await waitForOpen();
     if (!sock || connectionState !== "open") {
-      return res.status(200).json({ delivered: false, ok: false, queued: false, fallback: true, error: "NOT_CONNECTED", state: connectionState });
+      return res.status(503).json({ delivered: false, ok: false, error: "NOT_CONNECTED", state: connectionState });
     }
     const { phone, to, contact_phone, text, message } = req.body || {};
     const jid = normalizeRecipient(phone || to || contact_phone);
