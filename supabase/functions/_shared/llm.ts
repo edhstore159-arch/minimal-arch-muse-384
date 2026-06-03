@@ -23,6 +23,16 @@ const EMERGENT_BASE_URL = (Deno.env.get("EMERGENT_BASE_URL") || "https://integra
 const EMERGENT_CHAT_MODELS = [Deno.env.get("EMERGENT_MODEL"), "gpt-4o-mini", "gpt-4o"].filter(Boolean) as string[];
 const EMERGENT_IMAGE_MODELS = [Deno.env.get("EMERGENT_IMAGE_MODEL"), "gpt-image-1", "dall-e-3"].filter(Boolean) as string[];
 
+async function imageUrlToBase64(url: string) {
+  if (url.startsWith("data:image/")) return url.replace(/^data:image\/[^;]+;base64,/, "");
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Falha ao baixar imagem da Emergent: ${resp.status}`);
+  const bytes = new Uint8Array(await resp.arrayBuffer());
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
 // ---------- chat completions ----------
 
 async function chatLovable(opts: ChatOptions) {
@@ -109,7 +119,7 @@ async function imageEmergent(opts: ImageOptions) {
     const b64 = data?.data?.[0]?.b64_json;
     const url = data?.data?.[0]?.url;
     if (b64) return { ok: true as const, b64, provider: "emergent", model };
-    if (url) return { ok: true as const, b64: url.replace(/^data:image\/[^;]+;base64,/, ""), provider: "emergent", model };
+    if (url) return { ok: true as const, b64: await imageUrlToBase64(url), provider: "emergent", model };
     last = `Emergent[${model}] não retornou imagem`;
   }
   return { ok: false as const, error: last };
