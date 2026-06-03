@@ -26,16 +26,6 @@ const SUPPRESSED_DEBUG_INSTRUCTION_PATTERNS = [
   /fus[aã]o.*n[aã]o.*funcion/i,
   /chave emergent/i,
   /nem gerando as imagens/i,
-  /utilize o debug tool/i,
-  /debug tool para criar as imagens/i,
-  /imagens para as redes sociais/i,
-  /criar as imagens nas redes sociai/i,
-  /na render faca a mesma coisa/i,
-  /mini chat precisa trocar/i,
-  /openai_base_url\s*=/i,
-  /ollama/i,
-  /qwen3/i,
-  /localhost:11434/i,
 ];
 
 export const shouldSuppressLovableDebugInstruction = (message: string) => {
