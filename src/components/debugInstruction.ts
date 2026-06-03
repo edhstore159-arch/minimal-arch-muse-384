@@ -22,6 +22,10 @@ const SUPPRESSED_DEBUG_INSTRUCTION_PATTERNS = [
   /budget has been exceeded/i,
   /emergent 400/i,
   /edge function returned 502/i,
+  /fus[aã]o d?e? imagens?/i,
+  /fus[aã]o.*n[aã]o.*funcion/i,
+  /chave emergent/i,
+  /nem gerando as imagens/i,
 ];
 
 export const shouldSuppressLovableDebugInstruction = (message: string) => {
