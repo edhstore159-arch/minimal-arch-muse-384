@@ -103,7 +103,7 @@ export const ErrorDebugPopup = () => {
       status: "pending",
     };
 
-    const { error } = await supabase.from("debug_instructions").insert(payload);
+    const { error } = await (supabase.from("debug_instructions") as any).insert(payload);
     if (!error) return;
 
     if (/user_email|schema cache|column/i.test(error.message || "")) {
