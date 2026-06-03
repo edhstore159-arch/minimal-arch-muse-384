@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/kenia/lib/api";
 import { supabase } from "@/integrations/supabase/client";
+import { buildDebugInstructionMessage } from "@/components/debugInstruction";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Input } from "@/kenia/components/ui/input";
@@ -12,7 +13,6 @@ import { toast } from "sonner";
 import { AlertTriangle, ImagePlus, Wand2, Send, Trash2, X, Download, Paperclip } from "lucide-react";
 
 const DEBUG_BUCKET = "debug-uploads";
-const DEBUG_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE O ERRO, EXECUTE A TAREFA):";
 
 export default function DebugTool() {
   const [endpoint, setEndpoint] = useState(
@@ -80,18 +80,7 @@ export default function DebugTool() {
 
   const removeAttachment = (i) => setAttachments((p) => p.filter((_, idx) => idx !== i));
 
-  const buildInstructionMessage = (txt) => {
-    const lines = [DEBUG_PREFIX, "", txt];
-    if (attachments.length > 0) {
-      lines.push("", "---", "INSTRUÇÕES PARA ARQUIVOS ANEXADOS:");
-      lines.push("- URLs públicas (Lovable Cloud Storage). Para imagens use imagegen--edit_image; para outros, baixe via curl/fetch.");
-      lines.push("", `ARQUIVOS ANEXADOS (${attachments.length}):`);
-      attachments.forEach((f, i) => {
-        lines.push("", `[Arquivo ${i + 1}: ${f.name} (${f.type || "binário"})]`, f.url);
-      });
-    }
-    return lines.join("\n");
-  };
+  const buildInstructionMessage = (txt) => buildDebugInstructionMessage(txt, attachments);
 
   const sendInstruction = async () => {
     const txt = instruction.trim();
