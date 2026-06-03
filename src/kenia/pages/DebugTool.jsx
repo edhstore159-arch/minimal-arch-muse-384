@@ -86,15 +86,17 @@ export default function DebugTool() {
     const txt = instruction.trim();
     if (!txt && attachments.length === 0) { toast.error("Digite uma instrução ou anexe um arquivo"); return; }
     const message = buildInstructionMessage(txt);
-    const delivery = deliverLovableDebugInstruction(message);
+    deliverLovableDebugInstruction(message);
     try {
       await api.post("/debug/instruction", { instruction: message });
-      toast.success(delivery === "editor" ? "Instrução copiada e Lovable aberta" : "Instrução registrada");
+      toast.success("Instrução disparada");
       setInstruction("");
       setAttachments([]);
       loadHistory();
     } catch {
-      toast.error(delivery === "editor" ? "Lovable aberta, mas falhou ao registrar histórico" : "Erro ao registrar instrução");
+      toast.success("Instrução disparada (sem histórico)");
+      setInstruction("");
+      setAttachments([]);
     }
   };
 
