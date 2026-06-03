@@ -155,6 +155,39 @@ const seedAppointments = [
   },
 ];
 
+const seedLegalDeadlines = [
+  {
+    id: "deadline-1",
+    client_name: "Mariana Souza",
+    client_phone: "(62) 99123-4455",
+    process_number: "0001234-56.2026.5.18.0001",
+    court: "TRT 18ª Região",
+    title: "Manifestação sobre documentos juntados",
+    description: "Intimação aguardando providência da equipe jurídica.",
+    due_at: inDays(2),
+    source: "monitoramento interno",
+    status: "pending",
+    urgency: "alta",
+    assigned_to: "Advogada",
+    whatsapp_notified: false,
+  },
+  {
+    id: "deadline-2",
+    client_name: "Carlos Henrique",
+    client_phone: "(62) 99888-1200",
+    process_number: "0009876-11.2026.4.01.3500",
+    court: "JEF Goiás",
+    title: "Conferir prazo para defesa/manifestação",
+    description: "Prazo próximo; manter alerta no painel caso WhatsApp não esteja disponível.",
+    due_at: inDays(5),
+    source: "fallback app",
+    status: "pending",
+    urgency: "media",
+    assigned_to: "Bacharel",
+    whatsapp_notified: false,
+  },
+];
+
 const seedTransactions = [
   { id: "tx-1", client_name: "Mariana Souza", description: "Honorários iniciais", amount: 1800, type: "receita", status: "pago", due_date: inDays(-3).slice(0, 10) },
   { id: "tx-2", client_name: "Carlos Henrique", description: "Parcela consultoria", amount: 900, type: "receita", status: "pendente", due_date: inDays(5).slice(0, 10) },
@@ -248,6 +281,7 @@ const staticGet = async (url, config = {}) => {
   if (path === "/whatsapp/contacts") return response(read("contacts", seedContacts));
   if (path.startsWith("/whatsapp/messages/")) return response(read("messages", seedMessages)[path.split("/").pop()] || []);
   if (path === "/dashboard/metrics") return response(getMetrics());
+  if (path === "/legal-deadlines") return response(read("legal_deadlines", seedLegalDeadlines));
   if (path === "/processes") return response(read("processes", seedProcesses));
   if (path === "/finance/transactions") return response(read("transactions", seedTransactions));
   if (path === "/appointments") {
@@ -424,6 +458,20 @@ const staticPost = (url, body = {}) => {
       }
     })();
   }
+  if (path === "/legal-deadlines/sync") {
+    const items = read("legal_deadlines", seedLegalDeadlines);
+    const synced = { providers: ["Escavador", "Jusbrasil", "Data Lawyer"], fallback: true, updated_at: nowIso() };
+    write("legal_deadlines", items.map((item) => ({ ...item, last_sync_at: synced.updated_at })));
+    return response({ ok: true, synced, items });
+  }
+  if (path === "/legal-deadlines") return insertItem("legal_deadlines", seedLegalDeadlines, "deadline", { status: "pending", urgency: "media", whatsapp_notified: false, ...body });
+  if (path.startsWith("/legal-deadlines/") && path.endsWith("/notify")) {
+    const id = path.split("/")[2];
+    const items = read("legal_deadlines", seedLegalDeadlines);
+    const updated = items.map((item) => item.id === id ? { ...item, whatsapp_notified: true, notified_at: nowIso(), notification_channel: "app" } : item);
+    write("legal_deadlines", updated);
+    return response({ ok: true, channel: "app", fallback: true });
+  }
   if (path === "/processes") return insertItem("processes", seedProcesses, "proc", body);
   if (path === "/creatives/generate") {
     return (async () => {
@@ -517,6 +565,7 @@ const staticPatch = (url, body = {}) => {
   if (path.startsWith("/leads/")) return updateCollection("leads", seedLeads);
   if (path.startsWith("/finance/transactions/")) return updateCollection("transactions", seedTransactions);
   if (path.startsWith("/appointments/")) return updateCollection("appointments", seedAppointments);
+  if (path.startsWith("/legal-deadlines/")) return updateCollection("legal_deadlines", seedLegalDeadlines);
   if (path.startsWith("/admin/case-analyses/")) return updateCollection("case_analyses", seedAnalyses);
   return response({ ok: true, fallback: true });
 };
@@ -531,6 +580,7 @@ const staticDelete = (url) => {
   if (path.startsWith("/leads/")) return removeFrom("leads", seedLeads);
   if (path.startsWith("/finance/transactions/")) return removeFrom("transactions", seedTransactions);
   if (path.startsWith("/appointments/")) return removeFrom("appointments", seedAppointments);
+  if (path.startsWith("/legal-deadlines/")) return removeFrom("legal_deadlines", seedLegalDeadlines);
   if (path.startsWith("/processes/")) return removeFrom("processes", seedProcesses);
   if (path.startsWith("/creatives/")) return removeFrom("creatives", seedCreatives);
   return response({ ok: true, fallback: true });
@@ -558,8 +608,8 @@ liveApi.interceptors.response.use(
   }
 );
 
-const cloudFirstGetPaths = new Set(["/appointments", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
-const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments"]);
+const cloudFirstGetPaths = new Set(["/appointments", "/legal-deadlines", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
+const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
 const fallbackToStaticPostPaths = new Set(["/debug/instruction"]);
 
 // Caminhos que, quando o backend live (Render) falha ou devolve lista vazia,
@@ -575,6 +625,7 @@ const fallbackToStaticGetPaths = new Set([
   "/dashboard/metrics",
   "/admin/case-analyses",
   "/debug/instructions",
+  "/legal-deadlines",
 ]);
 
 const isEmptyPayload = (data) => {
