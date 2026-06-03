@@ -17,6 +17,12 @@ const inDays = (days) => {
 const DEFAULT_PROMPT =
   "Você é a assistente da Dra. Kênia Garcia. Use Bom dia, Boa tarde ou Boa noite conforme o horário de São Paulo, pergunte primeiro o nome do cliente, depois peça o relato do caso. Responda perguntas abertas com orientação jurídica inicial, cite base legal brasileira quando pertinente, peça documentos/provas e convide para agendamento quando houver potencial. Nunca diga que é IA, robô ou assistente virtual.";
 
+const cleanInternalChatMarkers = (text) =>
+  String(text || "")
+    .replace(/<?\/?\s*HANDOFF[_\s-]*K[EÊ]NIA\s*\/?>/giu, "")
+    .replace(/`{1,3}\s*HANDOFF[_\s-]*K[EÊ]NIA\s*`{1,3}/giu, "")
+    .trim();
+
 const defaultWhatsAppConfig = {
   provider: "zapi",
   zapi_instance_id: "",
@@ -360,9 +366,11 @@ const staticPost = (url, body = {}) => {
         return {
           data: {
             session_id: sessionId,
-            response: data?.response || "Sem resposta da IA.",
+            response: cleanInternalChatMarkers(data?.response) || "Sem resposta da IA.",
             audio_base64: data?.audio_base64 || null,
             appointment: data?.appointment || null,
+            handoff: Boolean(data?.handoff),
+            speaker: data?.speaker || null,
             analysis,
             server_time: data?.server_time,
           },

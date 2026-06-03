@@ -55,6 +55,8 @@ const renderMessageContent = (text) => {
 
 const cleanRepeatedText = (text) => {
   const noRepeatedWords = String(text || "")
+    .replace(/<?\/?\s*HANDOFF[_\s-]*K[EÊ]NIA\s*\/?>/giu, "")
+    .replace(/`{1,3}\s*HANDOFF[_\s-]*K[EÊ]NIA\s*`{1,3}/giu, "")
     .replace(/\b((?:[\p{L}\p{N}]{2,}\s+){1,3}[\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
     .replace(/\b([\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
     .replace(/([^.!?\n]{8,}[.!?])(?:\s+\1)+/giu, "$1")
@@ -220,6 +222,7 @@ export default function ChatIA() {
   const [scheduling, setScheduling] = useState(false);
   const [leadId, setLeadId] = useState(null);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(true);
+  const [activeSpeaker, setActiveSpeaker] = useState("Secretária");
   const audioRef = useRef(null);
   const scrollRef = useRef(null);
   const [recording, setRecording] = useState(false);
@@ -727,6 +730,7 @@ export default function ChatIA() {
       upsertLead({ description: msg });
       setThinking(false);
       if (data.handoff) {
+        setActiveSpeaker("Dra. Kênia Garcia");
         try {
           const ctx = new (window.AudioContext || window.webkitAudioContext)();
           const o = ctx.createOscillator();
@@ -740,11 +744,13 @@ export default function ChatIA() {
         } catch {}
         toast.success("Dra. Kênia foi notificada e está entrando na conversa", { duration: 4000 });
       }
-      await typeAssistantMessage(data.response, data.audio_base64 || null, data.speaker || null);
+      const responseText = cleanRepeatedText(data.response);
+      const speaker = data.handoff || activeSpeaker === "Dra. Kênia Garcia" ? "Dra. Kênia Garcia" : data.speaker || null;
+      await typeAssistantMessage(responseText, data.audio_base64 || null, speaker);
       if (shouldScheduleWaitFollowUp(data.response)) {
         if (waitFollowUpTimerRef.current) clearTimeout(waitFollowUpTimerRef.current);
         waitFollowUpTimerRef.current = setTimeout(() => {
-          typeAssistantMessage(buildWaitFollowUpText(name), null, "Secretária");
+          typeAssistantMessage(buildWaitFollowUpText(name), null, speaker || "Secretária");
           waitFollowUpTimerRef.current = null;
         }, WAIT_FOLLOW_UP_MS);
       }
