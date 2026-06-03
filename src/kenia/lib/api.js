@@ -511,26 +511,7 @@ const staticPost = (url, body = {}) => {
     write("debug_instructions", items);
     return response({ ok: true });
   }
-  if (path === "/settings/test-text") return response({ ok: true, model: "Lovable AI / Emergent", using_custom_key: false });
-  if (path === "/settings/test-image") {
-    return (async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke("generate-cover-image", {
-          body: { prompt: "teste simples de geração de imagem jurídica elegante" },
-        });
-        if (error) throw error;
-        return response({
-          ok: Boolean(data?.b64_json),
-          model: data?.provider === "emergent" ? "Emergent Gemini Image" : "Lovable AI Image",
-          provider: data?.provider || "none",
-          using_custom_key: data?.provider === "emergent",
-          error: data?.error || null,
-        });
-      } catch (e) {
-        return response({ ok: false, error: e?.message || String(e), model: "edge-function" });
-      }
-    })();
-  }
+  if (path === "/settings/test-text" || path === "/settings/test-image") return response({ ok: false, error: "Modo estático: backend de teste indisponível.", model: "static" });
   if (path === "/whatsapp/test-connection") return response({ connected: false, provider: "static", error: "STATIC_MODE", hint: "Site publicado como estático; conexão real de WhatsApp exige backend externo." });
   if (path.startsWith("/whatsapp/")) return response({ ok: false, connected: false, fallback: true, state: "offline", error: "STATIC_MODE" });
   if (path === "/legislation/refresh" || path === "/seed/demo") return response({ ok: true });
@@ -629,7 +610,7 @@ liveApi.interceptors.response.use(
 );
 
 const cloudFirstGetPaths = new Set(["/appointments", "/legal-deadlines", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
-const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/settings/test-text", "/settings/test-image", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
+const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
 const fallbackToStaticPostPaths = new Set(["/debug/instruction"]);
 
 // Caminhos que, quando o backend live (Render) falha ou devolve lista vazia,
