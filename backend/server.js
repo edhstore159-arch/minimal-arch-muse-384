@@ -464,6 +464,7 @@ async function startSock() {
       currentQRAt = null;
       lastError = null;
       starting = false;
+      reconnectAttempt = 0;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = null;
       processAutoReplyQueue().catch((e) => recordAutoReply({ step: "queue_process_error", error: e?.message || String(e) }));
@@ -477,12 +478,7 @@ async function startSock() {
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
       currentQR = null;
       currentQRAt = null;
-      if (shouldReconnect && !reconnectTimer) {
-        reconnectTimer = setTimeout(() => {
-          reconnectTimer = null;
-          startSock().catch((e) => { lastError = e?.message || String(e); });
-        }, RECONNECT_DELAY_MS);
-      }
+      if (shouldReconnect) scheduleReconnect(`connection_close_${code || "unknown"}`);
     }
   });
 
