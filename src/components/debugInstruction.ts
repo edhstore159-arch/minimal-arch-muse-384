@@ -2,13 +2,7 @@ export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE 
 
 export const isLovableNativeDebugRuntime = () => {
   if (typeof window === "undefined") return false;
-  const host = window.location.hostname.toLowerCase();
-
-  return (
-    host === "localhost" ||
-    host.endsWith(".lovableproject.com") ||
-    host.endsWith(".lovable.app")
-  );
+  return window.localStorage.getItem("lovable_native_debug_throw") === "1";
 };
 
 /**
