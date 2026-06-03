@@ -403,6 +403,10 @@ async function closeSock() {
 
 async function startSock() {
   if (starting) return;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   starting = true;
   connectionState = "connecting";
   let state;
@@ -421,7 +425,10 @@ async function startSock() {
   sock = makeWASocket({
     version,
     logger,
-    auth: state,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, logger),
+    },
     printQRInTerminal: false,
     browser: ["Ubuntu", "Chrome", "120.0.0.0"],
     qrTimeout: QR_TIMEOUT_MS,
