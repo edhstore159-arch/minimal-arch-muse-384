@@ -76,6 +76,23 @@ const contactsStore = new Map(); // jid -> contato
 const messagesStore = new Map(); // jid -> Array<mensagens>
 const processedAutoReplyMessageIds = new Set();
 const debugInstructions = [];
+const legalDeadlines = [
+  {
+    id: "deadline-1",
+    client_name: "Mariana Souza",
+    client_phone: "(62) 99123-4455",
+    process_number: "0001234-56.2026.5.18.0001",
+    court: "TRT 18ª Região",
+    title: "Manifestação sobre documentos juntados",
+    description: "Intimação aguardando providência da equipe jurídica.",
+    due_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    source: "monitoramento interno",
+    status: "pending",
+    urgency: "alta",
+    assigned_to: "Advogada",
+    whatsapp_notified: false,
+  },
+];
 
 const jidToPhone = (jid) => String(jid || "").split("@")[0].replace(/\D/g, "");
 const extractText = (m) =>
@@ -681,6 +698,17 @@ const outboundMessage = (text, to, providerResult = {}) => ({
   created_at: new Date().toISOString(),
   to,
 });
+
+const buildDeadlineNotice = (item) => {
+  const due = item?.due_at ? new Date(item.due_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "prazo próximo";
+  return [
+    `Olá, ${item?.client_name || "cliente"}. O escritório identificou uma movimentação/prazo no seu processo.`,
+    `Processo: ${item?.process_number || "não informado"}`,
+    `Providência: ${item?.title || "verificação jurídica"}`,
+    `Prazo: ${due}`,
+    "A equipe vai acompanhar e, se precisar de documento, avisaremos por aqui.",
+  ].join("\n");
+};
 
 const baileysRuntimeStatus = () => {
   const connected = connectionState === "open" || Boolean(sock?.user && connectionState !== "logged_out");
