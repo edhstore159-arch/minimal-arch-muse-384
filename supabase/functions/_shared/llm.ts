@@ -33,6 +33,16 @@ async function imageUrlToBase64(url: string) {
   return btoa(binary);
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 45000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ---------- chat completions ----------
 
 async function chatLovable(opts: ChatOptions) {
@@ -105,11 +115,17 @@ async function imageEmergent(opts: ImageOptions) {
   if (!EMERGENT_KEY) return { ok: false as const, error: "EMERGENT_API_KEY ausente" };
   let last = "Emergent image falhou";
   for (const model of EMERGENT_IMAGE_MODELS) {
-    const resp = await fetch(`${EMERGENT_BASE_URL}/images/generations`, {
+    let resp: Response;
+    try {
+      resp = await fetchWithTimeout(`${EMERGENT_BASE_URL}/images/generations`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${EMERGENT_KEY}` },
       body: JSON.stringify({ model, prompt: opts.prompt, size: opts.size || "1024x1024", n: 1 }),
-    });
+      });
+    } catch (e) {
+      last = `Emergent[${model}] timeout/erro: ${(e as Error)?.message || e}`;
+      continue;
+    }
     if (!resp.ok) {
       last = `Emergent[${model}] ${resp.status}: ${(await resp.text()).slice(0, 300)}`;
       if (resp.status === 401 || resp.status === 403) break;
