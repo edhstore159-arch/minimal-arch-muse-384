@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { isLovableNativeDebugRuntime, readLovableDebugBridgeMessage } from "@/components/debugInstruction";
+import { isLovableNativeDebugRuntime } from "@/components/debugInstruction";
 
 /**
  * DebugErrorThrower
@@ -14,10 +14,6 @@ export const DebugErrorThrower = () => {
 
   useEffect(() => {
     if (!isLovableNativeDebugRuntime()) return;
-    const bridgeMessage = readLovableDebugBridgeMessage();
-    if (bridgeMessage) {
-      setTimeout(() => setMessage(bridgeMessage), 250);
-    }
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
