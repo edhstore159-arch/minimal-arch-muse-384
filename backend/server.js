@@ -458,6 +458,11 @@ async function startSock() {
       currentQR = null;
       currentQRAt = null;
       lastError = null;
+      lastDisconnectCode = null;
+      lastOpenAt = Date.now();
+      reconnectAttempts = 0;
+      reconnectingSince = null;
+      manualLogoutRequested = false;
       starting = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -466,22 +471,21 @@ async function startSock() {
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode || new Boom(lastDisconnect?.error)?.output?.statusCode;
       lastError = lastDisconnect?.error?.message || null;
-      // Só NÃO reconectar se o usuário deslogou de fato pelo celular.
-      // connectionReplaced/restartRequired/timedOut/loggedOut→ tratar:
+      lastDisconnectCode = code || null;
       const loggedOut = code === DisconnectReason.loggedOut;
       const replaced = code === DisconnectReason.connectionReplaced;
-      // Em "connectionReplaced" a sessão foi assumida por outro dispositivo;
-      // ainda assim tentamos reconectar (o app é o único cliente esperado).
-      const shouldReconnect = !loggedOut;
-      // Em restartRequired reconecta imediato; demais com backoff curto
-      const delay = code === DisconnectReason.restartRequired ? 250 : RECONNECT_DELAY_MS;
+      const transientLoggedOut = loggedOut && !manualLogoutRequested && lastOpenAt && Date.now() - lastOpenAt < 30000;
+      const shouldReconnect = !manualLogoutRequested && (!loggedOut || transientLoggedOut);
+      reconnectAttempts = shouldReconnect ? reconnectAttempts + 1 : 0;
+      if (shouldReconnect && !reconnectingSince) reconnectingSince = Date.now();
+      const backoff = Math.min(RECONNECT_DELAY_MS * Math.max(1, reconnectAttempts), RECONNECT_MAX_DELAY_MS);
+      const delay = code === DisconnectReason.restartRequired ? 250 : replaced ? 5000 : backoff;
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
       currentQR = null;
       currentQRAt = null;
-      if (loggedOut) {
-        // limpar credenciais para forçar novo QR
+      if (!shouldReconnect && loggedOut) {
         try {
           const fs = await import("node:fs/promises");
           await fs.rm(AUTH_DIR, { recursive: true, force: true });
