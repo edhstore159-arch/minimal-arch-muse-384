@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/kenia/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/kenia/contexts/AuthContext";
 import { DebugErrorThrower } from "@/components/DebugErrorThrower";
-import { ErrorDebugPopup } from "@/components/ErrorDebugPopup";
 
 import Landing from "@/kenia/pages/Landing";
 import Login from "@/kenia/pages/Login";
@@ -40,7 +39,6 @@ function App() {
     <div className="App">
       {/* DebugErrorThrower DEVE ficar fora de qualquer ErrorBoundary/Suspense */}
       <DebugErrorThrower />
-      <ErrorDebugPopup />
       <AuthProvider>
         <BrowserRouter>
           <ScrollToTop />
@@ -50,9 +48,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/consulta" element={<Consulta />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            {/* Admin debug tool — sempre acessível, sem auth */}
-            <Route path="/admin/debug" element={<DebugTool />} />
-            <Route path="/app/debug" element={<DebugTool />} />
+            <Route path="/admin/debug" element={<Protected><DebugTool /></Protected>} />
             <Route
               element={
                 <Protected>
@@ -74,6 +70,7 @@ function App() {
               <Route path="/app/whatsapp" element={<WhatsAppSettings />} />
               <Route path="/app/whatsapp-logs" element={<WhatsAppLogs />} />
               <Route path="/app/settings" element={<Settings />} />
+              <Route path="/app/debug" element={<DebugTool />} />
             </Route>
           </Routes>
 

@@ -75,6 +75,7 @@ let whatsappConfig = { provider: "baileys", bot_enabled: true };
 const contactsStore = new Map(); // jid -> contato
 const messagesStore = new Map(); // jid -> Array<mensagens>
 const processedAutoReplyMessageIds = new Set();
+const debugInstructions = [];
 
 const jidToPhone = (jid) => String(jid || "").split("@")[0].replace(/\D/g, "");
 const extractText = (m) =>
@@ -704,6 +705,17 @@ const baileysRuntimeStatus = () => {
 // ---- Healthcheck ----
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
 app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
+
+app.get("/api/debug/instructions", (_req, res) => {
+  res.json(debugInstructions.slice(0, 50));
+});
+
+app.post("/api/debug/instruction", (req, res) => {
+  const instruction = String(req.body?.instruction || "").trim();
+  if (!instruction) return res.status(400).json({ ok: false, error: "Instrução vazia." });
+  debugInstructions.unshift({ id: `debug-${Date.now()}`, instruction, created_at: new Date().toISOString() });
+  res.status(201).json({ ok: true });
+});
 
 app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 
