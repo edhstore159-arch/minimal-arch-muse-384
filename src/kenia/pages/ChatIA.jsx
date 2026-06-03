@@ -835,9 +835,10 @@ export default function ChatIA() {
                           : "bg-white border border-nude-200 text-nude-900 rounded-bl-sm"
                       }`}
                     >
-                      {m.role === "assistant" && i === 0 && (
+                      {m.role === "assistant" && (m.speaker || i === 0) && (
                         <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-semibold tracking-widest uppercase text-gold-600">
-                          <Sparkles className="w-3 h-3" /> Ana · secretária
+                          <Sparkles className="w-3 h-3" />
+                          {m.speaker ? m.speaker : "Ana · secretária"}
                         </div>
                       )}
                       <div className="text-sm leading-relaxed whitespace-pre-wrap">{renderMessageContent(m.content)}</div>
