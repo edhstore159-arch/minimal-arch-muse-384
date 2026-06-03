@@ -560,6 +560,7 @@ liveApi.interceptors.response.use(
 
 const cloudFirstGetPaths = new Set(["/appointments", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
 const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments"]);
+const fallbackToStaticPostPaths = new Set(["/debug/instruction"]);
 
 // Caminhos que, quando o backend live (Render) falha ou devolve lista vazia,
 // caem para os dados estáticos de demonstração — assim o painel nunca aparece
@@ -573,6 +574,7 @@ const fallbackToStaticGetPaths = new Set([
   "/crm/stages",
   "/dashboard/metrics",
   "/admin/case-analyses",
+  "/debug/instructions",
 ]);
 
 const isEmptyPayload = (data) => {
@@ -601,6 +603,9 @@ export const api = HAS_BACKEND
       post: (url, body, config) => {
         const [path] = String(url).split("?");
         if (cloudFirstPostPaths.has(path)) return staticPost(url, body);
+        if (fallbackToStaticPostPaths.has(path)) {
+          return liveApi.post(url, body, config).catch(() => staticPost(url, body));
+        }
         return liveApi.post(url, body, config);
       },
       put: liveApi.put.bind(liveApi),
