@@ -17,7 +17,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
-const WAIT_FOLLOW_UP_MS = 55000;
+const WAIT_FOLLOW_UP_MS = 65000;
 
 // Gera link de videoconferência (Jitsi — funciona como Google Meet, sem necessidade de login)
 // Pode ser substituído por integração oficial com Google Calendar API no futuro.
