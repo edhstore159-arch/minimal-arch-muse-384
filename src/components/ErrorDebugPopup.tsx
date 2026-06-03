@@ -10,7 +10,8 @@ import { buildDebugInstructionMessage, deliverLovableDebugInstruction } from "@/
  * o bucket público "debug-uploads" e suas URLs são incluídas na mensagem do
  * erro intencional, para que o "Try to Fix" da Lovable possa acessá-los.
  *
- * NUNCA enviar a instrução por chat/sidebar/API — apenas via CustomEvent.
+ * No editor da Lovable usa CustomEvent para acionar o "Try to Fix" nativo.
+ * Fora do editor salva a instrução no backend para não quebrar a tela.
  */
 const BUCKET = "debug-uploads";
 
@@ -129,11 +130,15 @@ export const ErrorDebugPopup = () => {
     if (delivery === "skipped") {
       try {
         await saveFallback(message);
+        alert("Instrução salva. O botão Try to Fix só aparece dentro do editor da Lovable; em Render/link direto não há canal nativo para obedecer automaticamente esse comando.");
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         alert(`Falha ao salvar instrução: ${msg}`);
         return;
       }
+      setText("");
+      setFiles([]);
+      return;
     }
     setText("");
     setFiles([]);
