@@ -6,8 +6,15 @@ import { Button } from "@/kenia/components/ui/button";
 import { Textarea } from "@/kenia/components/ui/textarea";
 import { Label } from "@/kenia/components/ui/label";
 import { toast } from "sonner";
-import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, Info } from "lucide-react";
+import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, Info, Wand2 } from "lucide-react";
 import SocialConnections from "@/kenia/components/SocialConnections";
+
+// Preset de rejuvenescimento facial preservando identidade
+const REJUVENATE_PROMPT = `Rejuvenescer o rosto da pessoa preservando integralmente sua identidade facial, proporções, formato do rosto, olhos, nariz, boca, mandíbula e características únicas. Reduzir suavemente rugas, linhas de expressão profundas, flacidez leve e sinais de envelhecimento da pele. Melhorar a textura da pele de forma natural, mantendo poros, detalhes e aparência realista. Preservar tom de pele, expressão facial, penteado e iluminação original. Não alterar idade para aparência infantil ou artificial. Não modificar traços étnicos, estrutura óssea, peso facial ou características que identifiquem a pessoa. Resultado fotorealista, alta definição, aspecto natural de 5 a 15 anos mais jovem, sem efeito plástico, sem excesso de suavização, sem filtros de beleza exagerados.
+
+Prompt negativo: Não mudar identidade, não alterar formato dos olhos, nariz ou boca, não afinar o rosto, não aumentar lábios, não modificar cor dos olhos, não trocar penteado, não criar aparência artificial, não aplicar efeito de boneca, não remover todos os poros, não alterar expressão facial, não adicionar maquiagem excessiva, não gerar rosto diferente, não modificar ângulo da foto, não criar simetria artificial.
+
+Identity preservation priority: maximum. Facial structure lock. Photorealistic age regression. Natural skin restoration. Maintain exact likeness.`;
 
 // Presets oficiais para redes sociais (px)
 const SOCIAL_PRESETS = [
