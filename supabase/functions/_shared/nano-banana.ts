@@ -43,27 +43,40 @@ function buildContent({ prompt, imageUrls }: NanoBananaOptions): Content[] {
 async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("EMERGENT_API_KEY");
   if (!key) return { url: null, error: "EMERGENT_API_KEY ausente" };
-  try {
-    const resp = await fetch("https://integrations.emergentagent.com/llm/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash-image-preview",
-        modalities: ["image", "text"],
-        messages: [{ role: "user", content: buildContent(opts) }],
-      }),
-    });
-    if (!resp.ok) {
-      const txt = await resp.text();
-      return { url: null, error: `Emergent ${resp.status}: ${txt.slice(0, 200)}` };
+  // Try several model identifiers since Emergent's universal LLM accepts a few variants.
+  const models = [
+    "gemini-2.5-flash-image-preview",
+    "gemini-2.5-flash-image",
+    "google/gemini-2.5-flash-image",
+    "gemini-2.0-flash-exp-image-generation",
+  ];
+  let lastError = "";
+  for (const model of models) {
+    try {
+      const resp = await fetch("https://integrations.emergentagent.com/llm/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          modalities: ["image", "text"],
+          messages: [{ role: "user", content: buildContent(opts) }],
+        }),
+      });
+      if (!resp.ok) {
+        lastError = `Emergent[${model}] ${resp.status}: ${(await resp.text()).slice(0, 160)}`;
+        continue;
+      }
+      const data = await resp.json();
+      const url = extractImageFromMessage(data?.choices?.[0]?.message);
+      if (url) return { url };
+      lastError = `Emergent[${model}] sem imagem`;
+    } catch (e) {
+      lastError = `Emergent[${model}] erro: ${(e as Error)?.message || e}`;
     }
-    const data = await resp.json();
-    const url = extractImageFromMessage(data?.choices?.[0]?.message);
-    return { url, error: url ? undefined : "Emergent não retornou imagem" };
-  } catch (e) {
-    return { url: null, error: `Emergent erro: ${(e as Error)?.message || e}` };
   }
+  return { url: null, error: lastError || "Emergent falhou" };
 }
+
 
 async function callLovableGateway(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("LOVABLE_API_KEY");
