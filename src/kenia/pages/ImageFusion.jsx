@@ -10,11 +10,34 @@ import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, In
 import SocialConnections from "@/kenia/components/SocialConnections";
 
 // Preset de rejuvenescimento facial preservando identidade
-const REJUVENATE_PROMPT = `Rejuvenescer o rosto da pessoa preservando integralmente sua identidade facial, proporções, formato do rosto, olhos, nariz, boca, mandíbula e características únicas. Reduzir suavemente rugas, linhas de expressão profundas, flacidez leve e sinais de envelhecimento da pele. Melhorar a textura da pele de forma natural, mantendo poros, detalhes e aparência realista. Preservar tom de pele, expressão facial, penteado e iluminação original. Não alterar idade para aparência infantil ou artificial. Não modificar traços étnicos, estrutura óssea, peso facial ou características que identifiquem a pessoa. Resultado fotorealista, alta definição, aspecto natural de 5 a 15 anos mais jovem, sem efeito plástico, sem excesso de suavização, sem filtros de beleza exagerados.
+const REJUVENATE_PROMPT = `Identity Preservation Priority: 100%. Facial recognition similarity above 95%. Preserve all biometric facial characteristics.
 
-Prompt negativo: Não mudar identidade, não alterar formato dos olhos, nariz ou boca, não afinar o rosto, não aumentar lábios, não modificar cor dos olhos, não trocar penteado, não criar aparência artificial, não aplicar efeito de boneca, não remover todos os poros, não alterar expressão facial, não adicionar maquiagem excessiva, não gerar rosto diferente, não modificar ângulo da foto, não criar simetria artificial.
+Rejuvenesça a pessoa da imagem de forma natural e realista, preservando integralmente sua identidade facial.
 
-Identity preservation priority: maximum. Facial structure lock. Photorealistic age regression. Natural skin restoration. Maintain exact likeness.`;
+REGRAS OBRIGATÓRIAS:
+- Manter 100% dos traços faciais originais.
+- Não alterar formato do rosto, mandíbula, nariz, boca, olhos, sobrancelhas ou orelhas.
+- Não modificar proporções faciais.
+- Não mudar expressão, olhar, pose ou ângulo da cabeça.
+- Não alterar corte, volume, textura ou cor do cabelo.
+- Não substituir a pessoa por uma versão genérica ou artificial.
+- Não criar aparência de modelo, atriz ou pessoa diferente.
+- Preservar características únicas que permitem reconhecer imediatamente a pessoa.
+
+OBJETIVO DO REJUVENESCIMENTO:
+- Reduzir apenas sinais naturais de envelhecimento.
+- Suavizar discretamente linhas de expressão.
+- Atenuar marcas de cansaço ao redor dos olhos.
+- Melhorar levemente a uniformidade da pele.
+- Aumentar suavemente o brilho saudável da pele.
+- Preservar poros, textura e características naturais.
+- Manter aspecto fotográfico realista.
+
+INTENSIDADE: Rejuvenescimento equivalente a 5–8 anos mais jovem. Resultado sutil e profissional. Priorizar autenticidade acima da beleza. A pessoa final deve ser imediatamente reconhecível como a mesma pessoa da foto original.
+
+NEGATIVE PROMPT: Não alterar identidade facial, não modificar estrutura óssea, não afinar rosto, não aumentar olhos, não mudar nariz, não mudar boca, não mudar sobrancelhas, não remover características marcantes, não criar rosto genérico, não aplicar efeito plástico, não usar pele excessivamente lisa, não transformar em outra pessoa, não alterar expressão, não alterar cabelo, não alterar iluminação original.
+
+Resultado esperado: aparência mais descansada, saudável e ligeiramente mais jovem, mantendo total fidelidade à identidade da pessoa original.`;
 
 // Presets oficiais para redes sociais (px)
 const SOCIAL_PRESETS = [
