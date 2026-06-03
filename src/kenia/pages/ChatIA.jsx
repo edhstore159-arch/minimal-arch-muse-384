@@ -17,6 +17,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 const SCHEDULE_REGEX = /\b(agendar|agendamento|marcar|marca[cç][aã]o|hor[aá]rio|consulta|reuni[aã]o|atendimento|appointment|schedule)\b/i;
+const WAIT_FOLLOW_UP_MS = 55000;
 
 // Gera link de videoconferência (Jitsi — funciona como Google Meet, sem necessidade de login)
 // Pode ser substituído por integração oficial com Google Calendar API no futuro.
@@ -66,6 +67,14 @@ const cleanRepeatedText = (text) => {
     if (normalized && normalized !== previous) uniqueLines.push(line);
   }
   return uniqueLines.join("\n").trim();
+};
+
+const shouldScheduleWaitFollowUp = (text) =>
+  /\b(vou\s+verificar|vou\s+confirmar|te\s+retorno|retorno\s+em|aguard|um\s+momento|minutinho|minuto)\b/i.test(String(text || ""));
+
+const buildWaitFollowUpText = (name) => {
+  const firstName = String(name || "").trim().split(/\s+/)[0] || "cliente";
+  return `${firstName}, ainda estou verificando por aqui e já te retorno. Obrigada por aguardar. 🙏`;
 };
 
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -218,6 +227,7 @@ export default function ChatIA() {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const typingTimerRef = useRef(null);
+  const waitFollowUpTimerRef = useRef(null);
   const fileInputRef = useRef(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
@@ -313,6 +323,7 @@ export default function ChatIA() {
 
   useEffect(() => () => {
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (waitFollowUpTimerRef.current) clearTimeout(waitFollowUpTimerRef.current);
   }, []);
 
 
