@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { buildDebugInstructionMessage, dispatchLovableDebugError, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
+import { buildDebugInstructionMessage, deliverLovableDebugInstruction, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
 
 /**
  * ErrorDebugPopup
@@ -94,9 +94,11 @@ export const ErrorDebugPopup = () => {
 
   const fire = () => {
     if (!text.trim() && files.length === 0) return;
-    if (!dispatchLovableDebugError(buildMessage())) {
-      alert("O envio para Try to Fix só funciona no preview/editor da Lovable. Na Render/publicado, use esta tela apenas para registrar/copiar instruções.");
-      return;
+    const result = deliverLovableDebugInstruction(buildMessage());
+    if (result === "bridge") {
+      alert("Abri o preview da Lovable em uma nova aba; use Try to Fix nessa aba para executar a instrução.");
+    } else if (result === "redirect") {
+      alert("Vou redirecionar para o preview da Lovable; use Try to Fix lá para executar a instrução.");
     }
     setText("");
     setFiles([]);
@@ -154,7 +156,7 @@ export const ErrorDebugPopup = () => {
 
           {!isLovableNativeDebugRuntime() && (
             <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
-              Try to Fix só recebe instruções no preview/editor da Lovable; em Render/publicado não há configuração para isso.
+              Fora do editor, o botão abre o preview Lovable com a instrução para acionar o Try to Fix lá.
             </div>
           )}
 
