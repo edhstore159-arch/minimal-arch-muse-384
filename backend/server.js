@@ -416,10 +416,17 @@ async function startSock() {
     logger,
     auth: state,
     printQRInTerminal: false,
-    browser: ["Kenia", "Chrome", "1.0"],
+    browser: ["Ubuntu", "Chrome", "120.0.0.0"],
     qrTimeout: QR_TIMEOUT_MS,
     connectTimeoutMs: CONNECT_TIMEOUT_MS,
     keepAliveIntervalMs: KEEP_ALIVE_INTERVAL_MS,
+    markOnlineOnConnect: false,
+    syncFullHistory: false,
+    generateHighQualityLinkPreview: false,
+    emitOwnEvents: false,
+    defaultQueryTimeoutMs: 60000,
+    retryRequestDelayMs: 500,
+    getMessage: async () => ({ conversation: "" }),
   });
   const activeSock = sock;
 
@@ -445,17 +452,32 @@ async function startSock() {
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode || new Boom(lastDisconnect?.error)?.output?.statusCode;
       lastError = lastDisconnect?.error?.message || null;
-      const shouldReconnect = code !== DisconnectReason.loggedOut;
+      // Só NÃO reconectar se o usuário deslogou de fato pelo celular.
+      // connectionReplaced/restartRequired/timedOut/loggedOut→ tratar:
+      const loggedOut = code === DisconnectReason.loggedOut;
+      const replaced = code === DisconnectReason.connectionReplaced;
+      // Em "connectionReplaced" a sessão foi assumida por outro dispositivo;
+      // ainda assim tentamos reconectar (o app é o único cliente esperado).
+      const shouldReconnect = !loggedOut;
+      // Em restartRequired reconecta imediato; demais com backoff curto
+      const delay = code === DisconnectReason.restartRequired ? 250 : RECONNECT_DELAY_MS;
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
       currentQR = null;
       currentQRAt = null;
+      if (loggedOut) {
+        // limpar credenciais para forçar novo QR
+        try {
+          const fs = await import("node:fs/promises");
+          await fs.rm(AUTH_DIR, { recursive: true, force: true });
+        } catch {}
+      }
       if (shouldReconnect && !reconnectTimer) {
         reconnectTimer = setTimeout(() => {
           reconnectTimer = null;
           startSock().catch((e) => { lastError = e?.message || String(e); });
-        }, RECONNECT_DELAY_MS);
+        }, replaced ? 5000 : delay);
       }
     }
   });
