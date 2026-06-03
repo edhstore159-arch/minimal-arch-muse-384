@@ -230,7 +230,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     const data = await aiResp.json();
     const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
     const appointment = parseAppointmentBlock(rawReply);
-    const reply = stripAppointmentBlock(rawReply);
+    const reply = cleanRepeatedText(stripAppointmentBlock(rawReply));
 
     // Análise técnica do caso (chamada paralela à IA pedindo JSON estruturado)
     let analysis: any = { acertividade: 70, qualificacao: "necessita_mais_info" };
