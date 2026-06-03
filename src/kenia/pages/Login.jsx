@@ -28,6 +28,27 @@ export default function Login() {
 
   const [regData, setRegData] = useState({ name: "", email: "", password: "", oab: "" });
 
+  const handleForgotPassword = async () => {
+    const email = (loginData.email || "").trim();
+    if (!email) {
+      toast.error("Digite seu e-mail no campo acima para receber o link");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("E-mail de recuperação enviado. Verifique sua caixa de entrada.");
+    } catch (err) {
+      toast.error(err?.message || "Erro ao enviar e-mail");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -215,6 +236,15 @@ export default function Login() {
                     {loading ? "Entrando..." : "Acessar painel"}
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={loading}
+                    className="w-full text-xs text-gold-700 hover:text-gold-800 underline-offset-2 hover:underline text-right"
+                    data-testid="login-forgot"
+                  >
+                    Esqueci minha senha
+                  </button>
                   <div className="relative my-2">
                     <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-nude-200" /></div>
                     <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-nude-500 uppercase tracking-wider">ou</span></div>
