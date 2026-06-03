@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/kenia/lib/api";
 import { supabase } from "@/integrations/supabase/client";
-import { buildDebugInstructionMessage, dispatchLovableDebugError, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
+import { buildDebugInstructionMessage, deliverLovableDebugInstruction, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Input } from "@/kenia/components/ui/input";
@@ -86,15 +86,15 @@ export default function DebugTool() {
     const txt = instruction.trim();
     if (!txt && attachments.length === 0) { toast.error("Digite uma instrução ou anexe um arquivo"); return; }
     const message = buildInstructionMessage(txt);
-    const sentToLovable = dispatchLovableDebugError(message);
+    const delivery = deliverLovableDebugInstruction(message);
     try {
       await api.post("/debug/instruction", { instruction: message });
-      toast.success(sentToLovable ? "Instrução enviada ao Try to Fix" : "Instrução registrada; Try to Fix só funciona no preview da Lovable");
+      toast.success(delivery === "native" ? "Instrução enviada ao Try to Fix" : "Preview Lovable aberto com a instrução para o Try to Fix");
       setInstruction("");
       setAttachments([]);
       loadHistory();
     } catch {
-      toast.error(sentToLovable ? "Evento disparado, mas falhou ao registrar histórico" : "Erro ao registrar; Try to Fix indisponível fora do preview Lovable");
+      toast.error(delivery === "native" ? "Evento disparado, mas falhou ao registrar histórico" : "Preview aberto, mas falhou ao registrar histórico");
     }
   };
 
@@ -168,7 +168,7 @@ export default function DebugTool() {
               </div>
               {!isLovableNativeDebugRuntime() && (
                 <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  O envio para o overlay Try to Fix só funciona no preview/editor da Lovable. Na Render/publicado não existe configuração para enviar ordens ao agente.
+                  Fora do editor, o botão abre o preview Lovable com a instrução embutida; use Try to Fix na aba aberta.
                 </div>
               )}
 
