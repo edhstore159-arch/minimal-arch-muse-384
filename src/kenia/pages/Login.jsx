@@ -236,6 +236,15 @@ export default function Login() {
                     {loading ? "Entrando..." : "Acessar painel"}
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={loading}
+                    className="w-full text-xs text-gold-700 hover:text-gold-800 underline-offset-2 hover:underline text-right"
+                    data-testid="login-forgot"
+                  >
+                    Esqueci minha senha
+                  </button>
                   <div className="relative my-2">
                     <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-nude-200" /></div>
                     <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-nude-500 uppercase tracking-wider">ou</span></div>
