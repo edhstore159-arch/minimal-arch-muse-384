@@ -38,7 +38,7 @@ export const deliverLovableDebugInstruction = (message: string) => {
   if (typeof window === "undefined") return "unavailable" as const;
 
   const url = buildLovableDebugBridgeUrl(message);
-  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  const opened = window.open(url, "_blank");
   if (opened) return "bridge" as const;
 
   window.location.assign(url);
