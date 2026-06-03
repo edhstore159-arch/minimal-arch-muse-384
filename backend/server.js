@@ -710,6 +710,48 @@ const buildDeadlineNotice = (item) => {
   ].join("\n");
 };
 
+const ALEXA_SYSTEM_PROMPT =
+  process.env.ALEXA_SYSTEM_PROMPT ||
+  [
+    "Você responde pela Skill Alexa do escritório da Dra. Kênia Garcia.",
+    "Responda em português do Brasil, de forma natural para ser falada em voz alta.",
+    "Use no máximo 2 frases curtas. Se for caso jurídico concreto, diga que vai registrar e orientar o envio pelo WhatsApp ou atendimento do escritório.",
+    "Não use markdown, emojis, links longos ou listas extensas.",
+  ].join(" ");
+
+function extractAlexaUtterance(body = {}) {
+  const direct = body.text || body.message || body.query || body.utterance || body.input;
+  if (direct) return String(direct).trim();
+
+  const request = body.request || {};
+  if (request.type === "LaunchRequest") return "Abrir atendimento por voz do escritório.";
+  if (request.type === "SessionEndedRequest") return "";
+
+  const intent = request.intent || {};
+  const slots = Object.values(intent.slots || {});
+  const slotValue = slots.map((slot) => slot?.value).find(Boolean);
+  if (slotValue) return String(slotValue).trim();
+
+  if (intent.name === "AMAZON.HelpIntent") return "Explique como posso falar com o escritório.";
+  if (intent.name === "AMAZON.CancelIntent" || intent.name === "AMAZON.StopIntent") return "encerrar";
+  return String(intent.name || "atendimento jurídico").trim();
+}
+
+function alexaJsonResponse(text, shouldEndSession = false) {
+  const speech = cleanRepeatedText(text || "Não consegui responder agora. Tente novamente em instantes.")
+    .replace(/https?:\/\/\S+/g, "")
+    .slice(0, 7600)
+    .trim();
+  return {
+    version: "1.0",
+    response: {
+      outputSpeech: { type: "PlainText", text: speech },
+      card: { type: "Simple", title: "Dra. Kênia Garcia", content: speech },
+      shouldEndSession,
+    },
+  };
+}
+
 const baileysRuntimeStatus = () => {
   const connected = connectionState === "open" || Boolean(sock?.user && connectionState !== "logged_out");
   const qrAgeMs = currentQRAt ? Date.now() - currentQRAt : null;
