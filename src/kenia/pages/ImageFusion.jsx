@@ -10,73 +10,11 @@ import { Combine, Upload, Loader2, Download, X, Sparkles, ImageIcon, Package, In
 import SocialConnections from "@/kenia/components/SocialConnections";
 
 // Preset de rejuvenescimento facial preservando identidade
-const REJUVENATE_PROMPT = `Identity Preservation Priority: 100%. Facial recognition similarity above 95%. Preserve all biometric facial characteristics.
+const REJUVENATE_PROMPT = `Rejuvenescer o rosto da pessoa preservando integralmente sua identidade facial, proporções, formato do rosto, olhos, nariz, boca, mandíbula e características únicas. Reduzir suavemente rugas, linhas de expressão profundas, flacidez leve e sinais de envelhecimento da pele. Melhorar a textura da pele de forma natural, mantendo poros, detalhes e aparência realista. Preservar tom de pele, expressão facial, penteado e iluminação original. Não alterar idade para aparência infantil ou artificial. Não modificar traços étnicos, estrutura óssea, peso facial ou características que identifiquem a pessoa. Resultado fotorealista, alta definição, aspecto natural de 5 a 15 anos mais jovem, sem efeito plástico, sem excesso de suavização, sem filtros de beleza exagerados.
 
-Rejuvenesça a pessoa da imagem de forma natural e realista, preservando integralmente sua identidade facial.
+Prompt negativo: Não mudar identidade, não alterar formato dos olhos, nariz ou boca, não afinar o rosto, não aumentar lábios, não modificar cor dos olhos, não trocar penteado, não criar aparência artificial, não aplicar efeito de boneca, não remover todos os poros, não alterar expressão facial, não adicionar maquiagem excessiva, não gerar rosto diferente, não modificar ângulo da foto, não criar simetria artificial.
 
-REGRAS OBRIGATÓRIAS:
-- Manter 100% dos traços faciais originais.
-- Não alterar formato do rosto, mandíbula, nariz, boca, olhos, sobrancelhas ou orelhas.
-- Não modificar proporções faciais.
-- Não mudar expressão, olhar, pose ou ângulo da cabeça.
-- Não alterar corte, volume, textura ou cor do cabelo.
-- Não substituir a pessoa por uma versão genérica ou artificial.
-- Não criar aparência de modelo, atriz ou pessoa diferente.
-- Preservar características únicas que permitem reconhecer imediatamente a pessoa.
-
-OBJETIVO DO REJUVENESCIMENTO:
-- Reduzir apenas sinais naturais de envelhecimento.
-- Suavizar discretamente linhas de expressão.
-- Atenuar marcas de cansaço ao redor dos olhos.
-- Melhorar levemente a uniformidade da pele.
-- Aumentar suavemente o brilho saudável da pele.
-- Preservar poros, textura e características naturais.
-- Manter aspecto fotográfico realista.
-
-INTENSIDADE: Rejuvenescimento equivalente a 5–8 anos mais jovem. Resultado sutil e profissional. Priorizar autenticidade acima da beleza. A pessoa final deve ser imediatamente reconhecível como a mesma pessoa da foto original.
-
-NEGATIVE PROMPT: Não alterar identidade facial, não modificar estrutura óssea, não afinar rosto, não aumentar olhos, não mudar nariz, não mudar boca, não mudar sobrancelhas, não remover características marcantes, não criar rosto genérico, não aplicar efeito plástico, não usar pele excessivamente lisa, não transformar em outra pessoa, não alterar expressão, não alterar cabelo, não alterar iluminação original.
-
-Resultado esperado: aparência mais descansada, saudável e ligeiramente mais jovem, mantendo total fidelidade à identidade da pessoa original.`;
-
-// Regressão etária: 10-15 anos mais jovem
-const AGE_REGRESSION_10_15_PROMPT = `Identity Preservation Priority: 100%. Facial recognition similarity above 95%.
-
-Transforme a pessoa da imagem para uma versão aproximadamente 10 a 15 anos mais jovem, preservando integralmente sua identidade facial.
-
-MANTENHA: Formato do rosto, estrutura óssea, nariz, olhos, boca e sobrancelhas, expressão facial, simetria original, tom de pele.
-
-AJUSTE APENAS: Pele mais firme e saudável, menos linhas de expressão, menos sinais de cansaço, aparência mais energética e jovial.
-
-A pessoa deve ser reconhecida instantaneamente como a mesma pessoa.
-
-Photorealistic, ultra realistic, identity preservation, facial consistency, age regression, natural skin texture, high detail.`;
-
-// Regressão etária: adolescência (14-18 anos)
-const AGE_REGRESSION_TEEN_PROMPT = `Age regression to teenage version (14-18 years old). Recreate the same person as a teenager while preserving facial identity and genetic characteristics.
-
-MAINTAIN: Same eyes, same nose, same smile, same facial proportions, same ethnic characteristics, same hair color.
-
-ADJUST: Softer skin, slightly fuller cheeks, youthful facial fat distribution, teen appearance.
-
-The result must look like an authentic younger version of the same person, not a different individual.
-
-Photorealistic, identity preservation above 95%, highly detailed, natural teenager appearance.`;
-
-// Regressão etária: criança (6-10 anos)
-const AGE_REGRESSION_CHILD_PROMPT = `Generate a realistic childhood version of the person shown in the image.
-
-PRESERVE: Genetic facial traits, eye shape, nose structure, smile characteristics, ethnic appearance.
-
-Transform naturally into a child aged 6 to 10 years old.
-
-AVOID: Cartoon style, artificial appearance, generic child face.
-
-The child must be clearly recognizable as the same person at a younger age.
-
-Ultra realistic, photorealistic childhood reconstruction, identity preservation, high facial similarity.
-
-Dica: para melhor resultado, envie 2-3 fotos da mesma pessoa em ângulos diferentes.`;
+Identity preservation priority: maximum. Facial structure lock. Photorealistic age regression. Natural skin restoration. Maintain exact likeness.`;
 
 // Presets oficiais para redes sociais (px)
 const SOCIAL_PRESETS = [
@@ -346,39 +284,17 @@ export default function ImageFusion() {
         <Card className="max-w-5xl mx-auto p-5 bg-nude-900/60 border-gold-900/40 mt-5">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <Label className="text-gold-200">Instrução adicional (opcional)</Label>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button" variant="outline" size="sm"
-                onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + REJUVENATE_PROMPT)}
-                className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
-                data-testid="fusion-rejuvenate-preset"
-              >
-                <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Rejuvenescer (sutil)
-              </Button>
-              <Button
-                type="button" variant="outline" size="sm"
-                onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + AGE_REGRESSION_10_15_PROMPT)}
-                className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
-              >
-                <Wand2 className="w-3.5 h-3.5 mr-1.5" /> 10-15 anos mais jovem
-              </Button>
-              <Button
-                type="button" variant="outline" size="sm"
-                onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + AGE_REGRESSION_TEEN_PROMPT)}
-                className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
-              >
-                <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Adolescente (14-18)
-              </Button>
-              <Button
-                type="button" variant="outline" size="sm"
-                onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + AGE_REGRESSION_CHILD_PROMPT)}
-                className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
-              >
-                <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Criança (6-10)
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + REJUVENATE_PROMPT)}
+              className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
+              data-testid="fusion-rejuvenate-preset"
+            >
+              <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Preset: rejuvenescer rosto (preservar identidade)
+            </Button>
           </div>
-
           <Textarea rows={4} value={prompt} onChange={(e) => setPrompt(e.target.value)}
             placeholder="Ex: Mescle as duas imagens em estilo dourado elegante. Use o botão acima para aplicar o preset de rejuvenescimento facial."
             data-testid="fusion-prompt"
