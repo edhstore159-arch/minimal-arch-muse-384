@@ -593,6 +593,24 @@ setInterval(() => {
   processAutoReplyQueue().catch((e) => recordAutoReply({ step: "queue_process_error", error: e?.message || String(e) }));
 }, AUTO_REPLY_RETRY_EVERY_MS);
 
+setInterval(() => {
+  if (connectionState !== "open" && connectionState !== "logged_out") {
+    scheduleReconnect("watchdog");
+  }
+}, CONNECTION_WATCHDOG_INTERVAL_MS);
+
+process.on("unhandledRejection", (e) => {
+  lastError = e?.message || String(e);
+  console.error("unhandledRejection:", e);
+  if (connectionState !== "logged_out") scheduleReconnect("unhandled_rejection");
+});
+
+process.on("uncaughtException", (e) => {
+  lastError = e?.message || String(e);
+  console.error("uncaughtException:", e);
+  if (connectionState !== "logged_out") scheduleReconnect("uncaught_exception");
+});
+
 // ---- Helpers ----
 const ok = (data = {}) => ({ ok: true, ...data });
 const normalizeRecipient = (value) => {
