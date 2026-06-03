@@ -346,17 +346,39 @@ export default function ImageFusion() {
         <Card className="max-w-5xl mx-auto p-5 bg-nude-900/60 border-gold-900/40 mt-5">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <Label className="text-gold-200">Instrução adicional (opcional)</Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + REJUVENATE_PROMPT)}
-              className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
-              data-testid="fusion-rejuvenate-preset"
-            >
-              <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Preset: rejuvenescer rosto (preservar identidade)
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button" variant="outline" size="sm"
+                onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + REJUVENATE_PROMPT)}
+                className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
+                data-testid="fusion-rejuvenate-preset"
+              >
+                <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Rejuvenescer (sutil)
+              </Button>
+              <Button
+                type="button" variant="outline" size="sm"
+                onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + AGE_REGRESSION_10_15_PROMPT)}
+                className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
+              >
+                <Wand2 className="w-3.5 h-3.5 mr-1.5" /> 10-15 anos mais jovem
+              </Button>
+              <Button
+                type="button" variant="outline" size="sm"
+                onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + AGE_REGRESSION_TEEN_PROMPT)}
+                className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
+              >
+                <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Adolescente (14-18)
+              </Button>
+              <Button
+                type="button" variant="outline" size="sm"
+                onClick={() => setPrompt((p) => (p ? p + "\n\n" : "") + AGE_REGRESSION_CHILD_PROMPT)}
+                className="border-gold-700/50 text-gold-200 hover:bg-gold-500/10 hover:text-gold-100"
+              >
+                <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Criança (6-10)
+              </Button>
+            </div>
           </div>
+
           <Textarea rows={4} value={prompt} onChange={(e) => setPrompt(e.target.value)}
             placeholder="Ex: Mescle as duas imagens em estilo dourado elegante. Use o botão acima para aplicar o preset de rejuvenescimento facial."
             data-testid="fusion-prompt"
