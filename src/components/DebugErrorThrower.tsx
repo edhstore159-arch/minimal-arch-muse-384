@@ -4,8 +4,8 @@ import { isLovableNativeDebugRuntime } from "./debugInstruction";
 /**
  * DebugErrorThrower
  *
- * Escuta "lovable-debug-error" e lança o erro durante o render para que
- * ele escape ao overlay global da Lovable e habilite o "Try to Fix".
+ * Escuta "lovable-debug-error" e só lança o erro quando o modo nativo
+ * de debug estiver explicitamente habilitado via localStorage.
  *
  * NÃO envolver em ErrorBoundary/Suspense. NÃO substituir por console/toast.
  */
