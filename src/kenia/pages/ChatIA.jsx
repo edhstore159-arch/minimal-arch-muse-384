@@ -55,6 +55,8 @@ const renderMessageContent = (text) => {
 
 const cleanRepeatedText = (text) => {
   const noRepeatedWords = String(text || "")
+    .replace(/<?\/?\s*HANDOFF[_\s-]*K[EÊ]NIA\s*\/?>/giu, "")
+    .replace(/`{1,3}\s*HANDOFF[_\s-]*K[EÊ]NIA\s*`{1,3}/giu, "")
     .replace(/\b((?:[\p{L}\p{N}]{2,}\s+){1,3}[\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
     .replace(/\b([\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
     .replace(/([^.!?\n]{8,}[.!?])(?:\s+\1)+/giu, "$1")
@@ -740,11 +742,13 @@ export default function ChatIA() {
         } catch {}
         toast.success("Dra. Kênia foi notificada e está entrando na conversa", { duration: 4000 });
       }
-      await typeAssistantMessage(data.response, data.audio_base64 || null, data.speaker || null);
+      const responseText = cleanRepeatedText(data.response);
+      const speaker = data.handoff ? "Dra. Kênia Garcia" : data.speaker || null;
+      await typeAssistantMessage(responseText, data.audio_base64 || null, speaker);
       if (shouldScheduleWaitFollowUp(data.response)) {
         if (waitFollowUpTimerRef.current) clearTimeout(waitFollowUpTimerRef.current);
         waitFollowUpTimerRef.current = setTimeout(() => {
-          typeAssistantMessage(buildWaitFollowUpText(name), null, "Secretária");
+          typeAssistantMessage(buildWaitFollowUpText(name), null, data.handoff ? "Dra. Kênia Garcia" : "Secretária");
           waitFollowUpTimerRef.current = null;
         }, WAIT_FOLLOW_UP_MS);
       }
