@@ -130,8 +130,9 @@ const AI_SYSTEM_PROMPT =
     "SAUDAÇÃO INICIAL: use Bom dia/Boa tarde/Boa noite conforme o CONTEXTO TEMPORAL, apresente-se como secretária da Dra. Kênia e peça o nome. Após o nome, trate pelo primeiro nome e pergunte 'Me conta o que aconteceu?'.",
     "",
     "TROCA DE PERSONA (handoff para a Dra. Kênia):",
-    "- Quando o cliente pedir EXPLICITAMENTE para falar com a Dra. Kênia Garcia, responda PRIMEIRO ainda como secretária: 'Claro, {Nome}. Vou verificar se a Dra. Kênia está disponível agora, um momento por favor… 🙏' e inclua o marcador exato <HANDOFF_KENIA/> no FINAL dessa mesma mensagem (sem markdown).",
+    "- Quando o cliente pedir EXPLICITAMENTE para falar com a Dra. Kênia Garcia, responda PRIMEIRO ainda como secretária: 'Claro, {Nome}. Vou verificar se a Dra. Kênia está disponível agora e retorno em até 1 minuto. 🙏' e inclua o marcador exato <HANDOFF_KENIA/> no FINAL dessa mesma mensagem (sem markdown).",
     "- A partir da PRÓXIMA mensagem, assuma a persona da própria Dra. Kênia Garcia falando em primeira pessoa ('Oi {Nome}, aqui é a Kênia.'). Tom humano, frases curtas, com reticências naturais. NÃO repita o marcador nas mensagens seguintes.",
+    "- Se disser que vai verificar, retornar ou pedir para aguardar, nunca deixe o cliente sem retorno por mais de 1 minuto. Envie uma atualização curta antes disso, mesmo que ainda esteja verificando.",
     "- Para tarefas administrativas (agendar, documentos), volte ao papel de secretária.",
     "",
     "REGRAS DE TAMANHO (OBRIGATÓRIO):",
@@ -354,6 +355,28 @@ async function sendBotText(jid, reply, meta = {}) {
   throw new Error(lastSendErr || "send_failed");
 }
 
+function shouldScheduleWaitFollowUp(reply) {
+  const text = String(reply || "").toLowerCase();
+  return /\b(vou\s+verificar|vou\s+confirmar|te\s+retorno|retorno\s+em|aguard|um\s+momento|minutinho|minuto)\b/i.test(text);
+}
+
+function waitFollowUpText(contactName) {
+  const name = String(contactName || "").trim().split(/\s+/)[0] || "cliente";
+  return `${name}, ainda estou verificando por aqui e já te retorno. Obrigada por aguardar. 🙏`;
+}
+
+function scheduleWaitFollowUp(jid, contactName) {
+  setTimeout(async () => {
+    if (!sock || connectionState !== "open") return;
+    try {
+      await sendBotText(jid, waitFollowUpText(contactName), { source: "wait_follow_up" });
+      recordAutoReply({ step: "wait_follow_up_sent", jid });
+    } catch (e) {
+      queueAutoReply(jid, waitFollowUpText(contactName), { source: "wait_follow_up", reason: e?.message || String(e) });
+    }
+  }, 55000);
+}
+
 async function processAutoReplyQueue() {
   if (processingAutoReplyQueue || !pendingAutoReplies.length || !sock || connectionState !== "open") return;
   processingAutoReplyQueue = true;
@@ -404,6 +427,7 @@ async function autoReply(jid, userText, contactName) {
   try {
     const sent = await sendBotText(jid, reply, { source: usedFallback ? "local_fallback" : result.provider });
     recordAutoReply({ step: "sent", jid, attempt: sent.attempt, provider: usedFallback ? "local_fallback" : result.provider, model: result.model || null, reply: reply.slice(0, 200) });
+    if (shouldScheduleWaitFollowUp(reply)) scheduleWaitFollowUp(jid, contactName);
   } catch (e) {
     queueAutoReply(jid, reply, { source: usedFallback ? "local_fallback" : result.provider, reason: e?.message || String(e) });
     recordAutoReply({ step: "send_queued_after_fail", jid, error: e?.message || String(e) });
