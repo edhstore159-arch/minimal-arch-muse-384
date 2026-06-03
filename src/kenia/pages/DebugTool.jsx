@@ -82,11 +82,55 @@ export default function DebugTool() {
 
   const buildInstructionMessage = (txt) => buildDebugInstructionMessage(txt, attachments);
 
+  const saveInstructionToCloud = async (message) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    const instructionWithUser = user?.email
+      ? `${message}\n\n---\nUSUÁRIO CONECTADO: ${user.email}`
+      : message;
+    const payload = {
+      user_id: user?.id ?? null,
+      instruction: instructionWithUser,
+      attachments,
+      status: "pending",
+    };
+
+    const { error } = await supabase.from("debug_instructions").insert(payload);
+    if (!error) return;
+
+    if (/schema cache|column/i.test(error.message || "")) {
+      const { error: retryError } = await supabase.from("debug_instructions").insert({
+        user_id: user?.id ?? null,
+        instruction: instructionWithUser,
+        attachments,
+        status: "pending",
+      });
+      if (retryError) throw retryError;
+      return;
+    }
+
+    throw error;
+  };
+
   const sendInstruction = async () => {
     const txt = instruction.trim();
     if (!txt && attachments.length === 0) { toast.error("Digite uma instrução ou anexe um arquivo"); return; }
     const message = buildInstructionMessage(txt);
-    deliverLovableDebugInstruction(message);
+    const delivery = deliverLovableDebugInstruction(message);
+
+    if (delivery === "skipped") {
+      try {
+        await saveInstructionToCloud(message);
+        toast.success("Instrução salva para análise");
+        setInstruction("");
+        setAttachments([]);
+        loadHistory();
+      } catch (e) {
+        toast.error(`Falha ao salvar: ${e?.message || e}`);
+      }
+      return;
+    }
+
     try {
       await api.post("/debug/instruction", { instruction: message });
       toast.success("Instrução disparada");
@@ -110,12 +154,7 @@ export default function DebugTool() {
     }
     const message = buildInstructionMessage(txt);
     try {
-      const { error } = await supabase.from("debug_instructions").insert({
-        instruction: message,
-        attachments: attachments,
-        status: "pending",
-      });
-      if (error) throw error;
+      await saveInstructionToCloud(message);
       toast.success("Atualizações salvas");
       setInstruction("");
       setAttachments([]);

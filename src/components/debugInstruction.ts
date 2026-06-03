@@ -2,15 +2,18 @@ export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE 
 
 export const isLovableNativeDebugRuntime = () => {
   if (typeof window === "undefined") return false;
-  return true;
+  const hostname = window.location.hostname;
+  return hostname.includes("lovableproject.com") || hostname.startsWith("id-preview--");
 };
 
 /**
  * Dispara o CustomEvent que vira erro fatal global, acionando o overlay
- * "Try to Fix" da Lovable. NÃO enfraquecer este fluxo.
+ * "Try to Fix" da Lovable apenas no preview/editor. Em produção/Render,
+ * esse overlay não existe; nesses ambientes o fluxo deve salvar a instrução.
  */
 export const dispatchLovableDebugError = (message: string) => {
   if (typeof window === "undefined") return false;
+  if (!isLovableNativeDebugRuntime()) return false;
   window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
   return true;
 };
