@@ -39,6 +39,45 @@ NEGATIVE PROMPT: Não alterar identidade facial, não modificar estrutura óssea
 
 Resultado esperado: aparência mais descansada, saudável e ligeiramente mais jovem, mantendo total fidelidade à identidade da pessoa original.`;
 
+// Regressão etária: 10-15 anos mais jovem
+const AGE_REGRESSION_10_15_PROMPT = `Identity Preservation Priority: 100%. Facial recognition similarity above 95%.
+
+Transforme a pessoa da imagem para uma versão aproximadamente 10 a 15 anos mais jovem, preservando integralmente sua identidade facial.
+
+MANTENHA: Formato do rosto, estrutura óssea, nariz, olhos, boca e sobrancelhas, expressão facial, simetria original, tom de pele.
+
+AJUSTE APENAS: Pele mais firme e saudável, menos linhas de expressão, menos sinais de cansaço, aparência mais energética e jovial.
+
+A pessoa deve ser reconhecida instantaneamente como a mesma pessoa.
+
+Photorealistic, ultra realistic, identity preservation, facial consistency, age regression, natural skin texture, high detail.`;
+
+// Regressão etária: adolescência (14-18 anos)
+const AGE_REGRESSION_TEEN_PROMPT = `Age regression to teenage version (14-18 years old). Recreate the same person as a teenager while preserving facial identity and genetic characteristics.
+
+MAINTAIN: Same eyes, same nose, same smile, same facial proportions, same ethnic characteristics, same hair color.
+
+ADJUST: Softer skin, slightly fuller cheeks, youthful facial fat distribution, teen appearance.
+
+The result must look like an authentic younger version of the same person, not a different individual.
+
+Photorealistic, identity preservation above 95%, highly detailed, natural teenager appearance.`;
+
+// Regressão etária: criança (6-10 anos)
+const AGE_REGRESSION_CHILD_PROMPT = `Generate a realistic childhood version of the person shown in the image.
+
+PRESERVE: Genetic facial traits, eye shape, nose structure, smile characteristics, ethnic appearance.
+
+Transform naturally into a child aged 6 to 10 years old.
+
+AVOID: Cartoon style, artificial appearance, generic child face.
+
+The child must be clearly recognizable as the same person at a younger age.
+
+Ultra realistic, photorealistic childhood reconstruction, identity preservation, high facial similarity.
+
+Dica: para melhor resultado, envie 2-3 fotos da mesma pessoa em ângulos diferentes.`;
+
 // Presets oficiais para redes sociais (px)
 const SOCIAL_PRESETS = [
   { group: "Instagram", name: "Feed Quadrado",   w: 1080, h: 1080 },
