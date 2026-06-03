@@ -1,5 +1,20 @@
 export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE O ERRO, EXECUTE A TAREFA):";
 
+const SUPPRESSED_DEBUG_INSTRUCTION_PATTERNS = [
+  /you['’]?ve run out of ai balance/i,
+  /ai features are paused/i,
+  /top up your balance/i,
+  /not enough credits/i,
+  /payment_required/i,
+  /cr[eé]ditos? da lovable ai esgotados/i,
+  /conectar em outra conta/i,
+  /outra conta para ter acesso a cr[eé]ditos?/i,
+];
+
+export const shouldSuppressLovableDebugInstruction = (message: string) => {
+  return SUPPRESSED_DEBUG_INSTRUCTION_PATTERNS.some((pattern) => pattern.test(message));
+};
+
 export const isLovableNativeDebugRuntime = () => {
   if (typeof window === "undefined") return false;
   const hostname = window.location.hostname;
@@ -22,6 +37,7 @@ export const isLovableNativeDebugRuntime = () => {
  */
 export const dispatchLovableDebugError = (message: string) => {
   if (typeof window === "undefined") return false;
+  if (shouldSuppressLovableDebugInstruction(message)) return false;
   if (!isLovableNativeDebugRuntime()) return false;
   window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
   return true;
