@@ -745,6 +745,54 @@ app.post("/api/debug/instruction", (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+app.get("/api/legal-deadlines", (_req, res) => {
+  res.json(legalDeadlines.sort((a, b) => String(a.due_at || "").localeCompare(String(b.due_at || ""))));
+});
+
+app.post("/api/legal-deadlines/sync", (_req, res) => {
+  const updatedAt = new Date().toISOString();
+  for (const item of legalDeadlines) item.last_sync_at = updatedAt;
+  res.json(ok({ providers: ["escavador", "jusbrasil", "datalawyer"], fallback: true, updated_at: updatedAt, items: legalDeadlines }));
+});
+
+app.post("/api/legal-deadlines", (req, res) => {
+  const item = {
+    id: `deadline-${Date.now()}`,
+    status: "pending",
+    urgency: "media",
+    whatsapp_notified: false,
+    created_at: new Date().toISOString(),
+    ...(req.body || {}),
+  };
+  legalDeadlines.unshift(item);
+  res.status(201).json(item);
+});
+
+app.patch("/api/legal-deadlines/:id", (req, res) => {
+  const item = legalDeadlines.find((d) => d.id === req.params.id);
+  if (!item) return res.status(404).json({ ok: false, error: "deadline_not_found" });
+  Object.assign(item, req.body || {}, { updated_at: new Date().toISOString() });
+  res.json(item);
+});
+
+app.post("/api/legal-deadlines/:id/notify", async (req, res) => {
+  const item = legalDeadlines.find((d) => d.id === req.params.id);
+  if (!item) return res.status(404).json({ ok: false, error: "deadline_not_found" });
+  const jid = normalizeRecipient(req.body?.phone || item.client_phone);
+  if (!jid || !sock || connectionState !== "open") {
+    Object.assign(item, { whatsapp_notified: false, notification_channel: "app", notification_status: "fallback", notified_at: new Date().toISOString() });
+    return res.json(ok({ delivered: false, channel: "app", fallback: true, state: connectionState }));
+  }
+  try {
+    const out = await sendBotText(jid, buildDeadlineNotice(item), { source: "deadline_notice" });
+    Object.assign(item, { whatsapp_notified: true, notification_channel: "whatsapp", notification_status: "sent", notified_at: new Date().toISOString() });
+    res.json(ok({ delivered: true, channel: "whatsapp", message: out.out }));
+  } catch (e) {
+    Object.assign(item, { whatsapp_notified: false, notification_channel: "app", notification_status: "fallback", notification_error: e?.message || String(e), notified_at: new Date().toISOString() });
+    res.json(ok({ delivered: false, channel: "app", fallback: true, error: e?.message || String(e) }));
+  }
+});
+
 app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 
 // Teste rapido da chave de IA configurada no servidor
