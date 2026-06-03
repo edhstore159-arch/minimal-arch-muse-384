@@ -49,6 +49,7 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/consulta" element={<Consulta />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* Admin debug tool — sempre acessível, sem auth */}
             <Route path="/admin/debug" element={<DebugTool />} />
             <Route path="/app/debug" element={<DebugTool />} />
