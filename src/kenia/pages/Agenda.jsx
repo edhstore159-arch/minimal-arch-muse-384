@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   Plus, Calendar, Clock, Video, User, Link2, Trash2,
   CheckCircle2, AlertCircle, XCircle, ChevronLeft, ChevronRight, Copy,
+  BellRing, RefreshCw, MessageSquare,
 } from "lucide-react";
 
 const STATUS_COLORS = {
@@ -22,6 +23,8 @@ const STATUS_COLORS = {
 
 export default function Agenda() {
   const [items, setItems] = useState([]);
+  const [deadlines, setDeadlines] = useState([]);
+  const [syncingDeadlines, setSyncingDeadlines] = useState(false);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState("list");
   const [cursor, setCursor] = useState(new Date());
@@ -30,7 +33,7 @@ export default function Agenda() {
     location: "Google Meet", notes: "", status: "confirmado",
   });
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadDeadlines(); }, []);
   const load = async () => {
     try {
       const { data } = await api.get("/appointments");
@@ -45,6 +48,44 @@ export default function Agenda() {
     } catch {
       setItems([]);
     }
+  };
+
+  const loadDeadlines = async () => {
+    try {
+      const { data } = await api.get("/legal-deadlines");
+      const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+      setDeadlines(list.sort((a, b) => new Date(a.due_at || 0) - new Date(b.due_at || 0)));
+    } catch {
+      setDeadlines([]);
+    }
+  };
+
+  const syncDeadlines = async () => {
+    setSyncingDeadlines(true);
+    try {
+      await api.post("/legal-deadlines/sync", { providers: ["escavador", "jusbrasil", "datalawyer"] });
+      toast.success("Prazos sincronizados com fallback ativo");
+      loadDeadlines();
+    } catch {
+      toast.error("Não foi possível sincronizar agora");
+    } finally {
+      setSyncingDeadlines(false);
+    }
+  };
+
+  const notifyDeadline = async (item) => {
+    try {
+      await api.post(`/legal-deadlines/${item.id}/notify`, { channel: "whatsapp", phone: item.client_phone });
+      toast.success("Aviso enviado ou salvo no app como fallback");
+      loadDeadlines();
+    } catch {
+      toast.error("Falha ao notificar");
+    }
+  };
+
+  const toggleDeadlineStatus = async (item, status) => {
+    await api.patch(`/legal-deadlines/${item.id}`, { status });
+    loadDeadlines();
   };
 
   const create = async () => {
@@ -105,6 +146,9 @@ export default function Agenda() {
           <h1 className="font-display font-bold text-2xl">Agenda de Reuniões</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="border-nude-300" onClick={syncDeadlines} disabled={syncingDeadlines} data-testid="sync-deadlines-btn">
+            <RefreshCw className={`w-4 h-4 mr-2 ${syncingDeadlines ? "animate-spin" : ""}`} /> Sincronizar prazos
+          </Button>
           <div className="inline-flex border border-nude-200 rounded-md p-0.5 bg-white">
             <Button size="sm" variant={view === "calendar" ? "default" : "ghost"} className="h-7" onClick={() => setView("calendar")}>Mês</Button>
             <Button size="sm" variant={view === "list" ? "default" : "ghost"} className="h-7" onClick={() => setView("list")}>Lista</Button>
@@ -155,6 +199,53 @@ export default function Agenda() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
+        <Card className="mb-5 border-rose-200 bg-rose-50/40 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-rose-800">
+                <BellRing className="h-4 w-4" /> Intimações e prazos
+              </div>
+              <div className="mt-1 text-xs text-nude-600">
+                Monitoramento preparado para Escavador, Jusbrasil e Data Lawyer; se um provedor falhar, o alerta permanece no app.
+              </div>
+            </div>
+            <Badge className="bg-white text-rose-700 border border-rose-200 hover:bg-white">
+              {deadlines.filter((d) => d.status !== "done").length} pendente(s)
+            </Badge>
+          </div>
+          {deadlines.length > 0 && (
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {deadlines.slice(0, 4).map((item) => {
+                const due = item.due_at ? new Date(item.due_at) : null;
+                const daysLeft = due ? Math.ceil((due.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
+                return (
+                  <div key={item.id} className="rounded-md border border-rose-100 bg-white p-3" data-testid={`deadline-${item.id}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-nude-900">{item.title}</div>
+                        <div className="mt-1 text-xs text-nude-600">{item.client_name} · {item.court}</div>
+                        <div className="mt-1 text-xs text-nude-500">{item.process_number}</div>
+                      </div>
+                      <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 shrink-0">
+                        {daysLeft != null ? (daysLeft <= 0 ? "vence hoje" : `${daysLeft}d`) : "prazo"}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => notifyDeadline(item)}>
+                        <MessageSquare className="mr-1 h-3 w-3" /> Avisar WhatsApp
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => toggleDeadlineStatus(item, "done")}>
+                        <CheckCircle2 className="mr-1 h-3 w-3 text-gold-600" /> Cumprido
+                      </Button>
+                      <span className="ml-auto text-[11px] text-nude-400">{item.whatsapp_notified ? "WhatsApp/app avisado" : item.assigned_to}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
         {view === "calendar" && (
           <Card className="border-nude-200 p-5">
             <div className="flex items-center justify-between mb-4">
