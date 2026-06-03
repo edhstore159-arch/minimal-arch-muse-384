@@ -158,7 +158,8 @@ function saoPauloTemporalContext() {
 
 function cleanRepeatedText(text) {
   const noRepeatedWords = String(text || "")
-    .replace(/\b([\p{L}\p{N}]{2,})(?:\s+\1\b)+/giu, "$1")
+    .replace(/\b([\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
+    .replace(/([^.!?\n]{8,}[.!?])(?:\s+\1)+/giu, "$1")
     .replace(/[ \t]{2,}/g, " ");
   const lines = noRepeatedWords.split(/\n+/).map((line) => line.trim()).filter(Boolean);
   const uniqueLines = [];
