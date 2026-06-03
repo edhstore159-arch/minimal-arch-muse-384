@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { buildDebugInstructionMessage, deliverLovableDebugInstruction, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
+import { buildDebugInstructionMessage, deliverLovableDebugInstruction } from "@/components/debugInstruction";
 
 /**
  * ErrorDebugPopup
