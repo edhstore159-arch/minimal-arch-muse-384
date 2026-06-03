@@ -1015,6 +1015,23 @@ export default function ChatIA() {
                   className="resize-none flex-1"
                   data-testid="chat-input"
                 />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.heic,.txt,.zip"
+                  onChange={handleDocUpload}
+                />
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={thinking || uploadingDoc}
+                  title="Anexar documento (salvo na sua pasta no painel)"
+                  className="h-12 px-3 sm:px-4 shrink-0 bg-nude-200 hover:bg-nude-300 text-nude-800"
+                  data-testid="chat-attach-btn"
+                >
+                  {uploadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                </Button>
                 <Button
                   type="button"
                   onClick={recording ? stopRecording : startRecording}
