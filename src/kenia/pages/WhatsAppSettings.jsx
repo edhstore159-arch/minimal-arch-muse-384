@@ -1192,7 +1192,12 @@ export default function WhatsAppSettings() {
                       fd.append("description", `Voz clonada — ${voiceCloneName}`);
                       fd.append("audio_file", voiceCloneFile);
                       const { data } = await api.post("/whatsapp/elevenlabs/clone", fd);
-                      toast.success(`Voz clonada! voice_id: ${data.voice_id.slice(0, 14)}...`);
+                      const voiceId = data?.voice_id || data?.voiceId || data?.id || "";
+                      if (!voiceId) {
+                        throw new Error(data?.detail || data?.error || "Resposta sem voice_id — verifique a ELEVENLABS_API_KEY e o áudio enviado.");
+                      }
+                      if (cfg) setCfg({ ...cfg, elevenlabs_voice_id: voiceId });
+                      toast.success(`Voz clonada! voice_id: ${voiceId.slice(0, 14)}...`);
                       await load();
                       setVoiceCloneFile(null);
                     } catch (e) {
