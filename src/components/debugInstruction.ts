@@ -1,5 +1,17 @@
 export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE O ERRO, EXECUTE A TAREFA):";
 
+export const isLovableNativeDebugRuntime = () => {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname.toLowerCase();
+  return host.includes("lovableproject.com") || host.startsWith("id-preview--");
+};
+
+export const dispatchLovableDebugError = (message: string) => {
+  if (!isLovableNativeDebugRuntime()) return false;
+  window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
+  return true;
+};
+
 export type DebugAttachment = {
   name: string;
   url: string;
