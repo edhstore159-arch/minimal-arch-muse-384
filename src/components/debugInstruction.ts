@@ -2,16 +2,15 @@ export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE 
 
 export const isLovableNativeDebugRuntime = () => {
   if (typeof window === "undefined") return false;
-  return window.localStorage.getItem("lovable_native_debug_throw") === "1";
+  return true;
 };
 
 /**
- * Só dispara o CustomEvent quando o modo nativo foi habilitado manualmente.
- * Em produção externa (ex.: Render), o fluxo deve salvar silenciosamente.
+ * Dispara o CustomEvent que vira erro fatal global, acionando o overlay
+ * "Try to Fix" da Lovable. NÃO enfraquecer este fluxo.
  */
 export const dispatchLovableDebugError = (message: string) => {
   if (typeof window === "undefined") return false;
-  if (!isLovableNativeDebugRuntime()) return false;
   window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
   return true;
 };
