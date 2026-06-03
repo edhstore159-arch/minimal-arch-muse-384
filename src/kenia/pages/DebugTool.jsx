@@ -261,11 +261,15 @@ export default function DebugTool() {
                 data-testid="dbg-instruction"
               />
 
-              <div className="flex justify-end mt-3">
+              <div className="flex justify-end gap-2 mt-3">
+                <Button onClick={saveInstructionSilently} variant="outline" className="border-nude-300" data-testid="dbg-save">
+                  Salvar Atualizações
+                </Button>
                 <Button onClick={sendInstruction} className="bg-rose-600 hover:bg-rose-700 text-white" data-testid="dbg-fire">
                   <AlertTriangle className="w-4 h-4 mr-2" /> Registrar Instrução
                 </Button>
               </div>
+
 
 
               {safeHistory.length > 0 && (
