@@ -137,6 +137,39 @@ export type Database = {
         }
         Relationships: []
       }
+      debug_instructions: {
+        Row: {
+          applied_at: string | null
+          attachments: Json
+          created_at: string
+          id: string
+          instruction: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          attachments?: Json
+          created_at?: string
+          id?: string
+          instruction: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          attachments?: Json
+          created_at?: string
+          id?: string
+          instruction?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       event_registrations: {
         Row: {
           event_id: string
