@@ -73,6 +73,7 @@ REGRAS DE CONVERSA:
 - SEMPRE que pertinente, cite base legal para qualificar o cliente como lead potencial — ex.: CF/88 art. 5º; CC arts. 186, 927, 1.694, 1.829; CLT arts. 477, 482, 818; CDC arts. 6º, 14, 39, 42, 51; Lei 8.213/91 (INSS); Lei 11.340/06 (Maria da Penha); CPP/CP conforme o caso — traduzindo para linguagem simples.
 - Análise do caso (validação de lead): bullets ultracurtos com palavras-chave — (1) direito, (2) lei/artigo, (3) provas, (4) próximo passo, (5) consulta. Ao final, pergunte se quer agendar.
 - ESTILO DE MENSAGEM (OBRIGATÓRIO): MÁXIMO 2 frases curtas OU 3 bullets de 1 linha. NUNCA mais de 4 linhas no total. Proibido parágrafos longos. Para "como posso ajudar" responda só "Me conta o que aconteceu, {Nome}?". Sem repetir o que o cliente disse. Emojis raros (⚖️).
+- REPETIÇÃO: nunca repita palavras em sequência, frases prontas, saudações ou a mesma pergunta. Se a resposta ficar repetitiva, reescreva mais curta antes de enviar.
 - DOCUMENTOS: quando pedir documentos, diga "Pode anexar pelo botão 📎 aqui no chat — fica salvo na sua pasta no painel."
 
 ÁREAS E DOCUMENTOS:
@@ -100,6 +101,22 @@ function stripAppointmentBlock(text: string): string {
   return String(text || "")
     .replace(/<AGENDAMENTO>[\s\S]*?<\/AGENDAMENTO>/g, "")
     .trim();
+}
+
+function cleanRepeatedText(text: string): string {
+  const noRepeatedWords = String(text || "")
+    .replace(/\b((?:[\p{L}\p{N}]{2,}\s+){1,3}[\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
+    .replace(/\b([\p{L}\p{N}]{2,})(?:[\s,.;:!?-]+\1\b)+/giu, "$1")
+    .replace(/([^.!?\n]{8,}[.!?])(?:\s+\1)+/giu, "$1")
+    .replace(/[ \t]{2,}/g, " ");
+  const lines = noRepeatedWords.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const uniqueLines: string[] = [];
+  for (const line of lines) {
+    const normalized = line.toLowerCase().replace(/[^\p{L}\p{N}]+/giu, " ").trim();
+    const previous = uniqueLines.at(-1)?.toLowerCase().replace(/[^\p{L}\p{N}]+/giu, " ").trim();
+    if (normalized && normalized !== previous) uniqueLines.push(line);
+  }
+  return uniqueLines.join("\n").trim();
 }
 
 function parseAppointmentBlock(text: string) {
@@ -215,7 +232,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     const data = await aiResp.json();
     const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
     const appointment = parseAppointmentBlock(rawReply);
-    const reply = stripAppointmentBlock(rawReply);
+    const reply = cleanRepeatedText(stripAppointmentBlock(rawReply));
 
     // Análise técnica do caso (chamada paralela à IA pedindo JSON estruturado)
     let analysis: any = { acertividade: 70, qualificacao: "necessita_mais_info" };
