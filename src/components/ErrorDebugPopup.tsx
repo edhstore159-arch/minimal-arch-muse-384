@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { buildDebugInstructionMessage, deliverLovableDebugInstruction, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
+import { buildDebugInstructionMessage, deliverLovableDebugInstruction } from "@/components/debugInstruction";
 
 /**
  * ErrorDebugPopup
@@ -94,12 +94,7 @@ export const ErrorDebugPopup = () => {
 
   const fire = () => {
     if (!text.trim() && files.length === 0) return;
-    const result = deliverLovableDebugInstruction(buildMessage());
-    if (result === "editor") {
-      alert("Copiei a instrução e abri o projeto na Lovable. Cole no chat ou use o fluxo Try to Fix no editor.");
-    } else if (result === "redirect") {
-      alert("Copiei a instrução e vou redirecionar para o projeto na Lovable.");
-    }
+    deliverLovableDebugInstruction(buildMessage());
     setText("");
     setFiles([]);
   };
@@ -154,11 +149,6 @@ export const ErrorDebugPopup = () => {
             className="w-full text-xs p-2 border border-gray-300 rounded resize-y font-mono text-gray-900"
           />
 
-          {!isLovableNativeDebugRuntime() && (
-            <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
-              O botão copia a instrução e abre o projeto na Lovable; o envio automático ao Try to Fix não é suportado fora do editor.
-            </div>
-          )}
 
           {files.length > 0 && (
             <ul className="space-y-1 max-h-28 overflow-y-auto text-[11px]">

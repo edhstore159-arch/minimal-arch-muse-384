@@ -1,30 +1,22 @@
 export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE O ERRO, EXECUTE A TAREFA):";
-const LOVABLE_PROJECT_EDITOR_URL = import.meta.env.VITE_LOVABLE_PROJECT_URL || "https://lovable.dev/projects/09a14ae7-bd4a-415b-b22e-66bbeb1a9240";
 
-export const isLovableNativeDebugRuntime = () => {
-  if (typeof window === "undefined") return false;
-  const host = window.location.hostname.toLowerCase();
-  return host.includes("lovableproject.com") || host.startsWith("id-preview--");
-};
-
+/**
+ * Sempre dispara o CustomEvent. O DebugErrorThrower converte em throw fatal
+ * para acionar o overlay "Try to Fix" da Lovable. Não usar chat/API.
+ */
 export const dispatchLovableDebugError = (message: string) => {
-  if (!isLovableNativeDebugRuntime()) return false;
+  if (typeof window === "undefined") return false;
   window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
   return true;
 };
 
-export const openLovableEditorWithInstruction = (message: string) => {
-  if (typeof window === "undefined") return "unavailable" as const;
-
-  void navigator.clipboard?.writeText(message).catch(() => undefined);
-  const opened = window.open(LOVABLE_PROJECT_EDITOR_URL, "_blank");
-  if (opened) return "editor" as const;
-
-  window.location.assign(LOVABLE_PROJECT_EDITOR_URL);
-  return "redirect" as const;
+export const deliverLovableDebugInstruction = (message: string) => {
+  dispatchLovableDebugError(message);
+  return "dispatched" as const;
 };
 
-export const deliverLovableDebugInstruction = openLovableEditorWithInstruction;
+// Compat: alguns chamadores ainda importam isso. Sempre true para não bloquear o throw.
+export const isLovableNativeDebugRuntime = () => true;
 
 export type DebugAttachment = {
   name: string;

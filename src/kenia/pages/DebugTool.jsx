@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/kenia/lib/api";
 import { supabase } from "@/integrations/supabase/client";
-import { buildDebugInstructionMessage, deliverLovableDebugInstruction, isLovableNativeDebugRuntime } from "@/components/debugInstruction";
+import { buildDebugInstructionMessage, deliverLovableDebugInstruction } from "@/components/debugInstruction";
 import { Card } from "@/kenia/components/ui/card";
 import { Button } from "@/kenia/components/ui/button";
 import { Input } from "@/kenia/components/ui/input";
@@ -86,15 +86,17 @@ export default function DebugTool() {
     const txt = instruction.trim();
     if (!txt && attachments.length === 0) { toast.error("Digite uma instrução ou anexe um arquivo"); return; }
     const message = buildInstructionMessage(txt);
-    const delivery = deliverLovableDebugInstruction(message);
+    deliverLovableDebugInstruction(message);
     try {
       await api.post("/debug/instruction", { instruction: message });
-      toast.success(delivery === "editor" ? "Instrução copiada e Lovable aberta" : "Instrução registrada");
+      toast.success("Instrução disparada");
       setInstruction("");
       setAttachments([]);
       loadHistory();
     } catch {
-      toast.error(delivery === "editor" ? "Lovable aberta, mas falhou ao registrar histórico" : "Erro ao registrar instrução");
+      toast.success("Instrução disparada (sem histórico)");
+      setInstruction("");
+      setAttachments([]);
     }
   };
 
@@ -166,11 +168,6 @@ export default function DebugTool() {
               <div className="text-sm text-nude-500 mb-3">
                 Registra uma instrução técnica (apenas referência interna).
               </div>
-              {!isLovableNativeDebugRuntime() && (
-                <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  O botão copia a instrução e abre o projeto na Lovable. Envio automático ao Try to Fix a partir da Render não é suportado pela Lovable.
-                </div>
-              )}
 
               {/* DROPZONE DE IMAGEM — em destaque no topo */}
               <Label className="flex items-center gap-2 text-rose-700">
