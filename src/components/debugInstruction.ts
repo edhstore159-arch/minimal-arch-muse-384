@@ -1,6 +1,5 @@
 export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE O ERRO, EXECUTE A TAREFA):";
-const LOVABLE_DEBUG_BRIDGE_PARAM = "lovableDebugInstruction";
-const LOVABLE_DEBUG_BRIDGE_URL = "https://id-preview--d7f915e3-17eb-4f57-a292-74e7422a0161.lovable.app/app/debug";
+const LOVABLE_PROJECT_EDITOR_URL = import.meta.env.VITE_LOVABLE_PROJECT_URL || "https://lovable.dev/projects/09a14ae7-bd4a-415b-b22e-66bbeb1a9240";
 
 export const isLovableNativeDebugRuntime = () => {
   if (typeof window === "undefined") return false;
@@ -14,53 +13,18 @@ export const dispatchLovableDebugError = (message: string) => {
   return true;
 };
 
-const encodeBridgePayload = (value: string) => {
-  const bytes = new TextEncoder().encode(value);
-  let binary = "";
-  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-  return btoa(binary);
-};
-
-const decodeBridgePayload = (value: string) => {
-  const binary = atob(value);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-};
-
-export const buildLovableDebugBridgeUrl = (message: string) => {
-  const url = new URL(LOVABLE_DEBUG_BRIDGE_URL);
-  url.searchParams.set(LOVABLE_DEBUG_BRIDGE_PARAM, encodeBridgePayload(message));
-  return url.toString();
-};
-
-export const deliverLovableDebugInstruction = (message: string) => {
-  if (dispatchLovableDebugError(message)) return "native" as const;
+export const openLovableEditorWithInstruction = (message: string) => {
   if (typeof window === "undefined") return "unavailable" as const;
 
-  const url = buildLovableDebugBridgeUrl(message);
-  const opened = window.open(url, "_blank");
-  if (opened) return "bridge" as const;
+  void navigator.clipboard?.writeText(message).catch(() => undefined);
+  const opened = window.open(LOVABLE_PROJECT_EDITOR_URL, "_blank");
+  if (opened) return "editor" as const;
 
-  window.location.assign(url);
+  window.location.assign(LOVABLE_PROJECT_EDITOR_URL);
   return "redirect" as const;
 };
 
-export const readLovableDebugBridgeMessage = () => {
-  if (typeof window === "undefined" || !isLovableNativeDebugRuntime()) return null;
-  const params = new URLSearchParams(window.location.search);
-  const payload = params.get(LOVABLE_DEBUG_BRIDGE_PARAM);
-  if (!payload) return null;
-
-  try {
-    const message = decodeBridgePayload(payload);
-    params.delete(LOVABLE_DEBUG_BRIDGE_PARAM);
-    const search = params.toString();
-    window.history.replaceState({}, document.title, `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`);
-    return message;
-  } catch {
-    return null;
-  }
-};
+export const deliverLovableDebugInstruction = openLovableEditorWithInstruction;
 
 export type DebugAttachment = {
   name: string;

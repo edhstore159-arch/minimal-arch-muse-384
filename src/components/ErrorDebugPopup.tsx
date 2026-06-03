@@ -95,10 +95,10 @@ export const ErrorDebugPopup = () => {
   const fire = () => {
     if (!text.trim() && files.length === 0) return;
     const result = deliverLovableDebugInstruction(buildMessage());
-    if (result === "bridge") {
-      alert("Abri o preview da Lovable em uma nova aba; use Try to Fix nessa aba para executar a instrução.");
+    if (result === "editor") {
+      alert("Copiei a instrução e abri o projeto na Lovable. Cole no chat ou use o fluxo Try to Fix no editor.");
     } else if (result === "redirect") {
-      alert("Vou redirecionar para o preview da Lovable; use Try to Fix lá para executar a instrução.");
+      alert("Copiei a instrução e vou redirecionar para o projeto na Lovable.");
     }
     setText("");
     setFiles([]);
@@ -156,7 +156,7 @@ export const ErrorDebugPopup = () => {
 
           {!isLovableNativeDebugRuntime() && (
             <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
-              Fora do editor, o botão abre o preview Lovable com a instrução para acionar o Try to Fix lá.
+              O botão copia a instrução e abre o projeto na Lovable; o envio automático ao Try to Fix não é suportado fora do editor.
             </div>
           )}
 
