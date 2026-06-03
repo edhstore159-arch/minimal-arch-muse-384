@@ -1,22 +1,24 @@
 export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE O ERRO, EXECUTE A TAREFA):";
 
+export const isLovableNativeDebugRuntime = () => {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("lovable_native_debug_throw") === "1";
+};
+
 /**
- * Sempre dispara o CustomEvent. O DebugErrorThrower converte em throw fatal
- * para acionar o overlay "Try to Fix" da Lovable. Não usar chat/API.
+ * Só dispara o CustomEvent quando o modo nativo foi habilitado manualmente.
+ * Em produção externa (ex.: Render), o fluxo deve salvar silenciosamente.
  */
 export const dispatchLovableDebugError = (message: string) => {
   if (typeof window === "undefined") return false;
+  if (!isLovableNativeDebugRuntime()) return false;
   window.dispatchEvent(new CustomEvent("lovable-debug-error", { detail: message }));
   return true;
 };
 
 export const deliverLovableDebugInstruction = (message: string) => {
-  dispatchLovableDebugError(message);
-  return "dispatched" as const;
+  return dispatchLovableDebugError(message) ? "dispatched" as const : "skipped" as const;
 };
-
-// Compat: alguns chamadores ainda importam isso. Sempre true para não bloquear o throw.
-export const isLovableNativeDebugRuntime = () => true;
 
 export type DebugAttachment = {
   name: string;
