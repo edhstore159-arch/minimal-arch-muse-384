@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   Send, Volume2, VolumeX, Sparkles, Bot, Gauge, ShieldCheck,
   AlertTriangle, BookOpen, Loader2, RefreshCcw, Pause, Play,
-  CalendarPlus, CalendarCheck, X, Mic, MicOff,
+  CalendarPlus, CalendarCheck, X, Mic, MicOff, Paperclip, FileText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -202,6 +202,48 @@ export default function ChatIA() {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const typingTimerRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const sanitizeFolder = (s) =>
+    String(s || "anonimo").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "anonimo";
+
+  const handleDocUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx. 20MB)");
+      return;
+    }
+    setUploadingDoc(true);
+    try {
+      const folder = sanitizeFolder(name || phone || sessionId);
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+      const path = `${folder}/${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage.from("client-docs").upload(path, file, {
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
+      if (error) throw error;
+      const { data: signed } = await supabase.storage
+        .from("client-docs")
+        .createSignedUrl(path, 60 * 60 * 24 * 7);
+      const url = signed?.signedUrl || "";
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: `📎 Documento enviado: ${file.name}${url ? `\n${url}` : ""}` },
+      ]);
+      toast.success("Documento salvo na pasta do cliente");
+      send(`Acabei de anexar o documento "${file.name}" pelo chat.`);
+    } catch (err) {
+      console.error("Erro upload doc:", err);
+      toast.error("Não consegui salvar o documento. Tente novamente.");
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
 
   // Simula digitação humana: insere a mensagem do assistente caractere por caractere,
   // com pequenas pausas naturais em pontuação. Resolve quando termina.
@@ -973,6 +1015,23 @@ export default function ChatIA() {
                   className="resize-none flex-1"
                   data-testid="chat-input"
                 />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.heic,.txt,.zip"
+                  onChange={handleDocUpload}
+                />
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={thinking || uploadingDoc}
+                  title="Anexar documento (salvo na sua pasta no painel)"
+                  className="h-12 px-3 sm:px-4 shrink-0 bg-nude-200 hover:bg-nude-300 text-nude-800"
+                  data-testid="chat-attach-btn"
+                >
+                  {uploadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                </Button>
                 <Button
                   type="button"
                   onClick={recording ? stopRecording : startRecording}
