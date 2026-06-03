@@ -89,12 +89,12 @@ export default function DebugTool() {
     const delivery = deliverLovableDebugInstruction(message);
     try {
       await api.post("/debug/instruction", { instruction: message });
-      toast.success(delivery === "native" ? "Instrução enviada ao Try to Fix" : "Preview Lovable aberto com a instrução para o Try to Fix");
+      toast.success(delivery === "editor" ? "Instrução copiada e Lovable aberta" : "Instrução registrada");
       setInstruction("");
       setAttachments([]);
       loadHistory();
     } catch {
-      toast.error(delivery === "native" ? "Evento disparado, mas falhou ao registrar histórico" : "Preview aberto, mas falhou ao registrar histórico");
+      toast.error(delivery === "editor" ? "Lovable aberta, mas falhou ao registrar histórico" : "Erro ao registrar instrução");
     }
   };
 
@@ -168,7 +168,7 @@ export default function DebugTool() {
               </div>
               {!isLovableNativeDebugRuntime() && (
                 <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  Fora do editor, o botão abre o preview Lovable com a instrução embutida; use Try to Fix na aba aberta.
+                  O botão copia a instrução e abre o projeto na Lovable. Envio automático ao Try to Fix a partir da Render não é suportado pela Lovable.
                 </div>
               )}
 
