@@ -13,6 +13,23 @@ export const cleanDebugInstruction = (value: unknown) => {
   let text = String(value ?? "").replace(/\r\n/g, "\n").trim();
   if (!text) return "";
 
+  const noiseMarkers = [
+    "Ferramenta Interna",
+    "Registra uma instrução técnica",
+    "Anexar imagens / arquivos",
+    "Histórico",
+    "Arraste imagens",
+    "Descreva a instrução técnica",
+    "Registrar Instrução",
+  ];
+  const firstNoiseIndex = noiseMarkers
+    .map((marker) => text.toLowerCase().indexOf(marker.toLowerCase()))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0];
+  if (firstNoiseIndex > 0) {
+    text = text.slice(0, firstNoiseIndex).trim();
+  }
+
   text = text
     .replace(new RegExp(`^${escapeRegExp(DEBUG_INSTRUCTION_PREFIX)}\\s*`, "i"), "")
     .replace(/Ferramenta Interna\s+Debug Tool\s+Instrução\s+Mesclar Imagens/gi, "Debug Tool")
