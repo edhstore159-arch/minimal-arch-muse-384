@@ -123,6 +123,15 @@ export const ErrorDebugPopup = () => {
     throw error;
   };
 
+  const copyInstruction = async (message: string) => {
+    try {
+      await navigator.clipboard?.writeText(message);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const fire = async () => {
     if (!text.trim() && files.length === 0) return;
     const message = buildMessage();
@@ -130,7 +139,11 @@ export const ErrorDebugPopup = () => {
     if (delivery === "skipped") {
       try {
         await saveFallback(message);
-        alert("Instrução salva. O botão Try to Fix só aparece dentro do editor da Lovable; em Render/link direto não há canal nativo para obedecer automaticamente esse comando.");
+        const copied = await copyInstruction(message);
+        alert(copied
+          ? "Instrução salva e copiada. Cole no chat da Lovable para aplicar a alteração; Render/link direto não consegue enviar comandos automaticamente ao painel."
+          : "Instrução salva. Copie o texto manualmente e cole no chat da Lovable; Render/link direto não consegue enviar comandos automaticamente ao painel."
+        );
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         alert(`Falha ao salvar instrução: ${msg}`);
@@ -233,7 +246,7 @@ export const ErrorDebugPopup = () => {
               disabled={uploading}
               className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-semibold rounded"
             >
-              Gerar Erro
+              Salvar / Copiar
             </button>
           </div>
         </div>

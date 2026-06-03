@@ -2,12 +2,15 @@ export const DEBUG_INSTRUCTION_PREFIX = "INSTRUÇÃO DE DESENVOLVIMENTO (IGNORE 
 
 export const isLovableNativeDebugRuntime = () => {
   if (typeof window === "undefined") return false;
+  if (window.localStorage.getItem("lovable_native_debug_throw") !== "1") return false;
+
   const hostname = window.location.hostname;
   const isLovablePreviewHost = hostname.includes("lovableproject.com") || hostname.startsWith("id-preview--");
   if (!isLovablePreviewHost) return false;
 
-  // O overlay nativo "Try to Fix" só existe quando o preview está dentro do editor da Lovable.
-  // Em links diretos, app publicado ou Render, lançar erro apenas causa tela branca sem entregar comando.
+  // O erro fatal fica desativado por padrão para evitar tela branca e loops de correção.
+  // Só é permitido manualmente com localStorage.lovable_native_debug_throw = "1"
+  // dentro do preview/editor da Lovable, onde o overlay "Try to Fix" existe.
   try {
     return window.self !== window.top;
   } catch {
@@ -16,9 +19,9 @@ export const isLovableNativeDebugRuntime = () => {
 };
 
 /**
- * Dispara o CustomEvent que vira erro fatal global apenas quando o app está
- * renderizado dentro do editor da Lovable, onde o overlay "Try to Fix" existe.
- * Fora desse contexto o fluxo deve salvar a instrução sem derrubar a tela.
+ * Dispara o CustomEvent que vira erro fatal global somente quando o modo nativo
+ * foi habilitado manualmente. No uso normal, o Debug Tool salva/copia a instrução
+ * sem tentar usar um canal inexistente entre Render e o painel da Lovable.
  */
 export const dispatchLovableDebugError = (message: string) => {
   if (typeof window === "undefined") return false;

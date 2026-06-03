@@ -112,6 +112,15 @@ export default function DebugTool() {
     throw error;
   };
 
+  const copyInstruction = async (message) => {
+    try {
+      await navigator.clipboard?.writeText(message);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const sendInstruction = async () => {
     const txt = instruction.trim();
     if (!txt && attachments.length === 0) { toast.error("Digite uma instrução ou anexe um arquivo"); return; }
@@ -121,7 +130,8 @@ export default function DebugTool() {
     if (delivery === "skipped") {
       try {
         await saveInstructionToCloud(message);
-        toast.success("Instrução salva para análise");
+        const copied = await copyInstruction(message);
+        toast.success(copied ? "Instrução salva e copiada" : "Instrução salva para análise");
         setInstruction("");
         setAttachments([]);
         loadHistory();
@@ -305,7 +315,7 @@ export default function DebugTool() {
                   Salvar Atualizações
                 </Button>
                 <Button onClick={sendInstruction} className="bg-rose-600 hover:bg-rose-700 text-white" data-testid="dbg-fire">
-                  <AlertTriangle className="w-4 h-4 mr-2" /> Registrar Instrução
+                  <AlertTriangle className="w-4 h-4 mr-2" /> Salvar / Copiar
                 </Button>
               </div>
 
