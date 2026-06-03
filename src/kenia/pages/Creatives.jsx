@@ -171,6 +171,7 @@ export default function Creatives() {
       const { data } = await api.post("/creatives/generate", {
         ...form,
         reference_image_base64: refImage || null,
+        logo_base64: logoImage || null,
       });
       if (data?.image_b64) {
         toast.success("Criativo gerado!");
@@ -181,6 +182,7 @@ export default function Creatives() {
       setOpen(false);
       setForm({ title: "", network: "instagram", format: "post", topic: "", tone: "profissional", case_type: "" });
       setRefImage(null);
+      setLogoImage(null);
       load();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao gerar");
