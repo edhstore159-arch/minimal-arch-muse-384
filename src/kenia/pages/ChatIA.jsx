@@ -737,6 +737,13 @@ export default function ChatIA() {
         toast.success("Dra. Kênia foi notificada e está entrando na conversa", { duration: 4000 });
       }
       await typeAssistantMessage(data.response, data.audio_base64 || null, data.speaker || null);
+      if (shouldScheduleWaitFollowUp(data.response)) {
+        if (waitFollowUpTimerRef.current) clearTimeout(waitFollowUpTimerRef.current);
+        waitFollowUpTimerRef.current = setTimeout(() => {
+          typeAssistantMessage(buildWaitFollowUpText(name), null, "Secretária");
+          waitFollowUpTimerRef.current = null;
+        }, WAIT_FOLLOW_UP_MS);
+      }
       if (autoplay && data.audio_base64) {
         setTimeout(() => playAudio(data.audio_base64, messages.length + 1), 200);
       }
