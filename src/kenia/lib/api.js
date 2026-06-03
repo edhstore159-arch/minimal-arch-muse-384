@@ -234,7 +234,7 @@ const getMetrics = () => {
   };
 };
 
-const staticGet = (url, config = {}) => {
+const staticGet = async (url, config = {}) => {
   const [path] = String(url).split("?");
   if (path === "/whatsapp/config") return response(read("whatsapp_config", defaultWhatsAppConfig));
   if (path === "/crm/stages") return response(stages);
@@ -279,7 +279,21 @@ const staticGet = (url, config = {}) => {
     const analysis = read("case_analyses", seedAnalyses).find((i) => i.id === path.split("/").pop()) || seedAnalyses[0];
     return response({ analysis, messages: seedMessages["contact-1"] || [] });
   }
-  if (path === "/legislation/today") return response({ date_human: new Date().toLocaleDateString("pt-BR"), brief: "Modo estático ativo. Sem atualização automática de legislação." });
+  if (path === "/legislation/today") {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    try {
+      const cached = JSON.parse(localStorage.getItem("legal_brief_cache") || "null");
+      if (cached && cached.key === todayKey && cached.data?.brief) return response(cached.data);
+    } catch {}
+    try {
+      const { data, error } = await supabase.functions.invoke("legal-brief", { body: {} });
+      if (!error && data?.brief) {
+        try { localStorage.setItem("legal_brief_cache", JSON.stringify({ key: todayKey, data })); } catch {}
+        return response(data);
+      }
+    } catch (e) { console.error("legal-brief invoke", e); }
+    return response({ date_human: new Date().toLocaleDateString("pt-BR"), brief: "Não consegui carregar o resumo legal agora. Tente novamente em instantes." });
+  }
   if (path === "/whatsapp/elevenlabs/voices") return response({ voices: [] });
   return response({ ok: false, error: "STATIC_MODE", fallback: true });
 };
