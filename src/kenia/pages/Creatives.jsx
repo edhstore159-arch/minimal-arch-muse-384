@@ -205,10 +205,12 @@ export default function Creatives() {
   const download = (item) => {
     if (!item.image_b64) return;
     const a = document.createElement("a");
-    a.href = `data:image/png;base64,${item.image_b64}`;
+    a.href = String(item.image_b64).startsWith("data:") ? item.image_b64 : `data:image/png;base64,${item.image_b64}`;
     a.download = `legalflow-${item.id}.png`;
     a.click();
   };
+
+  const imageSrc = (value) => String(value || "").startsWith("data:") ? value : `data:image/png;base64,${value}`;
 
   const NetIcon = ({ network, className }) => {
     if (network === "instagram") return <Instagram className={className} />;
@@ -368,7 +370,7 @@ export default function Creatives() {
               <Card key={item.id} className="overflow-hidden border-nude-200 hover:shadow-md transition-shadow" data-testid={`creative-card-${item.id}`}>
                 <div className="aspect-square bg-nude-100 relative overflow-hidden">
                   {item.image_b64 ? (
-                    <img src={`data:image/png;base64,${item.image_b64}`} alt={item.title} className="w-full h-full object-cover" />
+                    <img src={imageSrc(item.image_b64)} alt={item.title} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full grid place-items-center text-nude-300">
                       <Sparkles className="w-8 h-8" />
@@ -420,7 +422,7 @@ export default function Creatives() {
             {scheduled.map((p) => (
               <div key={p.id} className="flex items-center gap-3 text-xs bg-nude-50 border border-nude-200 rounded-md px-3 py-2">
                 {p.image_b64 ? (
-                  <img src={`data:image/png;base64,${p.image_b64}`} alt="" className="w-10 h-10 rounded object-cover" />
+                  <img src={imageSrc(p.image_b64)} alt="" className="w-10 h-10 rounded object-cover" />
                 ) : (
                   <div className="w-10 h-10 rounded bg-nude-200 grid place-items-center text-nude-400"><Sparkles className="w-4 h-4" /></div>
                 )}
@@ -504,7 +506,7 @@ export default function Creatives() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="aspect-square bg-nude-100 rounded-md overflow-hidden">
                 {preview.image_b64 ? (
-                  <img src={`data:image/png;base64,${preview.image_b64}`} alt="" className="w-full h-full object-cover" />
+                  <img src={imageSrc(preview.image_b64)} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full grid place-items-center text-nude-400">Imagem não gerada</div>
                 )}
