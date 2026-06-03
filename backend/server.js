@@ -46,6 +46,9 @@ const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
 const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || 60000);
 const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS || 20000);
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 2000);
+const MAX_RECONNECT_DELAY_MS = Number(process.env.MAX_RECONNECT_DELAY_MS || 30000);
+const CONNECTION_WATCHDOG_INTERVAL_MS = Number(process.env.CONNECTION_WATCHDOG_INTERVAL_MS || 30000);
+const SEND_RECONNECT_WAIT_MS = Number(process.env.SEND_RECONNECT_WAIT_MS || 15000);
 const SERVER_STARTED_AT = Date.now();
 const AUTO_REPLY_RECENT_WINDOW_MS = Number(process.env.AUTO_REPLY_RECENT_WINDOW_MS || 180000);
 const logger = pino({ level: "warn" });
@@ -62,6 +65,7 @@ let connectionState = "disconnected"; // connecting | open | disconnected
 let lastError = null;
 let starting = false;
 let reconnectTimer = null;
+let reconnectAttempt = 0;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
 
 // ---- Armazenamento em memória de contatos e mensagens ----
