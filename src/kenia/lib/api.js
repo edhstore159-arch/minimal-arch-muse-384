@@ -234,7 +234,7 @@ const getMetrics = () => {
   };
 };
 
-const staticGet = (url, config = {}) => {
+const staticGet = async (url, config = {}) => {
   const [path] = String(url).split("?");
   if (path === "/whatsapp/config") return response(read("whatsapp_config", defaultWhatsAppConfig));
   if (path === "/crm/stages") return response(stages);
