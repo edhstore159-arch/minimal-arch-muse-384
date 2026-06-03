@@ -653,6 +653,7 @@ export const api = HAS_BACKEND
       },
       post: (url, body, config) => {
         const [path] = String(url).split("?");
+        if (path.startsWith("/legal-deadlines/")) return staticPost(url, body);
         if (cloudFirstPostPaths.has(path)) return staticPost(url, body);
         if (fallbackToStaticPostPaths.has(path)) {
           return liveApi.post(url, body, config).catch(() => staticPost(url, body));
@@ -660,8 +661,8 @@ export const api = HAS_BACKEND
         return liveApi.post(url, body, config);
       },
       put: liveApi.put.bind(liveApi),
-      patch: liveApi.patch.bind(liveApi),
-      delete: liveApi.delete.bind(liveApi),
+      patch: (url, body, config) => String(url).split("?")[0].startsWith("/legal-deadlines/") ? staticPatch(url, body) : liveApi.patch(url, body, config),
+      delete: (url, config) => String(url).split("?")[0].startsWith("/legal-deadlines/") ? staticDelete(url) : liveApi.delete(url, config),
     }
   : {
       get: staticGet,
