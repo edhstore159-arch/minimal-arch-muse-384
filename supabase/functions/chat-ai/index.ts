@@ -275,7 +275,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
             // normaliza tipos numéricos
             if (parsed.acertividade != null) parsed.acertividade = Math.max(0, Math.min(100, Number(parsed.acertividade) || 0));
             if (parsed.chance_exito != null) parsed.chance_exito = Math.max(0, Math.min(100, Number(parsed.chance_exito) || 0));
-            analysis = { ...analysis, ...parsed };
+            analysis = normalizeAnalysis(parsed, analysis);
           } catch (parseErr) {
             console.error("Análise: JSON inválido, mantendo heurística", parseErr, content.slice(0, 200));
           }
@@ -288,6 +288,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
     } catch (err) {
       console.error("Erro ao gerar análise:", err);
     }
+    analysis = normalizeAnalysis(aiGatewayError ? { ...analysis, fallback: true } : analysis, analysis);
 
 
 
@@ -323,6 +324,7 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
         appointment,
         audio_base64,
         analysis,
+        fallback: Boolean(aiGatewayError),
         server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
