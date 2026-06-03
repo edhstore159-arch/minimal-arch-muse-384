@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ b64_json: stripDataUrl(result.url), provider: result.provider }), {
+      return new Response(JSON.stringify({ b64_json: stripDataUrl(result.url), image_data_url: result.url, provider: result.provider }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    return new Response(JSON.stringify({ b64_json: img.b64, provider: img.provider }), {
+    return new Response(JSON.stringify({ b64_json: img.b64, image_data_url: `data:image/png;base64,${img.b64}`, provider: img.provider }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

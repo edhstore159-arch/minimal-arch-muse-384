@@ -40,6 +40,40 @@ function buildContent({ prompt, imageUrls }: NanoBananaOptions): Content[] {
   return parts;
 }
 
+function escapeXml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function toBase64Utf8(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.slice(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function buildLocalFusionFallback(opts: NanoBananaOptions): string | null {
+  const images = (opts.imageUrls || []).filter(Boolean).slice(0, 2);
+  if (!images.length) return null;
+  const first = escapeXml(images[0]);
+  const second = escapeXml(images[1] || images[0]);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#111827"/><stop offset="1" stop-color="#4338ca"/></linearGradient>
+    <clipPath id="left"><path d="M0 0h596L428 1024H0z"/></clipPath>
+    <clipPath id="right"><path d="M596 0h428v1024H428z"/></clipPath>
+    <filter id="soft"><feGaussianBlur stdDeviation="0.25"/></filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <image href="${first}" x="0" y="0" width="650" height="1024" preserveAspectRatio="xMidYMid slice" clip-path="url(#left)"/>
+  <image href="${second}" x="374" y="0" width="650" height="1024" preserveAspectRatio="xMidYMid slice" clip-path="url(#right)" opacity="0.96"/>
+  <image href="${first}" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid slice" opacity="0.12" filter="url(#soft)"/>
+  <path d="M596 0 428 1024" stroke="rgba(255,255,255,.62)" stroke-width="10"/>
+</svg>`;
+  return `data:image/svg+xml;base64,${toBase64Utf8(svg)}`;
+}
+
 async function callLovableGateway(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) return { url: null, error: "LOVABLE_API_KEY ausente" };
@@ -68,7 +102,7 @@ async function callLovableGateway(opts: NanoBananaOptions): Promise<{ url: strin
 async function callGeminiDirect(opts: NanoBananaOptions): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return { url: null, error: "GEMINI_API_KEY ausente" };
-  const model = "gemini-2.5-flash-image-preview";
+  const model = "gemini-2.5-flash-image";
   const parts: any[] = [{ text: opts.prompt }];
   for (const u of opts.imageUrls || []) {
     const m = String(u).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
@@ -105,10 +139,10 @@ async function callEmergent(opts: NanoBananaOptions): Promise<{ url: string | nu
   const key = Deno.env.get("EMERGENT_API_KEY");
   if (!key) return { url: null, error: "EMERGENT_API_KEY ausente" };
   const models = [
-    "gemini-2.5-flash-image-preview",
     "gemini-2.5-flash-image",
     "google/gemini-2.5-flash-image",
-    "gemini-2.0-flash-exp-image-generation",
+    "gemini-3.1-flash-image-preview",
+    "google/gemini-3.1-flash-image-preview",
   ];
   let lastError = "";
   for (const model of models) {
@@ -161,6 +195,11 @@ export async function generateWithNanoBanana(
   if (r3.url) return { url: r3.url, provider: "emergent" };
 
   const emergentErr = r3.error || "Emergent falhou";
+  const localFallback = buildLocalFusionFallback(opts);
+  if (localFallback) {
+    console.warn("⚠️ Todos os provedores de IA falharam; usando composição local sem IA:", [lovableErr, geminiErr, emergentErr].filter(Boolean).join(" | "));
+    return { url: localFallback, provider: "local-fallback" };
+  }
   if (/\b402\b|payment_required|Not enough credits/i.test(lovableErr)) {
     return {
       url: null,

@@ -487,7 +487,7 @@ const staticPost = (url, body = {}) => {
           },
         });
         if (error) throw error;
-        b64 = data?.b64_json || "";
+        b64 = data?.image_data_url || data?.b64_json || "";
         if (!b64 && data?.error) genError = data.error;
       } catch (e) {
         genError = e?.message || String(e);

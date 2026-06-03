@@ -138,7 +138,7 @@ async function imageLovable(opts: ImageOptions) {
 
 async function imageGemini(opts: ImageOptions) {
   if (!GEMINI_KEY) return { ok: false as const, error: "GEMINI_API_KEY ausente" };
-  const model = "gemini-2.5-flash-image-preview";
+  const model = "gemini-2.5-flash-image";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`;
   const resp = await fetch(url, {
     method: "POST",
