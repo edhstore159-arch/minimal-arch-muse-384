@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { isLovableNativeDebugRuntime } from "./debugInstruction";
 
 /**
@@ -10,24 +10,23 @@ import { isLovableNativeDebugRuntime } from "./debugInstruction";
  * NÃO envolver em ErrorBoundary/Suspense. NÃO substituir por console/toast.
  */
 export const DebugErrorThrower = () => {
-  const lastMessageRef = useRef<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
       if (!isLovableNativeDebugRuntime()) return;
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
-        if (lastMessageRef.current === detail) return;
-        lastMessageRef.current = detail;
-
-        window.setTimeout(() => {
-          throw new Error(detail);
-        }, 0);
+        setMessage(detail);
       }
     };
     window.addEventListener("lovable-debug-error", handler as EventListener);
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
+
+  if (message) {
+    throw new Error(message);
+  }
 
   return null;
 };
