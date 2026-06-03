@@ -483,6 +483,7 @@ const staticPost = (url, body = {}) => {
           body: {
             prompt: topic,
             reference_image_base64: body.reference_image_base64 || null,
+            logo_base64: body.logo_base64 || null,
           },
         });
         if (error) throw error;
