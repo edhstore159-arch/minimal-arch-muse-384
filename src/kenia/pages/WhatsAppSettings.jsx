@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { api, HAS_BACKEND } from "@/kenia/lib/api";
 import { Card } from "@/kenia/components/ui/card";
