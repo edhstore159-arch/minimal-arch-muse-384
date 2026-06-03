@@ -58,9 +58,13 @@ export default function WhatsAppSettings() {
   useEffect(() => {
     if (cfg?.provider !== "baileys") return;
     pollBaileys();
-    const t = setInterval(pollBaileys, 3000);
+    const t = setInterval(pollBaileys, 8000);
     return () => clearInterval(t);
   }, [cfg?.provider]);
+
+  // Contador de falhas consecutivas para evitar flapping (desconexões falsas)
+  const failureCountRef = useRef(0);
+  const MAX_FAILURES_BEFORE_OFFLINE = 5;
 
   const load = async () => {
     try {
@@ -75,25 +79,32 @@ export default function WhatsAppSettings() {
     try {
       const { data: st } = await api.get("/whatsapp/baileys/status");
       const normalized = normalizeBaileysStatus(st);
+      failureCountRef.current = 0;
       setBaileysStatus(normalized);
       if (!normalized.connected) {
-        const { data: qr } = await api.get("/whatsapp/baileys/qr");
-        setBaileysQr(qr);
+        try {
+          const { data: qr } = await api.get("/whatsapp/baileys/qr");
+          setBaileysQr(qr);
+        } catch { /* ignore qr fetch errors */ }
       } else {
         setBaileysQr(null);
         if (cfg?.provider !== "baileys") setCfg((current) => current ? { ...current, provider: "baileys", bot_enabled: true } : current);
       }
     } catch (e) {
-      // Sidecar morreu / nao responde. Marca offline e NAO tenta reconectar
-      // automaticamente para evitar loop infinito quando o backend nao existe.
+      // Tolerância a falhas transitórias: só marca offline após N falhas seguidas.
+      // Mantém o último estado conectado para não derrubar a UI por um glitch de rede.
+      failureCountRef.current += 1;
+      if (failureCountRef.current < MAX_FAILURES_BEFORE_OFFLINE) {
+        return;
+      }
       const msg =
         e?.response?.status
           ? `Backend respondeu ${e.response.status} em /whatsapp/baileys/status`
           : "Não foi possível contatar o backend (sidecar Baileys offline).";
-      setBaileysStatus({ ok: false, connected: false, state: "offline", last_error: msg });
-      setBaileysQr(null);
+      setBaileysStatus((prev) => prev?.connected ? prev : { ok: false, connected: false, state: "offline", last_error: msg });
     }
   };
+
 
   const baileysLogout = async () => {
     setBaileysLoggingOut(true);
