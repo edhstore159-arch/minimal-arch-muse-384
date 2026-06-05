@@ -26,6 +26,10 @@ export const DebugErrorThrower = () => {
   }, []);
 
   if (message) {
+    if (shouldSuppressLovableDebugInstruction(message)) {
+      return null;
+    }
+
     throw new Error(message);
   }
 
