@@ -31,6 +31,11 @@ const SUPPRESSED_DEBUG_INSTRUCTION_PATTERNS = [
   /ollama/i,
   /qwen3/i,
   /nao mexa no debug tool/i,
+  /integrar no lovable/i,
+  /seu-backend\.onrender\.com/i,
+  /no frontend:/i,
+  /faca isso integrar/i,
+
 ];
 
 export const shouldSuppressLovableDebugInstruction = (message: string) => {
