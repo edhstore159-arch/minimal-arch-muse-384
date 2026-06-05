@@ -22,6 +22,16 @@ const SUPPRESSED_DEBUG_INSTRUCTION_PATTERNS = [
   /budget has been exceeded/i,
   /emergent 400/i,
   /edge function returned 502/i,
+  /ollama/i,
+  /instalar o ollama/i,
+  /ollama\.com\/install/i,
+  /ollama serve/i,
+  /ollama pull/i,
+  /llama3/i,
+  /11434/i,
+  /onrender\.com\/chat/i,
+  /passo \d+\s*[—-]/i,
+  /crie um chat ia/i,
 ];
 
 export const shouldSuppressLovableDebugInstruction = (message: string) => {
