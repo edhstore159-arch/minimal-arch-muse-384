@@ -854,6 +854,8 @@ app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
   const info = {
+    ollama_url: OLLAMA_URL,
+    ollama_model: OLLAMA_MODEL,
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -871,10 +873,29 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
   res.status(result.ok ? 200 : 500).json({ ...info, result });
 });
 
+app.get("/api/whatsapp/ollama-baileys-test", async (_req, res) => {
+  const status = baileysRuntimeStatus();
+  const result = await callAI([
+    { role: "system", content: "Responda apenas com OLLAMA_OK se a IA estiver funcionando." },
+    { role: "user", content: "teste da cadeia Baileys com Ollama" },
+  ]);
+  res.status(result.ok ? 200 : 503).json({
+    ok: result.ok && status.connected && whatsappConfig.bot_enabled,
+    ollama_ok: result.ok && result.provider === "ollama",
+    baileys_connected: status.connected,
+    bot_enabled: whatsappConfig.bot_enabled,
+    auto_reply_chain_ready: result.ok && status.connected && whatsappConfig.bot_enabled,
+    baileys: status,
+    ai: result,
+  });
+});
+
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
   const status = baileysRuntimeStatus();
   res.json({
+    ollama_url: OLLAMA_URL,
+    ollama_model: OLLAMA_MODEL,
     bot_enabled: whatsappConfig.bot_enabled,
     connection_state: status.state,
     connected: status.connected,
