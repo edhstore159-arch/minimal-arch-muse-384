@@ -23,14 +23,6 @@ const cleanInternalChatMarkers = (text) =>
     .replace(/`{1,3}\s*HANDOFF[_\s-]*K[EÊ]NIA\s*`{1,3}/giu, "")
     .trim();
 
-const normalizeOllamaGenerateUrl = (value) => {
-  const raw = String(value || "").trim().replace(/\/+$/, "");
-  if (!raw) return "";
-  if (/\/api\/generate$/i.test(raw)) return raw;
-  if (/\/api\/chat$/i.test(raw)) return raw.replace(/\/api\/chat$/i, "/api/generate");
-  return `${raw}/api/generate`;
-};
-
 const defaultWhatsAppConfig = {
   provider: "zapi",
   zapi_instance_id: "",
@@ -365,17 +357,11 @@ const staticPost = (url, body = {}) => {
   if (path === "/chat/message") {
     return (async () => {
       const sessionId = body.session_id || nextId("session");
-      const OLLAMA_URL = normalizeOllamaGenerateUrl(
+      const OLLAMA_URL =
         import.meta.env.VITE_OLLAMA_URL ||
-        import.meta.env.VITE_OLLAMA_BASE_URL ||
-        import.meta.env.OLLAMA_URL ||
-        import.meta.env.OLLAMA_BASE_URL ||
-        "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate"
-      );
-      const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || import.meta.env.OLLAMA_MODEL || "qwen3:0.6b";
+        "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
+      const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || "qwen3:0.6b";
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 45000);
         const history = (body.history || [])
           .map((m) => `${m.role === "user" ? "Cliente" : "Kênia"}: ${m.content}`)
           .join("\n");
@@ -387,19 +373,10 @@ const staticPost = (url, body = {}) => {
         const res = await fetch(OLLAMA_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            model: OLLAMA_MODEL,
-            prompt,
-            stream: false,
-            think: false,
-            keep_alive: "2m",
-            options: { num_ctx: 2048, num_predict: 180, temperature: 0.3 },
-          }),
-        }).finally(() => clearTimeout(timeout));
-        const raw = await res.text();
-        if (!res.ok) throw new Error(`Ollama HTTP ${res.status}: ${raw.slice(0, 200)}`);
-        const data = raw ? JSON.parse(raw) : {};
+          body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false }),
+        });
+        if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
+        const data = await res.json();
         const text = (data?.response || "").trim() || "Sem resposta da IA.";
         return {
           data: {
@@ -615,8 +592,8 @@ liveApi.interceptors.response.use(
 );
 
 const cloudFirstGetPaths = new Set(["/appointments", "/legal-deadlines", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
-const cloudFirstPostPaths = new Set(["/creatives/generate", "/creatives/fuse-images", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
-const fallbackToStaticPostPaths = new Set(["/chat/message", "/debug/instruction"]);
+const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
+const fallbackToStaticPostPaths = new Set(["/debug/instruction"]);
 
 // Caminhos que, quando o backend live (Render) falha ou devolve lista vazia,
 // caem para os dados estáticos de demonstração — assim o painel nunca aparece

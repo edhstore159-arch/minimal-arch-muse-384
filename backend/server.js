@@ -42,48 +42,21 @@ async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
 }
 
 // ---- Ponte para Ollama (via ngrok) usada pelo bot do Baileys ----
-function normalizeOllamaGenerateUrl(value) {
-  const raw = String(value || "").trim().replace(/\/+$/, "");
-  if (!raw) return "";
-  if (/\/api\/generate$/i.test(raw)) return raw;
-  if (/\/api\/chat$/i.test(raw)) return raw.replace(/\/api\/chat$/i, "/api/generate");
-  return `${raw}/api/generate`;
-}
-
-const OLLAMA_URL = normalizeOllamaGenerateUrl(
+const OLLAMA_URL =
   process.env.OLLAMA_URL ||
-  process.env.OLLAMA_BASE_URL ||
-  process.env.VITE_OLLAMA_URL ||
-  process.env.VITE_OLLAMA_BASE_URL ||
-  "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate"
-);
+  "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
 
-function getOllamaConfig() {
-  return {
-    url: normalizeOllamaGenerateUrl(
-      process.env.OLLAMA_URL ||
-      process.env.OLLAMA_BASE_URL ||
-      process.env.VITE_OLLAMA_URL ||
-      process.env.VITE_OLLAMA_BASE_URL ||
-      OLLAMA_URL
-    ),
-    model: process.env.OLLAMA_MODEL || OLLAMA_MODEL,
-  };
-}
-
 export async function perguntarIA(texto) {
-  const { url, model } = getOllamaConfig();
-  if (!url) throw new Error("OLLAMA_URL ausente no backend");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
   try {
-    const resposta = await fetch(url, {
+    const resposta = await fetch(OLLAMA_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
-        model,
+        model: OLLAMA_MODEL,
         prompt: texto,
         stream: false,
       }),
@@ -254,7 +227,6 @@ function cleanRepeatedText(text) {
 }
 
 async function callAI(messagesPayload) {
-  const { url: ollamaUrl, model: ollamaModel } = getOllamaConfig();
   const ollamaPrompt = messagesPayload
     .map((message) => {
       const role = message.role === "system" ? "Instruções" : message.role === "assistant" ? "Atendente" : "Cliente";
@@ -265,14 +237,14 @@ async function callAI(messagesPayload) {
   const attempts = [];
   try {
     const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
-    return { ok: true, provider: "ollama", endpoint: ollamaUrl, model: ollamaModel, reply: cleanRepeatedText(reply), attempts };
+    return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
   } catch (e) {
     const timedOut = e?.name === "AbortError";
     const failed = {
       ok: false,
       provider: "ollama",
-      endpoint: ollamaUrl,
-      model: ollamaModel,
+      endpoint: OLLAMA_URL,
+      model: OLLAMA_MODEL,
       error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta do Ollama.` : e?.message || String(e),
     };
     attempts.push(failed);
@@ -815,9 +787,7 @@ const baileysRuntimeStatus = () => {
 
 // ---- Healthcheck ----
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
-app.get("/api/health", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend", state: connectionState, primary_ai_provider: "ollama" })));
-
-app.get("/health", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend", state: connectionState, primary_ai_provider: "ollama" })));
+app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
 
 app.get("/api/debug/instructions", (_req, res) => {
   res.json(debugInstructions.slice(0, 50));
@@ -882,12 +852,7 @@ app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
-  const { url: ollamaUrl, model: ollamaModel } = getOllamaConfig();
   const info = {
-    primary_provider: "ollama",
-    ollama_url: ollamaUrl,
-    ollama_model: ollamaModel,
-    reads_ollama_url_env: Boolean(process.env.OLLAMA_URL),
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -905,26 +870,10 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
   res.status(result.ok ? 200 : 500).json({ ...info, result });
 });
 
-app.get("/api/whatsapp/ollama-test", async (_req, res) => {
-  const { url: ollamaUrl, model: ollamaModel } = getOllamaConfig();
-  try {
-    const started = Date.now();
-    const reply = await perguntarIA("Responda apenas com a palavra OK.");
-    res.json(ok({ provider: "ollama", endpoint: ollamaUrl, model: ollamaModel, reads_ollama_url_env: Boolean(process.env.OLLAMA_URL), request_body: { model: ollamaModel, prompt: "Responda apenas com a palavra OK.", stream: false }, reply, duration_ms: Date.now() - started }));
-  } catch (e) {
-    res.status(500).json({ ok: false, provider: "ollama", endpoint: ollamaUrl, model: ollamaModel, reads_ollama_url_env: Boolean(process.env.OLLAMA_URL), request_body: { model: ollamaModel, prompt: "Responda apenas com a palavra OK.", stream: false }, error: e?.message || String(e) });
-  }
-});
-
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
-  const { url: ollamaUrl, model: ollamaModel } = getOllamaConfig();
   const status = baileysRuntimeStatus();
   res.json({
-    primary_provider: "ollama",
-    ollama_url: ollamaUrl,
-    ollama_model: ollamaModel,
-    reads_ollama_url_env: Boolean(process.env.OLLAMA_URL),
     bot_enabled: whatsappConfig.bot_enabled,
     connection_state: status.state,
     connected: status.connected,
@@ -969,12 +918,6 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
           status.connected
             ? "Conectado."
             : "Aguardando leitura do QR Code.",
-      },
-      {
-        id: "ollama",
-        ok: Boolean(OLLAMA_URL && OLLAMA_MODEL),
-        label: "Ollama como IA principal",
-        msg: `Modelo ${OLLAMA_MODEL} configurado como primeiro provedor do autoatendimento.`,
       },
     ],
   });
