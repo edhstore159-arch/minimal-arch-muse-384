@@ -361,6 +361,33 @@ const staticPost = (url, body = {}) => {
         import.meta.env.VITE_OLLAMA_URL ||
         "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
       const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || "qwen3:0.6b";
+      const fallbackReply =
+        "Tive uma instabilidade momentânea com o servidor da IA, mas continuo por aqui. Me envie sua dúvida em uma frase curta que eu respondo e direciono seu atendimento.";
+      try {
+        const { data, error } = await supabase.functions.invoke("chat-ai", {
+          body: {
+            message: body.message || body.text || "",
+            history: body.history || [],
+            session_id: sessionId,
+            user_id: body.user_id || null,
+            want_audio: false,
+          },
+        });
+        if (!error && data?.response) {
+          return response({
+            session_id: data.session_id || sessionId,
+            response: cleanInternalChatMarkers(data.response),
+            audio_base64: data.audio_base64 || null,
+            appointment: data.appointment || null,
+            handoff: Boolean(data.handoff),
+            speaker: data.speaker || null,
+            analysis: data.analysis || { acertividade: 80, qualificacao: "ok" },
+            server_time: data.server_time || nowIso(),
+          });
+        }
+      } catch (e) {
+        console.warn("chat-ai fallback falhou, tentando Ollama direto", e);
+      }
       try {
         const history = (body.history || [])
           .map((m) => `${m.role === "user" ? "Cliente" : "Kênia"}: ${m.content}`)
@@ -370,16 +397,18 @@ const staticPost = (url, body = {}) => {
           "Você é a Dra. Kênia Garcia, advogada brasileira. Responda de forma humana, breve e empática. Nunca diga que é IA.";
         const prompt = `${system}\n\n${history}\nCliente: ${body.message || body.text || ""}\nKênia:`;
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 45000);
         const res = await fetch(OLLAMA_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false }),
-        });
+          headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+          signal: controller.signal,
+          body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false, keep_alive: "10m" }),
+        }).finally(() => clearTimeout(timeout));
         if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
         const data = await res.json();
         const text = (data?.response || "").trim() || "Sem resposta da IA.";
-        return {
-          data: {
+        return response({
             session_id: sessionId,
             response: cleanInternalChatMarkers(text),
             audio_base64: null,
@@ -388,22 +417,14 @@ const staticPost = (url, body = {}) => {
             speaker: null,
             analysis: { acertividade: 80, qualificacao: "ok" },
             server_time: nowIso(),
-          },
-          status: 200,
-          statusText: "OK",
-          headers: {},
-          config: {},
-        };
+          });
       } catch (e) {
-        return {
-          data: {
+        return response({
             session_id: sessionId,
-            response: `Erro ao consultar Ollama: ${e?.message || e}. Verifique se o servidor Ollama está acessível em ${OLLAMA_URL}.`,
+            response: fallbackReply,
             audio_base64: null,
-            analysis: { acertividade: 0, qualificacao: "erro" },
-          },
-          status: 200, statusText: "OK", headers: {}, config: {},
-        };
+            analysis: { acertividade: 40, qualificacao: "fallback" },
+          });
       }
     })();
   }
@@ -592,7 +613,8 @@ liveApi.interceptors.response.use(
 );
 
 const cloudFirstGetPaths = new Set(["/appointments", "/legal-deadlines", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
-const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
+const cloudFirstPostPaths = new Set(["/creatives/generate", "/creatives/fuse-images", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
+const liveFirstWithStaticFallbackPostPaths = new Set(["/chat/message"]);
 const fallbackToStaticPostPaths = new Set(["/debug/instruction"]);
 
 // Caminhos que, quando o backend live (Render) falha ou devolve lista vazia,
@@ -638,6 +660,9 @@ export const api = HAS_BACKEND
         const [path] = String(url).split("?");
         if (path.startsWith("/legal-deadlines/")) return staticPost(url, body);
         if (cloudFirstPostPaths.has(path)) return staticPost(url, body);
+        if (liveFirstWithStaticFallbackPostPaths.has(path)) {
+          return liveApi.post(url, body, config).catch(() => staticPost(url, body));
+        }
         if (fallbackToStaticPostPaths.has(path)) {
           return liveApi.post(url, body, config).catch(() => staticPost(url, body));
         }

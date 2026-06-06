@@ -46,31 +46,82 @@ const OLLAMA_URL =
   process.env.OLLAMA_URL ||
   "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
+const OLLAMA_REQUEST_RETRIES = Number(process.env.OLLAMA_REQUEST_RETRIES || 2);
+const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "10m";
+const OLLAMA_HEALTH_INTERVAL_MS = Number(process.env.OLLAMA_HEALTH_INTERVAL_MS || 240000);
+const OLLAMA_HEALTH_TIMEOUT_MS = Number(process.env.OLLAMA_HEALTH_TIMEOUT_MS || 8000);
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const getOllamaBaseUrl = () => OLLAMA_URL.replace(/\/api\/(?:generate|chat)\/?$/i, "");
+let ollamaStatus = {
+  ok: false,
+  endpoint: OLLAMA_URL,
+  model: OLLAMA_MODEL,
+  last_checked_at: null,
+  last_success_at: null,
+  last_error: null,
+};
 
 export async function perguntarIA(texto) {
+  let lastErrorForThrow = null;
+  for (let attempt = 1; attempt <= OLLAMA_REQUEST_RETRIES + 1; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+    try {
+      const resposta = await fetch(OLLAMA_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          prompt: texto,
+          stream: false,
+          keep_alive: OLLAMA_KEEP_ALIVE,
+        }),
+      });
+      const raw = await resposta.text();
+      let data = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch {}
+      if (!resposta.ok) throw new Error(`Ollama ${resposta.status}: ${raw.slice(0, 500)}`);
+      const reply = String(data?.response || "").trim();
+      if (!reply) throw new Error("Resposta vazia do Ollama.");
+      ollamaStatus = { ...ollamaStatus, ok: true, last_checked_at: new Date().toISOString(), last_success_at: new Date().toISOString(), last_error: null };
+      return reply;
+    } catch (e) {
+      lastErrorForThrow = e;
+      const timedOut = e?.name === "AbortError";
+      const message = timedOut ? `timeout ${AI_REQUEST_TIMEOUT_MS}ms` : e?.message || String(e);
+      ollamaStatus = { ...ollamaStatus, ok: false, last_checked_at: new Date().toISOString(), last_error: message };
+      if (attempt <= OLLAMA_REQUEST_RETRIES) await delay(800 * attempt);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw lastErrorForThrow || new Error("Falha ao consultar Ollama.");
+}
+
+async function refreshOllamaStatus() {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), OLLAMA_HEALTH_TIMEOUT_MS);
   try {
-    const resposta = await fetch(OLLAMA_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const resp = await fetch(`${getOllamaBaseUrl()}/api/tags`, {
+      headers: { "ngrok-skip-browser-warning": "true" },
       signal: controller.signal,
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt: texto,
-        stream: false,
-      }),
     });
-    const raw = await resposta.text();
-    let data = {};
-    try { data = raw ? JSON.parse(raw) : {}; } catch {}
-    if (!resposta.ok) throw new Error(`Ollama ${resposta.status}: ${raw.slice(0, 500)}`);
-    const reply = String(data?.response || "").trim();
-    if (!reply) throw new Error("Resposta vazia do Ollama.");
-    return reply;
+    if (!resp.ok) throw new Error(`health ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+    ollamaStatus = { ...ollamaStatus, ok: true, last_checked_at: new Date().toISOString(), last_success_at: new Date().toISOString(), last_error: null };
+  } catch (e) {
+    const message = e?.name === "AbortError" ? `health timeout ${OLLAMA_HEALTH_TIMEOUT_MS}ms` : e?.message || String(e);
+    ollamaStatus = { ...ollamaStatus, ok: false, last_checked_at: new Date().toISOString(), last_error: message };
   } finally {
     clearTimeout(timeout);
   }
+  return ollamaStatus;
+}
+
+function startOllamaKeepAlive() {
+  if (!OLLAMA_HEALTH_INTERVAL_MS) return;
+  setTimeout(() => refreshOllamaStatus().catch(() => {}), 3000);
+  setInterval(() => refreshOllamaStatus().catch(() => {}), OLLAMA_HEALTH_INTERVAL_MS);
 }
 
 const PORT = Number(process.env.PORT) || 8080;
@@ -168,7 +219,7 @@ const EMERGENT_BASE_URL =
 const EMERGENT_MODEL = process.env.EMERGENT_MODEL || "gpt-4o-mini";
 const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY || process.env.VITE_LOVABLE_API_KEY || "";
 const AI_MODEL = process.env.AI_MODEL || "google/gemini-3-flash-preview";
-const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 20000);
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 45000);
 const AUTO_REPLY_SEND_TIMEOUT_MS = Number(process.env.AUTO_REPLY_SEND_TIMEOUT_MS || 20000);
 const AUTO_REPLY_RETRY_EVERY_MS = Number(process.env.AUTO_REPLY_RETRY_EVERY_MS || 10000);
 const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
@@ -722,6 +773,7 @@ startSock().catch((e) => {
   lastError = e?.message || String(e);
   console.error("startSock error:", e);
 });
+startOllamaKeepAlive();
 setInterval(() => {
   processAutoReplyQueue().catch((e) => recordAutoReply({ step: "queue_process_error", error: e?.message || String(e) }));
 }, AUTO_REPLY_RETRY_EVERY_MS);
@@ -845,7 +897,9 @@ app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
+  const ollama = await refreshOllamaStatus().catch(() => ollamaStatus);
   const info = {
+    ollama,
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -867,6 +921,7 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
   const status = baileysRuntimeStatus();
   res.json({
+    ollama: ollamaStatus,
     bot_enabled: whatsappConfig.bot_enabled,
     connection_state: status.state,
     connected: status.connected,
@@ -882,6 +937,11 @@ app.get("/api/whatsapp/ai-debug", (_req, res) => {
     queue_size: pendingAutoReplies.length,
     queued: pendingAutoReplies.map((m) => ({ jid: m.jid, attempts: m.attempts, created_at: m.created_at, source: m.source, reason: m.reason, last_error: m.last_error })),
   });
+});
+
+app.get("/api/whatsapp/ollama-status", async (_req, res) => {
+  const status = await refreshOllamaStatus().catch(() => ollamaStatus);
+  res.json({ ok: true, ...status, keep_alive: OLLAMA_KEEP_ALIVE, health_interval_ms: OLLAMA_HEALTH_INTERVAL_MS });
 });
 
 
