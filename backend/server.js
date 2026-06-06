@@ -254,6 +254,7 @@ function cleanRepeatedText(text) {
 }
 
 async function callAI(messagesPayload) {
+  const { url: ollamaUrl, model: ollamaModel } = getOllamaConfig();
   const ollamaPrompt = messagesPayload
     .map((message) => {
       const role = message.role === "system" ? "Instruções" : message.role === "assistant" ? "Atendente" : "Cliente";
@@ -264,14 +265,14 @@ async function callAI(messagesPayload) {
   const attempts = [];
   try {
     const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
-    return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
+    return { ok: true, provider: "ollama", endpoint: ollamaUrl, model: ollamaModel, reply: cleanRepeatedText(reply), attempts };
   } catch (e) {
     const timedOut = e?.name === "AbortError";
     const failed = {
       ok: false,
       provider: "ollama",
-      endpoint: OLLAMA_URL,
-      model: OLLAMA_MODEL,
+      endpoint: ollamaUrl,
+      model: ollamaModel,
       error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta do Ollama.` : e?.message || String(e),
     };
     attempts.push(failed);
