@@ -127,13 +127,38 @@ const legalDeadlines = [
 ];
 
 const jidToPhone = (jid) => String(jid || "").split("@")[0].replace(/\D/g, "");
-const extractText = (m) =>
-  m?.message?.conversation ||
-  m?.message?.extendedTextMessage?.text ||
-  m?.message?.imageMessage?.caption ||
-  m?.message?.videoMessage?.caption ||
-  m?.message?.documentMessage?.caption ||
-  "";
+const unwrapMessage = (message = {}) => {
+  let current = message;
+  for (let i = 0; i < 5; i += 1) {
+    const next =
+      current?.ephemeralMessage?.message ||
+      current?.viewOnceMessage?.message ||
+      current?.viewOnceMessageV2?.message ||
+      current?.documentWithCaptionMessage?.message ||
+      current?.editedMessage?.message?.protocolMessage?.editedMessage;
+    if (!next) break;
+    current = next;
+  }
+  return current || {};
+};
+
+const extractText = (m) => {
+  const message = unwrapMessage(m?.message || {});
+  return String(
+    message.conversation ||
+    message.extendedTextMessage?.text ||
+    message.imageMessage?.caption ||
+    message.videoMessage?.caption ||
+    message.documentMessage?.caption ||
+    message.buttonsResponseMessage?.selectedDisplayText ||
+    message.buttonsResponseMessage?.selectedButtonId ||
+    message.listResponseMessage?.title ||
+    message.listResponseMessage?.singleSelectReply?.selectedRowId ||
+    message.templateButtonReplyMessage?.selectedDisplayText ||
+    message.templateButtonReplyMessage?.selectedId ||
+    ""
+  ).trim();
+};
 
 const upsertContact = (jid, patch = {}) => {
   if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") return null;
