@@ -41,6 +41,26 @@ async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
   return data.text || data.transcript || "";
 }
 
+// ---- Ponte para Ollama (via ngrok) usada pelo bot do Baileys ----
+const OLLAMA_URL =
+  process.env.OLLAMA_URL ||
+  "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
+
+export async function perguntarIA(texto) {
+  const resposta = await fetch(OLLAMA_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: OLLAMA_MODEL,
+      prompt: texto,
+      stream: false,
+    }),
+  });
+  const data = await resposta.json();
+  return data.response;
+}
+
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
 const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
