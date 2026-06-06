@@ -20,3 +20,33 @@ services:
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6bHh5c3h2dmx1cGp0cm14cW1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4OTM3MDUsImV4cCI6MjA5MjQ2OTcwNX0.iU5enYnsJExOHtbwpJKQ4bMGZS8hzQIURi6T2y2EQVM
       - key: VITE_SUPABASE_PROJECT_ID
         value: kzlxysxvvlupjtrmxqmb
+      - key: VITE_BACKEND_URL
+        value: https://kenia-whatsapp-backend.onrender.com
+  - type: web
+    name: kenia-whatsapp-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: baileys-auth
+      mountPath: /opt/render/project/src/backend/auth
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: AUTH_DIR
+        value: /opt/render/project/src/backend/auth
+      - key: SUPABASE_URL
+        value: https://kzlxysxvvlupjtrmxqmb.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Imt6bHh5c3h2dmx1cGp0cm14cW1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4OTM3MDUsImV4cCI6MjA5MjQ2OTcwNX0.iU5enYnsJExOHtbwpJKQ4bMGZS8hzQIURi6T2y2EQVM
+      - key: OLLAMA_URL
+        value: https://unabashed-vertical-crispness.ngrok-free.dev
+      - key: OLLAMA_MODEL
+        value: qwen3:0.6b
+      - key: AI_REQUEST_TIMEOUT_MS
+        value: "45000"
