@@ -301,20 +301,34 @@ async function callAI(messagesPayload) {
     .join("\n\n");
 
   const attempts = [];
-  try {
-    const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
-    return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
-  } catch (e) {
-    const timedOut = e?.name === "AbortError";
-    const failed = {
+  const fallbackProviderConfigured = Boolean(LOVABLE_API_KEY || OPENAI_API_KEY || EMERGENT_API_KEY);
+  const skipOllamaWhenDisconnected = !ollamaStatus.ok && fallbackProviderConfigured && ollamaStatus.last_checked_at;
+  if (skipOllamaWhenDisconnected) {
+    attempts.push({
       ok: false,
       provider: "ollama",
       endpoint: OLLAMA_URL,
       model: OLLAMA_MODEL,
-      error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta do Ollama.` : e?.message || String(e),
-    };
-    attempts.push(failed);
-    recordAutoReply({ step: "ai_provider_fail", provider: "ollama", error: failed.error });
+      skipped: true,
+      error: ollamaStatus.last_error || "Ollama desconectado no último healthcheck.",
+    });
+  }
+  if (!skipOllamaWhenDisconnected) {
+    try {
+      const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
+      return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
+    } catch (e) {
+      const timedOut = e?.name === "AbortError";
+      const failed = {
+        ok: false,
+        provider: "ollama",
+        endpoint: OLLAMA_URL,
+        model: OLLAMA_MODEL,
+        error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta do Ollama.` : e?.message || String(e),
+      };
+      attempts.push(failed);
+      recordAutoReply({ step: "ai_provider_fail", provider: "ollama", error: failed.error });
+    }
   }
 
   const providers = [
