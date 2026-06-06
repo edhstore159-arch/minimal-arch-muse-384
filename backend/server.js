@@ -787,7 +787,7 @@ const baileysRuntimeStatus = () => {
 
 // ---- Healthcheck ----
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
-app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
+app.get("/api/health", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend", state: connectionState, primary_ai_provider: "ollama" })));
 
 app.get("/api/debug/instructions", (_req, res) => {
   res.json(debugInstructions.slice(0, 50));
@@ -853,6 +853,9 @@ app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
   const info = {
+    primary_provider: "ollama",
+    ollama_url: OLLAMA_URL,
+    ollama_model: OLLAMA_MODEL,
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -870,10 +873,23 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
   res.status(result.ok ? 200 : 500).json({ ...info, result });
 });
 
+app.get("/api/whatsapp/ollama-test", async (_req, res) => {
+  try {
+    const started = Date.now();
+    const reply = await perguntarIA("Responda apenas com a palavra OK.");
+    res.json(ok({ provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply, duration_ms: Date.now() - started }));
+  } catch (e) {
+    res.status(500).json({ ok: false, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, error: e?.message || String(e) });
+  }
+});
+
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
   const status = baileysRuntimeStatus();
   res.json({
+    primary_provider: "ollama",
+    ollama_url: OLLAMA_URL,
+    ollama_model: OLLAMA_MODEL,
     bot_enabled: whatsappConfig.bot_enabled,
     connection_state: status.state,
     connected: status.connected,
@@ -918,6 +934,12 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
           status.connected
             ? "Conectado."
             : "Aguardando leitura do QR Code.",
+      },
+      {
+        id: "ollama",
+        ok: Boolean(OLLAMA_URL && OLLAMA_MODEL),
+        label: "Ollama como IA principal",
+        msg: `Modelo ${OLLAMA_MODEL} configurado como primeiro provedor do autoatendimento.`,
       },
     ],
   });
