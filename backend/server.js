@@ -817,6 +817,8 @@ const baileysRuntimeStatus = () => {
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
 app.get("/api/health", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend", state: connectionState, primary_ai_provider: "ollama" })));
 
+app.get("/health", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend", state: connectionState, primary_ai_provider: "ollama" })));
+
 app.get("/api/debug/instructions", (_req, res) => {
   res.json(debugInstructions.slice(0, 50));
 });
@@ -880,10 +882,12 @@ app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
+  const { url: ollamaUrl, model: ollamaModel } = getOllamaConfig();
   const info = {
     primary_provider: "ollama",
-    ollama_url: OLLAMA_URL,
-    ollama_model: OLLAMA_MODEL,
+    ollama_url: ollamaUrl,
+    ollama_model: ollamaModel,
+    reads_ollama_url_env: Boolean(process.env.OLLAMA_URL),
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -902,22 +906,25 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
 });
 
 app.get("/api/whatsapp/ollama-test", async (_req, res) => {
+  const { url: ollamaUrl, model: ollamaModel } = getOllamaConfig();
   try {
     const started = Date.now();
     const reply = await perguntarIA("Responda apenas com a palavra OK.");
-    res.json(ok({ provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply, duration_ms: Date.now() - started }));
+    res.json(ok({ provider: "ollama", endpoint: ollamaUrl, model: ollamaModel, reads_ollama_url_env: Boolean(process.env.OLLAMA_URL), request_body: { model: ollamaModel, prompt: "Responda apenas com a palavra OK.", stream: false }, reply, duration_ms: Date.now() - started }));
   } catch (e) {
-    res.status(500).json({ ok: false, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, error: e?.message || String(e) });
+    res.status(500).json({ ok: false, provider: "ollama", endpoint: ollamaUrl, model: ollamaModel, reads_ollama_url_env: Boolean(process.env.OLLAMA_URL), request_body: { model: ollamaModel, prompt: "Responda apenas com a palavra OK.", stream: false }, error: e?.message || String(e) });
   }
 });
 
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
+  const { url: ollamaUrl, model: ollamaModel } = getOllamaConfig();
   const status = baileysRuntimeStatus();
   res.json({
     primary_provider: "ollama",
-    ollama_url: OLLAMA_URL,
-    ollama_model: OLLAMA_MODEL,
+    ollama_url: ollamaUrl,
+    ollama_model: ollamaModel,
+    reads_ollama_url_env: Boolean(process.env.OLLAMA_URL),
     bot_enabled: whatsappConfig.bot_enabled,
     connection_state: status.state,
     connected: status.connected,
