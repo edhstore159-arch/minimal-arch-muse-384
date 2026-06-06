@@ -359,8 +359,9 @@ const staticPost = (url, body = {}) => {
       const sessionId = body.session_id || nextId("session");
       const OLLAMA_URL =
         import.meta.env.VITE_OLLAMA_URL ||
+        import.meta.env.OLLAMA_URL ||
         "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
-      const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || "qwen3:0.6b";
+      const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || import.meta.env.OLLAMA_MODEL || "qwen3:0.6b";
       try {
         const history = (body.history || [])
           .map((m) => `${m.role === "user" ? "Cliente" : "Kênia"}: ${m.content}`)
@@ -592,8 +593,8 @@ liveApi.interceptors.response.use(
 );
 
 const cloudFirstGetPaths = new Set(["/appointments", "/legal-deadlines", "/creatives", "/whatsapp/default-prompt", "/legislation/today"]);
-const cloudFirstPostPaths = new Set(["/chat/message", "/creatives/generate", "/creatives/fuse-images", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
-const fallbackToStaticPostPaths = new Set(["/debug/instruction"]);
+const cloudFirstPostPaths = new Set(["/creatives/generate", "/creatives/fuse-images", "/appointments", "/legal-deadlines", "/legal-deadlines/sync"]);
+const fallbackToStaticPostPaths = new Set(["/chat/message", "/debug/instruction"]);
 
 // Caminhos que, quando o backend live (Render) falha ou devolve lista vazia,
 // caem para os dados estáticos de demonstração — assim o painel nunca aparece
