@@ -103,7 +103,7 @@ export async function perguntarIA(texto) {
       const raw = await resposta.text();
       let data = {};
       try { data = raw ? JSON.parse(raw) : {}; } catch {}
-      if (!resposta.ok) throw new Error(`Ollama ${resposta.status}: ${raw.slice(0, 500)}`);
+      if (!resposta.ok) throw new Error(formatOllamaHttpError(resposta.status, raw));
       const reply = String(data?.response || "").trim();
       if (!reply) throw new Error("Resposta vazia do Ollama.");
       ollamaStatus = { ...ollamaStatus, ok: true, last_checked_at: new Date().toISOString(), last_success_at: new Date().toISOString(), last_error: null };
@@ -125,11 +125,11 @@ async function refreshOllamaStatus() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), OLLAMA_HEALTH_TIMEOUT_MS);
   try {
-    const resp = await fetch(`${getOllamaBaseUrl()}/api/tags`, {
+    const resp = await fetch(OLLAMA_TAGS_URL, {
       headers: { "ngrok-skip-browser-warning": "true" },
       signal: controller.signal,
     });
-    if (!resp.ok) throw new Error(`health ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+    if (!resp.ok) throw new Error(formatOllamaHttpError(resp.status, await resp.text(), "Ollama health"));
     ollamaStatus = { ...ollamaStatus, ok: true, last_checked_at: new Date().toISOString(), last_success_at: new Date().toISOString(), last_error: null };
   } catch (e) {
     const message = e?.name === "AbortError" ? `health timeout ${OLLAMA_HEALTH_TIMEOUT_MS}ms` : e?.message || String(e);
