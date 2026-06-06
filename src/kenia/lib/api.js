@@ -397,11 +397,14 @@ const staticPost = (url, body = {}) => {
           "Você é a Dra. Kênia Garcia, advogada brasileira. Responda de forma humana, breve e empática. Nunca diga que é IA.";
         const prompt = `${system}\n\n${history}\nCliente: ${body.message || body.text || ""}\nKênia:`;
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 45000);
         const res = await fetch(OLLAMA_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+          signal: controller.signal,
           body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false, keep_alive: "10m" }),
-        });
+        }).finally(() => clearTimeout(timeout));
         if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
         const data = await res.json();
         const text = (data?.response || "").trim() || "Sem resposta da IA.";
