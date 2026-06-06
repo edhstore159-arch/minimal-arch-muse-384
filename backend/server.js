@@ -127,38 +127,13 @@ const legalDeadlines = [
 ];
 
 const jidToPhone = (jid) => String(jid || "").split("@")[0].replace(/\D/g, "");
-const unwrapMessage = (message = {}) => {
-  let current = message;
-  for (let i = 0; i < 5; i += 1) {
-    const next =
-      current?.ephemeralMessage?.message ||
-      current?.viewOnceMessage?.message ||
-      current?.viewOnceMessageV2?.message ||
-      current?.documentWithCaptionMessage?.message ||
-      current?.editedMessage?.message?.protocolMessage?.editedMessage;
-    if (!next) break;
-    current = next;
-  }
-  return current || {};
-};
-
-const extractText = (m) => {
-  const message = unwrapMessage(m?.message || {});
-  return String(
-    message.conversation ||
-    message.extendedTextMessage?.text ||
-    message.imageMessage?.caption ||
-    message.videoMessage?.caption ||
-    message.documentMessage?.caption ||
-    message.buttonsResponseMessage?.selectedDisplayText ||
-    message.buttonsResponseMessage?.selectedButtonId ||
-    message.listResponseMessage?.title ||
-    message.listResponseMessage?.singleSelectReply?.selectedRowId ||
-    message.templateButtonReplyMessage?.selectedDisplayText ||
-    message.templateButtonReplyMessage?.selectedId ||
-    ""
-  ).trim();
-};
+const extractText = (m) =>
+  m?.message?.conversation ||
+  m?.message?.extendedTextMessage?.text ||
+  m?.message?.imageMessage?.caption ||
+  m?.message?.videoMessage?.caption ||
+  m?.message?.documentMessage?.caption ||
+  "";
 
 const upsertContact = (jid, patch = {}) => {
   if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") return null;
@@ -262,7 +237,6 @@ async function callAI(messagesPayload) {
   const attempts = [];
   try {
     const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
-    console.log("Resposta IA:", String(reply || "").slice(0, 500));
     return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
   } catch (e) {
     const timedOut = e?.name === "AbortError";
@@ -647,18 +621,21 @@ async function startSock() {
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (sock !== activeSock || !Array.isArray(messages)) return;
     for (const m of messages) {
-      console.log("Mensagem bruta:", JSON.stringify(m, null, 2));
       const jid = m?.key?.remoteJid;
       if (!jid) continue;
       const fromMe = Boolean(m?.key?.fromMe);
       let text = extractText(m);
-      if (text) console.log("Texto recebido:", text);
       recordAutoReply({ step: "incoming", type, jid, fromMe, hasText: Boolean(text), preview: String(text || "").slice(0, 80) });
       if (jid.endsWith("@g.us") || jid === "status@broadcast") continue;
-      const message = unwrapMessage(m?.message || {});
       const audioMsg =
-        message.audioMessage ||
-        message.pttMessage;
+        m?.message?.audioMessage ||
+        m?.message?.pttMessage ||
+        m?.message?.ephemeralMessage?.message?.audioMessage ||
+        m?.message?.ephemeralMessage?.message?.pttMessage ||
+        m?.message?.viewOnceMessage?.message?.audioMessage ||
+        m?.message?.viewOnceMessage?.message?.pttMessage ||
+        m?.message?.viewOnceMessageV2?.message?.audioMessage ||
+        m?.message?.viewOnceMessageV2?.message?.pttMessage;
       console.log("[audio] audioMsg:", !!audioMsg, "mimetype:", audioMsg?.mimetype, "keys:", m?.message && Object.keys(m.message));
       recordAutoReply({ step: "audio_detect", jid, has: !!audioMsg, mimetype: audioMsg?.mimetype, msgKeys: m?.message ? Object.keys(m.message) : [] });
       if (!text && audioMsg && !fromMe) {
