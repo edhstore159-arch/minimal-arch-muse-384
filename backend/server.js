@@ -42,18 +42,40 @@ async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
 }
 
 // ---- Ponte para Ollama (via ngrok) usada pelo bot do Baileys ----
-const OLLAMA_URL =
+const OLLAMA_RAW_URL =
   process.env.OLLAMA_URL ||
   "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
+const normalizeOllamaBaseUrl = (value) => {
+  const trimmed = String(value || "").trim().replace(/\/+$/g, "");
+  const withoutEndpoint = trimmed
+    .replace(/\/api\/(?:generate|chat|tags|show)\/?$/i, "")
+    .replace(/\/api\/?$/i, "");
+  return withoutEndpoint || "http://127.0.0.1:11434";
+};
+const OLLAMA_BASE_URL = normalizeOllamaBaseUrl(OLLAMA_RAW_URL);
+const OLLAMA_URL = `${OLLAMA_BASE_URL}/api/generate`;
+const OLLAMA_TAGS_URL = `${OLLAMA_BASE_URL}/api/tags`;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
 const OLLAMA_REQUEST_RETRIES = Number(process.env.OLLAMA_REQUEST_RETRIES || 2);
 const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "10m";
 const OLLAMA_HEALTH_INTERVAL_MS = Number(process.env.OLLAMA_HEALTH_INTERVAL_MS || 240000);
 const OLLAMA_HEALTH_TIMEOUT_MS = Number(process.env.OLLAMA_HEALTH_TIMEOUT_MS || 8000);
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const getOllamaBaseUrl = () => OLLAMA_URL.replace(/\/api\/(?:generate|chat)\/?$/i, "");
+const getOllamaBaseUrl = () => OLLAMA_BASE_URL;
+const formatOllamaHttpError = (status, raw, context = "Ollama") => {
+  const body = String(raw || "").replace(/\s+/g, " ").trim();
+  if (status === 404 && /ngrok|<!doctype html|<html/i.test(body)) {
+    return `${context} desconectado: o túnel respondeu 404/HTML. Atualize OLLAMA_URL no Render com o ngrok ativo apontando para http://localhost:11434.`;
+  }
+  if (status === 404) {
+    return `${context} respondeu 404. Verifique se OLLAMA_URL aponta para a base do Ollama ou para /api/generate e se o modelo ${OLLAMA_MODEL} existe.`;
+  }
+  return `${context} ${status}: ${body.slice(0, 500)}`;
+};
 let ollamaStatus = {
   ok: false,
+  configured_url: OLLAMA_RAW_URL,
+  base_url: OLLAMA_BASE_URL,
   endpoint: OLLAMA_URL,
   model: OLLAMA_MODEL,
   last_checked_at: null,
@@ -81,7 +103,7 @@ export async function perguntarIA(texto) {
       const raw = await resposta.text();
       let data = {};
       try { data = raw ? JSON.parse(raw) : {}; } catch {}
-      if (!resposta.ok) throw new Error(`Ollama ${resposta.status}: ${raw.slice(0, 500)}`);
+      if (!resposta.ok) throw new Error(formatOllamaHttpError(resposta.status, raw));
       const reply = String(data?.response || "").trim();
       if (!reply) throw new Error("Resposta vazia do Ollama.");
       ollamaStatus = { ...ollamaStatus, ok: true, last_checked_at: new Date().toISOString(), last_success_at: new Date().toISOString(), last_error: null };
@@ -103,11 +125,11 @@ async function refreshOllamaStatus() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), OLLAMA_HEALTH_TIMEOUT_MS);
   try {
-    const resp = await fetch(`${getOllamaBaseUrl()}/api/tags`, {
+    const resp = await fetch(OLLAMA_TAGS_URL, {
       headers: { "ngrok-skip-browser-warning": "true" },
       signal: controller.signal,
     });
-    if (!resp.ok) throw new Error(`health ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+    if (!resp.ok) throw new Error(formatOllamaHttpError(resp.status, await resp.text(), "Ollama health"));
     ollamaStatus = { ...ollamaStatus, ok: true, last_checked_at: new Date().toISOString(), last_success_at: new Date().toISOString(), last_error: null };
   } catch (e) {
     const message = e?.name === "AbortError" ? `health timeout ${OLLAMA_HEALTH_TIMEOUT_MS}ms` : e?.message || String(e);
@@ -279,20 +301,34 @@ async function callAI(messagesPayload) {
     .join("\n\n");
 
   const attempts = [];
-  try {
-    const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
-    return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
-  } catch (e) {
-    const timedOut = e?.name === "AbortError";
-    const failed = {
+  const fallbackProviderConfigured = Boolean(LOVABLE_API_KEY || OPENAI_API_KEY || EMERGENT_API_KEY);
+  const skipOllamaWhenDisconnected = !ollamaStatus.ok && fallbackProviderConfigured && ollamaStatus.last_checked_at;
+  if (skipOllamaWhenDisconnected) {
+    attempts.push({
       ok: false,
       provider: "ollama",
       endpoint: OLLAMA_URL,
       model: OLLAMA_MODEL,
-      error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta do Ollama.` : e?.message || String(e),
-    };
-    attempts.push(failed);
-    recordAutoReply({ step: "ai_provider_fail", provider: "ollama", error: failed.error });
+      skipped: true,
+      error: ollamaStatus.last_error || "Ollama desconectado no último healthcheck.",
+    });
+  }
+  if (!skipOllamaWhenDisconnected) {
+    try {
+      const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
+      return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
+    } catch (e) {
+      const timedOut = e?.name === "AbortError";
+      const failed = {
+        ok: false,
+        provider: "ollama",
+        endpoint: OLLAMA_URL,
+        model: OLLAMA_MODEL,
+        error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta do Ollama.` : e?.message || String(e),
+      };
+      attempts.push(failed);
+      recordAutoReply({ step: "ai_provider_fail", provider: "ollama", error: failed.error });
+    }
   }
 
   const providers = [
@@ -914,7 +950,7 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
     { role: "system", content: "Responda apenas com a palavra OK." },
     { role: "user", content: "ping" },
   ]);
-  res.status(result.ok ? 200 : 500).json({ ...info, result });
+  res.json({ ok: result.ok, fallback: !result.ok, ...info, result });
 });
 
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
@@ -941,7 +977,14 @@ app.get("/api/whatsapp/ai-debug", (_req, res) => {
 
 app.get("/api/whatsapp/ollama-status", async (_req, res) => {
   const status = await refreshOllamaStatus().catch(() => ollamaStatus);
-  res.json({ ok: true, ...status, keep_alive: OLLAMA_KEEP_ALIVE, health_interval_ms: OLLAMA_HEALTH_INTERVAL_MS });
+  res.json({
+    ok: status.ok,
+    connected: status.ok,
+    ...status,
+    keep_alive: OLLAMA_KEEP_ALIVE,
+    health_interval_ms: OLLAMA_HEALTH_INTERVAL_MS,
+    hint: status.ok ? null : "Se aparecer 404/HTML/ngrok, abra um novo túnel para a porta 11434 e atualize OLLAMA_URL no backend publicado.",
+  });
 });
 
 
@@ -971,6 +1014,17 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
           status.connected
             ? "Conectado."
             : "Aguardando leitura do QR Code.",
+      },
+      {
+        id: "ollama",
+        ok: ollamaStatus.ok,
+        label: "Ollama / IA local",
+        msg: ollamaStatus.ok
+          ? `Conectado em ${ollamaStatus.base_url} com modelo ${ollamaStatus.model}.`
+          : `Desconectado: ${ollamaStatus.last_error || "ainda não testado"}`,
+        hint: ollamaStatus.ok
+          ? null
+          : "Atualize OLLAMA_URL no Render para o ngrok ativo do Ollama (porta 11434) e redeploy; enquanto isso, o robô usa fallback/local se disponível.",
       },
     ],
   });
