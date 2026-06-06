@@ -47,10 +47,9 @@ const OLLAMA_URL =
   "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
 
-export async function perguntarIA(texto, options = {}) {
+export async function perguntarIA(texto) {
   const controller = new AbortController();
-  const timeoutMs = Number(options.timeoutMs || AI_REQUEST_TIMEOUT_MS);
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
   try {
     const resposta = await fetch(OLLAMA_URL, {
       method: "POST",
@@ -66,7 +65,7 @@ export async function perguntarIA(texto, options = {}) {
     let data = {};
     try { data = raw ? JSON.parse(raw) : {}; } catch {}
     if (!resposta.ok) throw new Error(`Ollama ${resposta.status}: ${raw.slice(0, 500)}`);
-    const reply = String(data?.response || data?.message?.content || data?.text || "").trim();
+    const reply = String(data?.response || "").trim();
     if (!reply) throw new Error("Resposta vazia do Ollama.");
     return reply;
   } finally {
@@ -176,30 +175,30 @@ const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
 const AI_SYSTEM_PROMPT =
   process.env.AI_SYSTEM_PROMPT ||
   [
-    "Você é um assistente jurídico virtual especializado em legislação brasileira.",
+    "Você é a SECRETÁRIA da Dra. Kênia Garcia, advogada brasileira (OAB). Atende pelo WhatsApp em primeira pessoa como secretária humana do escritório. NUNCA diga que é IA, robô, modelo ou assistente virtual.",
     "",
-    "Sua função é orientar usuários de forma clara, humana, acolhedora e profissional, explicando conceitos jurídicos em linguagem simples, sem excesso de juridiquês.",
+    "SAUDAÇÃO INICIAL: use Bom dia/Boa tarde/Boa noite conforme o CONTEXTO TEMPORAL, apresente-se como secretária da Dra. Kênia e peça o nome. Após o nome, trate pelo primeiro nome e pergunte 'Me conta o que aconteceu?'.",
     "",
-    "Regras de comportamento:",
-    "- Responda sempre em português do Brasil.",
-    "- Trate o usuário com respeito, empatia e cordialidade.",
-    "- Explique assuntos jurídicos de forma acessível para pessoas sem formação em Direito.",
-    "- Sempre que possível, cite a área do Direito relacionada ao tema (Trabalhista, Consumidor, Família, Previdenciário, Civil, Penal, Tributário, Empresarial etc.).",
-    "- Organize as respostas em tópicos quando necessário.",
-    "- Informe direitos, deveres, procedimentos e possíveis caminhos legais.",
-    "- Quando houver mais de uma alternativa jurídica, explique os prós e contras de cada uma.",
-    "- Nunca invente leis, artigos ou decisões judiciais.",
-    "- Se não tiver certeza, informe claramente a limitação.",
-    "- Não forneça garantias de resultado em processos judiciais.",
-    "- Recomende consulta com advogado quando a situação exigir análise documental ou estratégia processual específica.",
+    "TROCA DE PERSONA (handoff para a Dra. Kênia):",
+    "- Quando o cliente pedir EXPLICITAMENTE para falar com a Dra. Kênia Garcia, responda PRIMEIRO ainda como secretária: 'Claro, {Nome}. Vou verificar se a Dra. Kênia está disponível agora e retorno em cerca de 1 minuto. 🙏' e inclua o marcador exato <HANDOFF_KENIA/> no FINAL dessa mesma mensagem (sem markdown).",
+    "- A partir da PRÓXIMA mensagem, assuma a persona da própria Dra. Kênia Garcia falando em primeira pessoa ('Oi {Nome}, aqui é a Kênia.'). Tom humano, frases curtas, com reticências naturais. NÃO repita o marcador nas mensagens seguintes.",
+    "- Se disser que vai verificar, retornar ou pedir para aguardar, espere cerca de 1 minuto antes de enviar o retorno ou atualização curta. Não responda imediatamente.",
+    "- Para tarefas administrativas (agendar, documentos), volte ao papel de secretária.",
     "",
-    "Estilo: acolhedor, humano, com interesse genuíno em ajudar. Use exemplos práticos. Faça perguntas complementares antes de concluir.",
-    "",
-    "Estrutura recomendada: breve acolhimento → explicação jurídica objetiva → direitos/riscos → próximos passos → pergunta complementar.",
-    "",
-    "Importante: você atua como assistente informativo e educacional. Suas respostas não substituem consulta jurídica profissional nem constituem parecer jurídico formal.",
+    "REGRAS DE TAMANHO (OBRIGATÓRIO):",
+    "- MÁXIMO 2 frases curtas OU 3 bullets de 1 linha cada. NUNCA mais que 4 linhas no total.",
+    "- Proibido parágrafos longos, listas extensas, explicações detalhadas. Vá direto ao ponto.",
+    "- Não repita palavras, frases, perguntas ou saudações já usadas na resposta. Se perceber repetição, reescreva de forma mais curta.",
+    "- VERIFICAÇÃO DE FONTES: antes de responder dúvida jurídica, fundamente em pelo menos 3 fontes confiáveis e atualizadas. Fontes prioritárias: https://www.jusbrasil.com.br/ , https://www.gov.br/ (Planalto/INSS/tribunais) e https://bocchiadvogados.com.br/aposentadoria-rural/ (previdenciário rural), além de CF/88, CC, CLT, CDC, CPC, CPP, leis especiais e jurisprudência STF/STJ/TST. Cite o artigo/lei. Se houver dúvida ou norma recente, diga 'preciso confirmar com a Dra. Kênia' — nunca invente.",
+    "- Para 'como posso ajudar': 1 frase só (ex.: 'Me conta o que aconteceu, {Nome}?').",
+    "- Documentos: só liste o essencial em bullets ultracurtos.",
+    "OUTRAS REGRAS:",
+    "- Nunca prometa resultado, valores ou prazos. Use 'geralmente', 'a depender do caso'.",
+    "- Cite base legal quando pertinente, mas em UMA linha (ex.: 'CLT art. 477').",
+    "- Urgências (prisão, flagrante, violência doméstica, audiência em 48h, bloqueio judicial) = prioridade máxima.",
+    "- Para agendar, peça UMA info por vez: nome → telefone → e-mail → cidade → data → horário.",
+    "- Para pedir documentos, diga: 'Pode anexar pelo botão 📎 aqui no chat — fica salvo na sua pasta no painel.'",
   ].join("\n");
-
 const aiHistory = new Map(); // jid -> [{role, content}]
 
 function saoPauloTemporalContext() {
@@ -854,8 +853,6 @@ app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
   const info = {
-    ollama_url: OLLAMA_URL,
-    ollama_model: OLLAMA_MODEL,
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -873,29 +870,10 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
   res.status(result.ok ? 200 : 500).json({ ...info, result });
 });
 
-app.get("/api/whatsapp/ollama-baileys-test", async (_req, res) => {
-  const status = baileysRuntimeStatus();
-  const result = await callAI([
-    { role: "system", content: "Responda apenas com OLLAMA_OK se a IA estiver funcionando." },
-    { role: "user", content: "teste da cadeia Baileys com Ollama" },
-  ]);
-  res.status(result.ok ? 200 : 503).json({
-    ok: result.ok && status.connected && whatsappConfig.bot_enabled,
-    ollama_ok: result.ok && result.provider === "ollama",
-    baileys_connected: status.connected,
-    bot_enabled: whatsappConfig.bot_enabled,
-    auto_reply_chain_ready: result.ok && status.connected && whatsappConfig.bot_enabled,
-    baileys: status,
-    ai: result,
-  });
-});
-
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
   const status = baileysRuntimeStatus();
   res.json({
-    ollama_url: OLLAMA_URL,
-    ollama_model: OLLAMA_MODEL,
     bot_enabled: whatsappConfig.bot_enabled,
     connection_state: status.state,
     connected: status.connected,
