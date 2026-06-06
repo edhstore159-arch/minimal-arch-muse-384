@@ -357,56 +357,37 @@ const staticPost = (url, body = {}) => {
   if (path === "/chat/message") {
     return (async () => {
       const sessionId = body.session_id || nextId("session");
+      const OLLAMA_URL =
+        import.meta.env.VITE_OLLAMA_URL ||
+        "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
+      const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || "qwen3:0.6b";
       try {
-        const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: null }));
-        const { data, error } = await supabase.functions.invoke("chat-ai", {
-          body: {
-            message: body.message || body.text || "",
-            history: body.history || [],
-            system_prompt: body.system_prompt,
-            session_id: sessionId,
-            user_id: authData?.user?.id || null,
-          },
+        const history = (body.history || [])
+          .map((m) => `${m.role === "user" ? "Cliente" : "Kênia"}: ${m.content}`)
+          .join("\n");
+        const system =
+          body.system_prompt ||
+          "Você é a Dra. Kênia Garcia, advogada brasileira. Responda de forma humana, breve e empática. Nunca diga que é IA.";
+        const prompt = `${system}\n\n${history}\nCliente: ${body.message || body.text || ""}\nKênia:`;
+
+        const res = await fetch(OLLAMA_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false }),
         });
-        if (error) throw error;
-        const analysis = data?.analysis || { acertividade: 80, qualificacao: "ok" };
-        // Persist/upsert análise local para AdminCases mostrar nome/telefone/área reais
-        try {
-          const items = read("case_analyses", seedAnalyses);
-          const existingIdx = items.findIndex((i) => i.session_id === sessionId);
-          const prev = existingIdx >= 0 ? items[existingIdx] : {};
-          const merged = {
-            id: prev.id || nextId("case"),
-            session_id: sessionId,
-            visitor_name: body.visitor_name || prev.visitor_name || null,
-            visitor_phone: body.visitor_phone || prev.visitor_phone || null,
-            area: analysis.area || prev.area || "Em análise",
-            qualificacao: analysis.qualificacao || prev.qualificacao || "necessita_mais_info",
-            acertividade: Number(analysis.acertividade ?? prev.acertividade ?? 0),
-            chance_exito: Number(analysis.chance_exito ?? prev.chance_exito ?? 0),
-            resumo: analysis.resumo || prev.resumo || "",
-            motivo: analysis.motivo || prev.motivo || "",
-            fundamentos: analysis.fundamentos || prev.fundamentos || [],
-            proxima_pergunta: analysis.proxima_pergunta || prev.proxima_pergunta || "",
-            admin_notes: prev.admin_notes || "",
-            updated_at: nowIso(),
-          };
-          if (existingIdx >= 0) items[existingIdx] = merged;
-          else items.unshift(merged);
-          write("case_analyses", items);
-        } catch (saveErr) {
-          console.error("Erro ao salvar análise local:", saveErr);
-        }
+        if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
+        const data = await res.json();
+        const text = (data?.response || "").trim() || "Sem resposta da IA.";
         return {
           data: {
             session_id: sessionId,
-            response: cleanInternalChatMarkers(data?.response) || "Sem resposta da IA.",
-            audio_base64: data?.audio_base64 || null,
-            appointment: data?.appointment || null,
-            handoff: Boolean(data?.handoff),
-            speaker: data?.speaker || null,
-            analysis,
-            server_time: data?.server_time,
+            response: cleanInternalChatMarkers(text),
+            audio_base64: null,
+            appointment: null,
+            handoff: false,
+            speaker: null,
+            analysis: { acertividade: 80, qualificacao: "ok" },
+            server_time: nowIso(),
           },
           status: 200,
           statusText: "OK",
@@ -417,7 +398,7 @@ const staticPost = (url, body = {}) => {
         return {
           data: {
             session_id: sessionId,
-            response: `Erro ao consultar IA: ${e?.message || e}. Verifique se a edge function chat-ai está publicada.`,
+            response: `Erro ao consultar Ollama: ${e?.message || e}. Verifique se o servidor Ollama está acessível em ${OLLAMA_URL}.`,
             audio_base64: null,
             analysis: { acertividade: 0, qualificacao: "erro" },
           },
@@ -426,6 +407,7 @@ const staticPost = (url, body = {}) => {
       }
     })();
   }
+
 
 
   if (path === "/finance/transactions") return insertItem("transactions", seedTransactions, "tx", body);
