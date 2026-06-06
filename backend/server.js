@@ -1015,6 +1015,17 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
             ? "Conectado."
             : "Aguardando leitura do QR Code.",
       },
+      {
+        id: "ollama",
+        ok: ollamaStatus.ok,
+        label: "Ollama / IA local",
+        msg: ollamaStatus.ok
+          ? `Conectado em ${ollamaStatus.base_url} com modelo ${ollamaStatus.model}.`
+          : `Desconectado: ${ollamaStatus.last_error || "ainda não testado"}`,
+        hint: ollamaStatus.ok
+          ? null
+          : "Atualize OLLAMA_URL no Render para o ngrok ativo do Ollama (porta 11434) e redeploy; enquanto isso, o robô usa fallback/local se disponível.",
+      },
     ],
   });
 });
