@@ -47,9 +47,10 @@ const OLLAMA_URL =
   "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
 
-export async function perguntarIA(texto) {
+export async function perguntarIA(texto, options = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+  const timeoutMs = Number(options.timeoutMs || AI_REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const resposta = await fetch(OLLAMA_URL, {
       method: "POST",
@@ -65,7 +66,7 @@ export async function perguntarIA(texto) {
     let data = {};
     try { data = raw ? JSON.parse(raw) : {}; } catch {}
     if (!resposta.ok) throw new Error(`Ollama ${resposta.status}: ${raw.slice(0, 500)}`);
-    const reply = String(data?.response || "").trim();
+    const reply = String(data?.response || data?.message?.content || data?.text || "").trim();
     if (!reply) throw new Error("Resposta vazia do Ollama.");
     return reply;
   } finally {
