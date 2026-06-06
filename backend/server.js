@@ -48,17 +48,29 @@ const OLLAMA_URL =
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
 
 export async function perguntarIA(texto) {
-  const resposta = await fetch(OLLAMA_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: OLLAMA_MODEL,
-      prompt: texto,
-      stream: false,
-    }),
-  });
-  const data = await resposta.json();
-  return data.response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+  try {
+    const resposta = await fetch(OLLAMA_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: texto,
+        stream: false,
+      }),
+    });
+    const raw = await resposta.text();
+    let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch {}
+    if (!resposta.ok) throw new Error(`Ollama ${resposta.status}: ${raw.slice(0, 500)}`);
+    const reply = String(data?.response || "").trim();
+    if (!reply) throw new Error("Resposta vazia do Ollama.");
+    return reply;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 const PORT = Number(process.env.PORT) || 8080;
@@ -215,6 +227,30 @@ function cleanRepeatedText(text) {
 }
 
 async function callAI(messagesPayload) {
+  const ollamaPrompt = messagesPayload
+    .map((message) => {
+      const role = message.role === "system" ? "Instruções" : message.role === "assistant" ? "Atendente" : "Cliente";
+      return `${role}: ${message.content}`;
+    })
+    .join("\n\n");
+
+  const attempts = [];
+  try {
+    const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
+    return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
+  } catch (e) {
+    const timedOut = e?.name === "AbortError";
+    const failed = {
+      ok: false,
+      provider: "ollama",
+      endpoint: OLLAMA_URL,
+      model: OLLAMA_MODEL,
+      error: timedOut ? `Tempo esgotado após ${AI_REQUEST_TIMEOUT_MS}ms aguardando resposta do Ollama.` : e?.message || String(e),
+    };
+    attempts.push(failed);
+    recordAutoReply({ step: "ai_provider_fail", provider: "ollama", error: failed.error });
+  }
+
   const providers = [
     LOVABLE_API_KEY && {
       provider: "lovable-gemini",
@@ -237,10 +273,9 @@ async function callAI(messagesPayload) {
   ].filter(Boolean);
 
   if (!providers.length) {
-    return { ok: false, error: "Nenhuma chave de IA configurada (OPENAI_API_KEY, EMERGENT_API_KEY ou LOVABLE_API_KEY)." };
+    return { ok: false, error: "Ollama falhou e nenhuma chave alternativa de IA está configurada (OPENAI_API_KEY, EMERGENT_API_KEY ou LOVABLE_API_KEY).", attempts, ...attempts[attempts.length - 1] };
   }
 
-  const attempts = [];
   for (const cfg of providers) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
@@ -456,7 +491,7 @@ async function autoReply(jid, userText, contactName) {
     ...history.slice(-10),
     { role: "user", content: userText },
   ];
-  recordAutoReply({ step: "ai_request", jid, providers: [OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
+  recordAutoReply({ step: "ai_request", jid, providers: ["ollama", OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
   const result = await callAI(messagesPayload);
   const usedFallback = !result.ok;
   const reply = cleanRepeatedText(usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply);
