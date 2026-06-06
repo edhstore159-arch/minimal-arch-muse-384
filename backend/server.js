@@ -262,6 +262,7 @@ async function callAI(messagesPayload) {
   const attempts = [];
   try {
     const reply = await perguntarIA(`${ollamaPrompt}\n\nAtendente:`);
+    console.log("Resposta IA:", String(reply || "").slice(0, 500));
     return { ok: true, provider: "ollama", endpoint: OLLAMA_URL, model: OLLAMA_MODEL, reply: cleanRepeatedText(reply), attempts };
   } catch (e) {
     const timedOut = e?.name === "AbortError";
@@ -646,21 +647,18 @@ async function startSock() {
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (sock !== activeSock || !Array.isArray(messages)) return;
     for (const m of messages) {
+      console.log("Mensagem bruta:", JSON.stringify(m, null, 2));
       const jid = m?.key?.remoteJid;
       if (!jid) continue;
       const fromMe = Boolean(m?.key?.fromMe);
       let text = extractText(m);
+      if (text) console.log("Texto recebido:", text);
       recordAutoReply({ step: "incoming", type, jid, fromMe, hasText: Boolean(text), preview: String(text || "").slice(0, 80) });
       if (jid.endsWith("@g.us") || jid === "status@broadcast") continue;
+      const message = unwrapMessage(m?.message || {});
       const audioMsg =
-        m?.message?.audioMessage ||
-        m?.message?.pttMessage ||
-        m?.message?.ephemeralMessage?.message?.audioMessage ||
-        m?.message?.ephemeralMessage?.message?.pttMessage ||
-        m?.message?.viewOnceMessage?.message?.audioMessage ||
-        m?.message?.viewOnceMessage?.message?.pttMessage ||
-        m?.message?.viewOnceMessageV2?.message?.audioMessage ||
-        m?.message?.viewOnceMessageV2?.message?.pttMessage;
+        message.audioMessage ||
+        message.pttMessage;
       console.log("[audio] audioMsg:", !!audioMsg, "mimetype:", audioMsg?.mimetype, "keys:", m?.message && Object.keys(m.message));
       recordAutoReply({ step: "audio_detect", jid, has: !!audioMsg, mimetype: audioMsg?.mimetype, msgKeys: m?.message ? Object.keys(m.message) : [] });
       if (!text && audioMsg && !fromMe) {
