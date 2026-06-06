@@ -1,22 +1,20 @@
 import { useEffect, useState } from "react";
-import { isLovableNativeDebugRuntime, shouldSuppressLovableDebugInstruction } from "./debugInstruction";
 
 /**
  * DebugErrorThrower
  *
- * Escuta "lovable-debug-error" e só lança o erro no runtime de preview/editor
- * da Lovable, onde existe o overlay nativo "Try to Fix".
+ * Escuta "lovable-debug-error" e lança o erro intencionalmente para acionar
+ * o overlay global da Lovable com botão "Try to Fix".
  *
  * NÃO envolver em ErrorBoundary/Suspense. NÃO substituir por console/toast.
+ * O throw é proposital e parte da feature.
  */
 export const DebugErrorThrower = () => {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
-      if (!isLovableNativeDebugRuntime()) return;
       const detail = (e as CustomEvent<string>).detail;
-      if (shouldSuppressLovableDebugInstruction(String(detail || ""))) return;
       if (typeof detail === "string" && detail.length > 0) {
         setMessage(detail);
       }
@@ -26,10 +24,6 @@ export const DebugErrorThrower = () => {
   }, []);
 
   if (message) {
-    if (shouldSuppressLovableDebugInstruction(message)) {
-      return null;
-    }
-
     throw new Error(message);
   }
 
