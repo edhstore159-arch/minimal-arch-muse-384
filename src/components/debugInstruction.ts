@@ -32,6 +32,15 @@ const SUPPRESSED_DEBUG_INSTRUCTION_PATTERNS = [
   /onrender\.com\/chat/i,
   /passo \d+\s*[—-]/i,
   /crie um chat ia/i,
+  /crie uma api node\.?js/i,
+  /api node\.?js usando express/i,
+  /ngrok-free\.dev/i,
+  /qwen3/i,
+  /pronto para deploy no render/i,
+  /adicione suporte a cors/i,
+  /process\.env\.port/i,
+  /POST \/chat/i,
+  /\/api\/generate/i,
 ];
 
 export const shouldSuppressLovableDebugInstruction = (message: string) => {
