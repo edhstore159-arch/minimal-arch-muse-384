@@ -59,25 +59,33 @@ const OLLAMA_URL = normalizeOllamaGenerateUrl(
 );
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
 
+function getOllamaConfig() {
+  return {
+    url: normalizeOllamaGenerateUrl(
+      process.env.OLLAMA_URL ||
+      process.env.OLLAMA_BASE_URL ||
+      process.env.VITE_OLLAMA_URL ||
+      process.env.VITE_OLLAMA_BASE_URL ||
+      OLLAMA_URL
+    ),
+    model: process.env.OLLAMA_MODEL || OLLAMA_MODEL,
+  };
+}
+
 export async function perguntarIA(texto) {
+  const { url, model } = getOllamaConfig();
+  if (!url) throw new Error("OLLAMA_URL ausente no backend");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
   try {
-    const resposta = await fetch(OLLAMA_URL, {
+    const resposta = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
-        model: OLLAMA_MODEL,
+        model,
         prompt: texto,
         stream: false,
-        think: false,
-        keep_alive: "2m",
-        options: {
-          num_ctx: Number(process.env.OLLAMA_NUM_CTX || 2048),
-          num_predict: Number(process.env.OLLAMA_NUM_PREDICT || 180),
-          temperature: Number(process.env.OLLAMA_TEMPERATURE || 0.3),
-        },
       }),
     });
     const raw = await resposta.text();
