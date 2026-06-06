@@ -950,7 +950,7 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
     { role: "system", content: "Responda apenas com a palavra OK." },
     { role: "user", content: "ping" },
   ]);
-  res.status(result.ok ? 200 : 500).json({ ...info, result });
+  res.json({ ok: result.ok, fallback: !result.ok, ...info, result });
 });
 
 // Mostra os últimos eventos do atendente automático (substitui leitura de log do Render)
@@ -977,7 +977,14 @@ app.get("/api/whatsapp/ai-debug", (_req, res) => {
 
 app.get("/api/whatsapp/ollama-status", async (_req, res) => {
   const status = await refreshOllamaStatus().catch(() => ollamaStatus);
-  res.json({ ok: true, ...status, keep_alive: OLLAMA_KEEP_ALIVE, health_interval_ms: OLLAMA_HEALTH_INTERVAL_MS });
+  res.json({
+    ok: status.ok,
+    connected: status.ok,
+    ...status,
+    keep_alive: OLLAMA_KEEP_ALIVE,
+    health_interval_ms: OLLAMA_HEALTH_INTERVAL_MS,
+    hint: status.ok ? null : "Se aparecer 404/HTML/ngrok, abra um novo túnel para a porta 11434 e atualize OLLAMA_URL no backend publicado.",
+  });
 });
 
 
