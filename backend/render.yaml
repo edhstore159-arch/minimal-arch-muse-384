@@ -24,6 +24,6 @@ services:
       - key: OLLAMA_URL
         value: https://unabashed-vertical-crispness.ngrok-free.dev
       - key: OLLAMA_MODEL
-        value: qwen3:0.6b
+        value: llama3.2:latest
       - key: AI_REQUEST_TIMEOUT_MS
         value: "45000"
