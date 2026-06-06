@@ -42,9 +42,21 @@ async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
 }
 
 // ---- Ponte para Ollama (via ngrok) usada pelo bot do Baileys ----
-const OLLAMA_URL =
+function normalizeOllamaGenerateUrl(value) {
+  const raw = String(value || "").trim().replace(/\/+$/, "");
+  if (!raw) return "";
+  if (/\/api\/generate$/i.test(raw)) return raw;
+  if (/\/api\/chat$/i.test(raw)) return raw.replace(/\/api\/chat$/i, "/api/generate");
+  return `${raw}/api/generate`;
+}
+
+const OLLAMA_URL = normalizeOllamaGenerateUrl(
   process.env.OLLAMA_URL ||
-  "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
+  process.env.OLLAMA_BASE_URL ||
+  process.env.VITE_OLLAMA_URL ||
+  process.env.VITE_OLLAMA_BASE_URL ||
+  "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate"
+);
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
 
 export async function perguntarIA(texto) {
@@ -59,6 +71,13 @@ export async function perguntarIA(texto) {
         model: OLLAMA_MODEL,
         prompt: texto,
         stream: false,
+        think: false,
+        keep_alive: "2m",
+        options: {
+          num_ctx: Number(process.env.OLLAMA_NUM_CTX || 2048),
+          num_predict: Number(process.env.OLLAMA_NUM_PREDICT || 180),
+          temperature: Number(process.env.OLLAMA_TEMPERATURE || 0.3),
+        },
       }),
     });
     const raw = await resposta.text();
