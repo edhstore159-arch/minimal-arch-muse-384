@@ -21,6 +21,10 @@ services:
         value: https://unabashed-vertical-crispness.ngrok-free.dev/api/generate
       - key: OLLAMA_MODEL
         value: qwen3:0.6b
+      - key: OLLAMA_NUM_CTX
+        value: "2048"
+      - key: OLLAMA_NUM_PREDICT
+        value: "180"
       - key: SUPABASE_URL
         value: https://kzlxysxvvlupjtrmxqmb.supabase.co
       - key: SUPABASE_ANON_KEY
