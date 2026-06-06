@@ -42,18 +42,40 @@ async function transcribeAudioBuffer(buffer, mimetype = "audio/ogg") {
 }
 
 // ---- Ponte para Ollama (via ngrok) usada pelo bot do Baileys ----
-const OLLAMA_URL =
+const OLLAMA_RAW_URL =
   process.env.OLLAMA_URL ||
   "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
+const normalizeOllamaBaseUrl = (value) => {
+  const trimmed = String(value || "").trim().replace(/\/+$/g, "");
+  const withoutEndpoint = trimmed
+    .replace(/\/api\/(?:generate|chat|tags|show)\/?$/i, "")
+    .replace(/\/api\/?$/i, "");
+  return withoutEndpoint || "http://127.0.0.1:11434";
+};
+const OLLAMA_BASE_URL = normalizeOllamaBaseUrl(OLLAMA_RAW_URL);
+const OLLAMA_URL = `${OLLAMA_BASE_URL}/api/generate`;
+const OLLAMA_TAGS_URL = `${OLLAMA_BASE_URL}/api/tags`;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
 const OLLAMA_REQUEST_RETRIES = Number(process.env.OLLAMA_REQUEST_RETRIES || 2);
 const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "10m";
 const OLLAMA_HEALTH_INTERVAL_MS = Number(process.env.OLLAMA_HEALTH_INTERVAL_MS || 240000);
 const OLLAMA_HEALTH_TIMEOUT_MS = Number(process.env.OLLAMA_HEALTH_TIMEOUT_MS || 8000);
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const getOllamaBaseUrl = () => OLLAMA_URL.replace(/\/api\/(?:generate|chat)\/?$/i, "");
+const getOllamaBaseUrl = () => OLLAMA_BASE_URL;
+const formatOllamaHttpError = (status, raw, context = "Ollama") => {
+  const body = String(raw || "").replace(/\s+/g, " ").trim();
+  if (status === 404 && /ngrok|<!doctype html|<html/i.test(body)) {
+    return `${context} desconectado: o túnel respondeu 404/HTML. Atualize OLLAMA_URL no Render com o ngrok ativo apontando para http://localhost:11434.`;
+  }
+  if (status === 404) {
+    return `${context} respondeu 404. Verifique se OLLAMA_URL aponta para a base do Ollama ou para /api/generate e se o modelo ${OLLAMA_MODEL} existe.`;
+  }
+  return `${context} ${status}: ${body.slice(0, 500)}`;
+};
 let ollamaStatus = {
   ok: false,
+  configured_url: OLLAMA_RAW_URL,
+  base_url: OLLAMA_BASE_URL,
   endpoint: OLLAMA_URL,
   model: OLLAMA_MODEL,
   last_checked_at: null,
