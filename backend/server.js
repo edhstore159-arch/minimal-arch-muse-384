@@ -773,6 +773,7 @@ startSock().catch((e) => {
   lastError = e?.message || String(e);
   console.error("startSock error:", e);
 });
+startOllamaKeepAlive();
 setInterval(() => {
   processAutoReplyQueue().catch((e) => recordAutoReply({ step: "queue_process_error", error: e?.message || String(e) }));
 }, AUTO_REPLY_RETRY_EVERY_MS);
@@ -896,7 +897,9 @@ app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
 
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
+  const ollama = await refreshOllamaStatus().catch(() => ollamaStatus);
   const info = {
+    ollama,
     has_openai_key: Boolean(OPENAI_API_KEY),
     has_emergent_key: Boolean(EMERGENT_API_KEY),
     has_lovable_key: Boolean(LOVABLE_API_KEY),
@@ -918,6 +921,7 @@ app.get("/api/whatsapp/ai-test", async (_req, res) => {
 app.get("/api/whatsapp/ai-debug", (_req, res) => {
   const status = baileysRuntimeStatus();
   res.json({
+    ollama: ollamaStatus,
     bot_enabled: whatsappConfig.bot_enabled,
     connection_state: status.state,
     connected: status.connected,
@@ -933,6 +937,11 @@ app.get("/api/whatsapp/ai-debug", (_req, res) => {
     queue_size: pendingAutoReplies.length,
     queued: pendingAutoReplies.map((m) => ({ jid: m.jid, attempts: m.attempts, created_at: m.created_at, source: m.source, reason: m.reason, last_error: m.last_error })),
   });
+});
+
+app.get("/api/whatsapp/ollama-status", async (_req, res) => {
+  const status = await refreshOllamaStatus().catch(() => ollamaStatus);
+  res.json({ ok: true, ...status, keep_alive: OLLAMA_KEEP_ALIVE, health_interval_ms: OLLAMA_HEALTH_INTERVAL_MS });
 });
 
 
