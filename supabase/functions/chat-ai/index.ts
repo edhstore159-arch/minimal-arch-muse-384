@@ -262,7 +262,6 @@ Quando o usuário disser "hoje", "amanhã" ou "próxima sexta", use a referênci
         handoff,
         speaker: handoff ? "Dra. Kênia Garcia" : "Secretária",
         analysis,
-        server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
