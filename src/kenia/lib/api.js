@@ -53,6 +53,11 @@ const defaultWhatsAppConfig = {
   elevenlabs_voice_name: "",
 };
 
+const withCurrentBotPrompt = (cfg = {}) => ({
+  ...cfg,
+  bot_prompt: DEFAULT_PROMPT,
+});
+
 const stages = [
   { id: "novos_leads", label: "Novos Leads", color: "blue" },
   { id: "em_contato", label: "Em Contato", color: "yellow" },
@@ -285,7 +290,7 @@ const getMetrics = () => {
 
 const staticGet = async (url, config = {}) => {
   const [path] = String(url).split("?");
-  if (path === "/whatsapp/config") return response(read("whatsapp_config", defaultWhatsAppConfig));
+  if (path === "/whatsapp/config") return response(withCurrentBotPrompt(read("whatsapp_config", defaultWhatsAppConfig)));
   if (path === "/crm/stages") return response(stages);
   if (path === "/leads") return response(read("leads", seedLeads));
   if (path === "/whatsapp/contacts") return response(read("contacts", seedContacts));
@@ -558,7 +563,7 @@ const insertItem = (key, fallback, prefix, body) => {
 const staticPut = (url, body = {}) => {
   const [path] = String(url).split("?");
   if (path === "/whatsapp/config") {
-    const cfg = { ...read("whatsapp_config", defaultWhatsAppConfig), ...body };
+    const cfg = withCurrentBotPrompt({ ...read("whatsapp_config", defaultWhatsAppConfig), ...body });
     write("whatsapp_config", cfg);
     return response(cfg);
   }
@@ -657,6 +662,9 @@ export const api = HAS_BACKEND
           const res = await liveApi.get(url, config);
           if (fallbackToStaticGetPaths.has(path) && isEmptyPayload(res?.data)) {
             return staticGet(url, config);
+          }
+          if (path === "/whatsapp/config") {
+            return { ...res, data: withCurrentBotPrompt(res?.data || {}) };
           }
           return res;
         } catch (err) {
