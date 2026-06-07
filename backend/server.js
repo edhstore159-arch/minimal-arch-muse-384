@@ -1548,8 +1548,18 @@ app.post("/api/chat/message", async (req, res) => {
   }
   const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
   const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, message)).trim();
+  // análise em background a partir da sessão web
+  const sessionId = req.body?.session_id || `web-${Date.now()}`;
+  const webJid = `web:${sessionId}`;
+  const visitorName = req.body?.visitor_name || "Cliente Web";
+  const webHistory = [
+    ...normalizedHistory,
+    { role: "user", content: message },
+    { role: "assistant", content: reply },
+  ];
+  analyzeLeadCase({ jid: webJid, contactName: visitorName, history: webHistory, lastUserText: message }).catch(() => {});
   res.json({
-    session_id: req.body?.session_id || `session-${Date.now()}`,
+    session_id: sessionId,
     response: reply,
     audio_base64: null,
     handoff,
