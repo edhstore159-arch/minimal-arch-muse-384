@@ -729,6 +729,14 @@ const isEmptyPayload = (data) => {
   return false;
 };
 
+const backendSafeGetPaths = new Set([
+  "/whatsapp/diagnostics",
+  "/whatsapp/baileys/status",
+  "/whatsapp/baileys/qr",
+  "/whatsapp/qr",
+  "/whatsapp/qr/image",
+]);
+
 export const api = HAS_BACKEND
   ? {
       get: async (url, config) => {
@@ -744,6 +752,7 @@ export const api = HAS_BACKEND
           }
           return res;
         } catch (err) {
+          if (backendSafeGetPaths.has(path)) return staticGet(url, config);
           if (fallbackToStaticGetPaths.has(path)) return staticGet(url, config);
           throw err;
         }
