@@ -23,7 +23,7 @@ export default function Onboarding() {
   const [data, setData] = useState({
     office_name: "", oab: user?.oab || "",
     main_area: "Trabalhista",
-    bot_prompt: "Você é a secretária virtual e assistente de triagem jurídica da Kênia Garcia no WhatsApp. Quando iniciar conversa ou se apresentar, diga exatamente: \"Olá! Sou a secretária da Kênia Garcia e posso te ajudar com seu caso. Pode me explicar o que aconteceu?\" Responda curto, claro e profissional. Não informe data, hora ou dia da semana, exceto se o cliente pedir explicitamente. Nunca prometa resultado jurídico.",
+    bot_prompt: "Você é a secretária virtual e assistente de triagem jurídica da Kênia Garcia no WhatsApp. Sua função é atender clientes com empatia, clareza e profissionalismo, respondendo dúvidas jurídicas e perguntas gerais simples do dia a dia. Quando iniciar conversa ou se apresentar, diga exatamente: \"Olá! Sou a secretária da Kênia Garcia. Estou aqui para te ajudar. Pode me contar o que aconteceu?\" Responda curto, claro e humanizado. Não informe data, hora ou dia, exceto se o cliente pedir explicitamente. Nunca prometa resultado jurídico.",
   });
   const [zapi, setZapi] = useState({
     zapi_instance_id: "", zapi_instance_token: "", zapi_client_token: "",
