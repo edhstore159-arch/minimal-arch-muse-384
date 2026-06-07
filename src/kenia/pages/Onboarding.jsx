@@ -48,6 +48,16 @@ export default function Onboarding() {
   const [connected, setConnected] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const applyQrResponse = (qrData = {}) => {
+    const qr = qrData?.qr || qrData?.data?.value || qrData?.data?.qrcode || qrData?.data?.qr;
+    if (qr) setQrImg(qr);
+    if (qrData?.connected) {
+      setConnected(true);
+      setQrImg(null);
+    }
+    return Boolean(qr || qrData?.connected);
+  };
+
   useEffect(() => {
     api.get("/whatsapp/config").then(r => {
       const c = r.data || {};
@@ -59,6 +69,25 @@ export default function Onboarding() {
       if (c.bot_prompt) setData(d => ({ ...d, bot_prompt: c.bot_prompt }));
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (step !== 3 || connected) return;
+    const refreshQr = async () => {
+      try {
+        const { data: status } = await api.get("/whatsapp/baileys/status");
+        if (status?.connected) {
+          setConnected(true);
+          setQrImg(null);
+          return;
+        }
+        const { data: qrData } = await api.get("/whatsapp/qr");
+        applyQrResponse(qrData);
+      } catch {}
+    };
+    refreshQr();
+    const timer = window.setInterval(refreshQr, 10000);
+    return () => window.clearInterval(timer);
+  }, [step, connected]);
 
   const saveStep1 = async () => {
     if (!data.office_name) { toast.error("Informe o nome do escritório"); return; }
@@ -73,14 +102,12 @@ export default function Onboarding() {
     setSaving(true);
     try {
       await api.put("/whatsapp/config", {
-        provider: "zapi", ...zapi,
+        provider: "baileys", ...zapi,
         bot_enabled: true, bot_prompt: data.bot_prompt,
       });
       toast.success("Configuração WhatsApp salva");
-      // buscar QR
       const { data: qrData } = await api.get("/whatsapp/qr");
-      if (qrData?.data?.value) setQrImg(qrData.data.value);
-      else if (qrData?.data?.qrcode) setQrImg(qrData.data.qrcode);
+      if (!applyQrResponse(qrData)) toast.info("Aguardando o QR Code do WhatsApp...");
     } catch {
       toast.error("Erro ao salvar WhatsApp");
     } finally {
@@ -94,9 +121,8 @@ export default function Onboarding() {
       const { data: r } = await api.post("/whatsapp/test-connection");
       if (r.connected) {
         setConnected(true);
+        setQrImg(null);
         toast.success("WhatsApp conectado!");
-        // auto-setup webhook
-        await api.post("/whatsapp/setup-webhook", {});
       } else {
         toast.warning("Ainda não conectado. Escaneie o QR e tente de novo.");
       }
@@ -206,14 +232,14 @@ export default function Onboarding() {
                   <MessageSquare className="w-3 h-3 mr-1" /> WhatsApp
                 </Badge>
                 <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight break-words">Conecte seu WhatsApp</h1>
-                <p className="text-nude-500 mt-2">Use Z-API (recomendado). QR Code em 30 segundos.</p>
+                <p className="text-nude-500 mt-2">Conexão direta por QR Code. A sessão fica salva e reconecta automaticamente.</p>
               </div>
-              <div><Label>Instance ID</Label><Input value={zapi.zapi_instance_id} onChange={e => setZapi({ ...zapi, zapi_instance_id: e.target.value })} className="font-mono text-xs h-11" /></div>
-              <div><Label>Instance Token</Label><Input value={zapi.zapi_instance_token} onChange={e => setZapi({ ...zapi, zapi_instance_token: e.target.value })} className="font-mono text-xs h-11" /></div>
-              <div><Label>Client-Token (segurança)</Label><Input value={zapi.zapi_client_token} onChange={e => setZapi({ ...zapi, zapi_client_token: e.target.value })} className="font-mono text-xs h-11" /></div>
+              <div className="bg-nude-50 border border-nude-200 rounded-md p-4 text-sm text-nude-600">
+                Abra o WhatsApp no celular, vá em <strong>Aparelhos conectados</strong> e escaneie o QR abaixo. Se o código expirar, ele será renovado sem apagar a sessão.
+              </div>
               {!qrImg && (
                 <Button onClick={saveWhatsApp} disabled={saving} className="w-full bg-gold-600 hover:bg-gold-700 h-11" data-testid="ob-save-wa">
-                  {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</> : <><QrCode className="w-4 h-4 mr-2" />Gerar QR Code</>}
+                  {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Buscando...</> : <><QrCode className="w-4 h-4 mr-2" />Mostrar QR Code</>}
                 </Button>
               )}
               {qrImg && (

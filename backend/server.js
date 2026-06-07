@@ -151,6 +151,8 @@ function startOllamaKeepAlive() {
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
 const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
+const QR_RENEW_AFTER_MS = Number(process.env.QR_RENEW_AFTER_MS || 70000);
+const QR_ENSURE_COOLDOWN_MS = Number(process.env.QR_ENSURE_COOLDOWN_MS || 6000);
 const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || 60000);
 const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS || 20000);
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 2000);
@@ -177,6 +179,8 @@ let lastOpenAt = null;
 let lastDisconnectCode = null;
 let manualLogoutRequested = false;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
+let qrEnsurePromise = null;
+let lastQrEnsureAt = 0;
 
 // ---- Armazenamento em memória de contatos e mensagens ----
 const contactsStore = new Map(); // jid -> contato
@@ -782,20 +786,22 @@ async function startSock() {
       const loggedOut = code === DisconnectReason.loggedOut;
       const replaced = code === DisconnectReason.connectionReplaced;
       const transientLoggedOut = loggedOut && !manualLogoutRequested && lastOpenAt && Date.now() - lastOpenAt < 30000;
-      const shouldReconnect = !manualLogoutRequested && (!loggedOut || transientLoggedOut);
+      const needsFreshPairing = loggedOut && !manualLogoutRequested && !transientLoggedOut;
+      const shouldReconnect = !manualLogoutRequested && (!loggedOut || transientLoggedOut || needsFreshPairing);
       reconnectAttempts = shouldReconnect ? reconnectAttempts + 1 : 0;
       if (shouldReconnect && !reconnectingSince) reconnectingSince = Date.now();
       const backoff = Math.min(RECONNECT_DELAY_MS * Math.max(1, reconnectAttempts), RECONNECT_MAX_DELAY_MS);
-      const delay = code === DisconnectReason.restartRequired ? 250 : replaced ? 5000 : backoff;
+      const delay = needsFreshPairing ? 1500 : code === DisconnectReason.restartRequired ? 250 : replaced ? 5000 : backoff;
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
       currentQR = null;
       currentQRAt = null;
-      if (!shouldReconnect && loggedOut) {
+      if (needsFreshPairing) {
         try {
           const fs = await import("node:fs/promises");
           await fs.rm(AUTH_DIR, { recursive: true, force: true });
+          await fs.mkdir(AUTH_DIR, { recursive: true });
         } catch {}
       }
       if (shouldReconnect && !reconnectTimer) {
@@ -915,6 +921,25 @@ async function restartSock({ resetAuth = false } = {}) {
   };
 }
 
+async function ensureQrReady({ forceRenew = false } = {}) {
+  const now = Date.now();
+  const status = baileysRuntimeStatus();
+  const qrIsFresh = currentQR && currentQRAt && now - currentQRAt < QR_RENEW_AFTER_MS;
+  if (status.connected || (!forceRenew && qrIsFresh)) return status;
+  if (starting && now - lastQrEnsureAt < QR_ENSURE_COOLDOWN_MS) return status;
+  if (!forceRenew && currentQR && currentQRAt && now - currentQRAt < QR_TIMEOUT_MS) return status;
+  if (!qrEnsurePromise) {
+    lastQrEnsureAt = now;
+    qrEnsurePromise = restartSock({ resetAuth: false })
+      .catch((e) => {
+        lastError = e?.message || String(e);
+        return baileysRuntimeStatus();
+      })
+      .finally(() => { qrEnsurePromise = null; });
+  }
+  return qrEnsurePromise;
+}
+
 startSock().catch((e) => {
   lastError = e?.message || String(e);
   console.error("startSock error:", e);
@@ -973,6 +998,7 @@ const baileysRuntimeStatus = () => {
     qr_age_ms: qrAgeMs,
     qr_expires_in_s: currentQRAt ? Math.max(0, Math.ceil((QR_TIMEOUT_MS - qrAgeMs) / 1000)) : null,
     qr_timeout_s: Math.ceil(QR_TIMEOUT_MS / 1000),
+    qr_renew_after_s: Math.ceil(QR_RENEW_AFTER_MS / 1000),
   };
 };
 
@@ -1184,7 +1210,11 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
 
 // ---- Status ----
 app.get("/api/whatsapp/baileys/status", (_req, res) => {
-  res.json(baileysRuntimeStatus());
+  const status = baileysRuntimeStatus();
+  if (!status.connected && !status.qr_available) {
+    ensureQrReady().catch(() => {});
+  }
+  res.json(status);
 });
 
 app.get("/api/whatsapp/test-connection", (_req, res) => {
@@ -1209,24 +1239,35 @@ app.post("/api/whatsapp/test-connection", (_req, res) => {
 
 // ---- QR Code ----
 app.get("/api/whatsapp/baileys/qr", async (_req, res) => {
+  let status = baileysRuntimeStatus();
+  if (!status.connected && (!currentQR || (currentQRAt && Date.now() - currentQRAt > QR_RENEW_AFTER_MS))) {
+    status = await ensureQrReady({ forceRenew: true });
+  }
   const qr = currentQR ? await QRCode.toDataURL(currentQR, { width: 320, margin: 2 }) : null;
-  const status = baileysRuntimeStatus();
   res.json({ qr, raw: currentQR, ...status });
 });
 
 app.get("/api/whatsapp/qr", async (_req, res) => {
+  let status = baileysRuntimeStatus();
+  if (!status.connected && (!currentQR || (currentQRAt && Date.now() - currentQRAt > QR_RENEW_AFTER_MS))) {
+    status = await ensureQrReady({ forceRenew: true });
+  }
   if (!currentQR) {
     return res.json({
-      connected: connectionState === "open",
+      connected: status.connected,
       qr: null,
+      state: status.state,
     });
   }
   const dataUrl = await QRCode.toDataURL(currentQR);
-  const status = baileysRuntimeStatus();
   res.json({ connected: false, qr: dataUrl, qr_expires_in_s: status.qr_expires_in_s, qr_timeout_s: status.qr_timeout_s });
 });
 
 app.get("/api/whatsapp/qr/image", async (_req, res) => {
+  const status = baileysRuntimeStatus();
+  if (!status.connected && (!currentQR || (currentQRAt && Date.now() - currentQRAt > QR_RENEW_AFTER_MS))) {
+    await ensureQrReady({ forceRenew: true });
+  }
   if (!currentQR) return res.status(404).send("No QR available");
   const buf = await QRCode.toBuffer(currentQR, { width: 320 });
   res.setHeader("Content-Type", "image/png");

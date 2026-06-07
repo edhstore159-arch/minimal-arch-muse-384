@@ -757,16 +757,16 @@ export default function WhatsAppSettings() {
                           className="ml-auto h-7 text-xs"
                           onClick={async () => {
                             if (!HAS_BACKEND || baileysStatus?.state === "static") {
-                              toast.warning("Resetar sessão só funciona depois que VITE_BACKEND_URL apontar para o backend publicado.", { duration: 9000 });
+                              toast.warning("Renovar QR só funciona depois que VITE_BACKEND_URL apontar para o backend publicado.", { duration: 9000 });
                               return;
                             }
                             try {
-                              const { data } = await api.post("/whatsapp/baileys/restart");
+                              const { data } = await api.post("/whatsapp/baileys/reconnect");
                               if (data?.ok) {
-                                toast.success("Sessão resetada! Aguarde 5s pelo novo QR...");
-                                setTimeout(() => { pollBaileys(); }, 6000);
+                                toast.success("QR renovado sem apagar a sessão. Aguarde alguns segundos...");
+                                setTimeout(() => { pollBaileys(); }, 2500);
                               } else {
-                                toast.error("Erro ao resetar: " + (data?.error || "desconhecido"));
+                                toast.error("Erro ao renovar QR: " + (data?.error || "desconhecido"));
                               }
                             } catch (e) {
                               toast.error("Erro: " + (e?.response?.data?.detail || e.message));
@@ -774,7 +774,7 @@ export default function WhatsAppSettings() {
                           }}
                           data-testid="baileys-restart-btn"
                         >
-                          <RefreshCw className="w-3 h-3 mr-1" /> Resetar sessão
+                          <RefreshCw className="w-3 h-3 mr-1" /> Renovar QR
                         </Button>
                       </div>
                       <ol className="space-y-1.5 list-decimal pl-5 text-nude-600">
@@ -786,7 +786,7 @@ export default function WhatsAppSettings() {
                       </ol>
                       <div className="text-[11px] text-gold-700 bg-gold-50 border border-gold-200 p-2 rounded">
                         💡 O QR agora fica disponível por mais tempo e a tela atualiza automaticamente.
-                        Use "Reconectar serviço" ou "Resetar sessão" somente se o QR parar de renovar.
+                        Use "Reconectar serviço" ou "Renovar QR" somente se o QR parar de renovar.
                       </div>
                       <div className="text-[11px] text-nude-500 bg-nude-50 border border-nude-200 p-2 rounded">
                         ⚠️ Esta conexão é não-oficial (uso pessoal). Para alto volume comercial,
