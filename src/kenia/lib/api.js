@@ -458,9 +458,13 @@ const staticPost = (url, body = {}) => {
           },
         });
         if (!error && data?.response) {
+          const cleanedResponse = cleanInternalChatMarkers(data.response);
+          const responseText = isNearDuplicateReply(cleanedResponse, body.history || [])
+            ? buildNonRepeatingFallback(body.message || body.text || "")
+            : cleanedResponse;
           return response({
             session_id: data.session_id || sessionId,
-            response: cleanInternalChatMarkers(data.response),
+            response: responseText,
             audio_base64: data.audio_base64 || null,
             appointment: data.appointment || null,
             handoff: Boolean(data.handoff),
@@ -490,9 +494,12 @@ const staticPost = (url, body = {}) => {
         if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
         const data = await res.json();
         const text = (data?.response || "").trim() || "Sem resposta da IA.";
+        const responseText = isNearDuplicateReply(text, body.history || [])
+          ? buildNonRepeatingFallback(body.message || body.text || "")
+          : cleanInternalChatMarkers(text);
         return response({
             session_id: sessionId,
-            response: cleanInternalChatMarkers(text),
+            response: responseText,
             audio_base64: null,
             appointment: null,
             handoff: false,
