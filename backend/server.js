@@ -151,6 +151,8 @@ function startOllamaKeepAlive() {
 const PORT = Number(process.env.PORT) || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
 const QR_TIMEOUT_MS = Number(process.env.QR_TIMEOUT_MS || 300000);
+const QR_RENEW_AFTER_MS = Number(process.env.QR_RENEW_AFTER_MS || 70000);
+const QR_ENSURE_COOLDOWN_MS = Number(process.env.QR_ENSURE_COOLDOWN_MS || 6000);
 const CONNECT_TIMEOUT_MS = Number(process.env.CONNECT_TIMEOUT_MS || 60000);
 const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS || 20000);
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 2000);
@@ -177,6 +179,8 @@ let lastOpenAt = null;
 let lastDisconnectCode = null;
 let manualLogoutRequested = false;
 let whatsappConfig = { provider: "baileys", bot_enabled: true };
+let qrEnsurePromise = null;
+let lastQrEnsureAt = 0;
 
 // ---- Armazenamento em memória de contatos e mensagens ----
 const contactsStore = new Map(); // jid -> contato
