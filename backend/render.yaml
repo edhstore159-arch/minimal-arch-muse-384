@@ -28,3 +28,7 @@ services:
         value: qwen3:8b
       - key: AI_REQUEST_TIMEOUT_MS
         value: "45000"
+      - key: OLLAMA_GENERATE_TIMEOUT_MS
+        value: "15000"
+      - key: OLLAMA_REQUEST_RETRIES
+        value: "0"
