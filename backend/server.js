@@ -613,7 +613,7 @@ async function autoReply(jid, userText, contactName) {
   if (usedFallback) recordAutoReply({ step: "ai_fail_local_fallback", jid, result, reply: reply.slice(0, 200) });
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
-  aiHistory.set(jid, history.slice(-20));
+  aiHistory.set(jid, history);
   try {
     const sent = await sendBotText(jid, reply, { source: usedFallback ? "local_fallback" : result.provider });
     recordAutoReply({ step: "sent", jid, attempt: sent.attempt, provider: usedFallback ? "local_fallback" : result.provider, model: result.model || null, reply: reply.slice(0, 200) });
