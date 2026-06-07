@@ -203,7 +203,7 @@ export default function ChatIA() {
     {
       role: "assistant",
       content:
-        "Olá! Sou a secretária virtual da Kênia Garcia. Estou aqui para ajudar você. Pode me contar o que aconteceu ou qual é sua dúvida?",
+        "Olá! Sou a secretária da Kênia Garcia. Como posso ajudar?",
       audio_base64: null,
     },
   ]);
@@ -712,7 +712,7 @@ export default function ChatIA() {
         "/chat/message",
         {
           message: msg,
-          history: messages.slice(-20).map((m) => ({ role: m.role, content: m.content })),
+          history: messages.map((m) => ({ role: m.role, content: m.content })),
           session_id: sessionId,
           visitor_name: name || null,
           visitor_phone: phone || null,
@@ -780,7 +780,7 @@ export default function ChatIA() {
       {
         role: "assistant",
         content:
-          "Olá! Sou a secretária virtual da Kênia Garcia. Estou aqui para ajudar você. Pode me contar o que aconteceu ou qual é sua dúvida?",
+          "Olá! Sou a secretária da Kênia Garcia. Como posso ajudar?",
         audio_base64: null,
       },
     ]);
