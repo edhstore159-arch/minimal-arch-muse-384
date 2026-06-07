@@ -318,13 +318,28 @@ Quando o usuário disser "hoje", "amanhã" ou "próxima sexta", use a referênci
         response: reply,
       });
       if (appointment) {
+        const room = `kenia-${(appointment.client_name || "consulta")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "-")
+          .slice(0, 30)}-${Date.now().toString(36)}`;
+        const meetUrl = `https://meet.jit.si/${room}`;
+        const enrichedPayload = {
+          ...(appointment.raw_payload || {}),
+          meeting_link: meetUrl,
+          meet_url: meetUrl,
+          location: "Google Meet",
+          duration_min: 60,
+        };
         await supabase.from("appointments").insert({
           user_id: userId,
           session_id: sessionId,
           ...appointment,
+          raw_payload: enrichedPayload,
           source: "chat_ai",
           status: "scheduled",
         });
+        (appointment as any).meeting_link = meetUrl;
+        (appointment as any).meet_url = meetUrl;
       }
     } catch (err) {
       console.error("Erro ao salvar conversa/agendamento:", err);
