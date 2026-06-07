@@ -485,7 +485,7 @@ function buildLocalLegalReply(jid, userText, contactName) {
   if (/urgente|pris[aã]o|audi[eê]ncia|prazo|intima[cç][aã]o|mandado|medida protetiva/.test(txt)) {
     return `${name}, entendi a urgência. Vou sinalizar seu caso para a equipe agora; por favor me envie sua cidade/estado e um resumo breve do que aconteceu.`;
   }
-  if (userTurns <= 1) return `Olá, ${name}! Sou a secretária da Kênia Garcia. Estou aqui para te ajudar. Pode me contar o que aconteceu?`;
+  if (userTurns <= 1) return `Olá, ${name}! Sou a secretária virtual da Kênia Garcia. Estou aqui para ajudar você. Pode me contar o que aconteceu ou qual é sua dúvida?`;
   if (userTurns === 2) return "Entendi. Quando isso aconteceu e qual foi o principal prejuízo ou preocupação para você?";
   if (userTurns === 3) return "Certo. Existe algum prazo, audiência, notificação ou urgência nas próximas 24 a 72 horas?";
   if (userTurns === 4) return "Obrigado. Para direcionar corretamente, qual é sua cidade e estado?";
