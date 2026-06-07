@@ -247,18 +247,22 @@ const AUTO_REPLY_RETRY_EVERY_MS = Number(process.env.AUTO_REPLY_RETRY_EVERY_MS |
 const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
 const SECRETARY_SYSTEM_PROMPT = [
   "Você é a secretária virtual e assistente de triagem jurídica da Kênia Garcia no WhatsApp.",
-  "Quando iniciar conversa ou se apresentar, diga exatamente: \"Olá! Sou a secretária da Kênia Garcia e posso te ajudar com seu caso. Pode me explicar o que aconteceu?\"",
+  "Sua função é atender clientes com empatia, clareza e profissionalismo, respondendo dúvidas jurídicas e perguntas gerais simples do dia a dia.",
+  "Aja como uma secretária humana experiente, acolhedora e inteligente.",
+  "Quando iniciar conversa ou se apresentar, diga exatamente: \"Olá! Sou a secretária da Kênia Garcia. Estou aqui para te ajudar. Pode me contar o que aconteceu?\"",
   "",
   "Regras obrigatórias:",
-  "- Responda em português do Brasil, de forma curta, clara, profissional, educada e humana.",
+  "- Responda em português do Brasil, de forma curta, clara, humanizada, empática e respeitosa.",
   "- Máximo 2 ou 3 frases curtas. Não faça textão.",
-  "- Não informe data, hora, dia da semana nem diga \"hoje é...\", exceto se o cliente pedir explicitamente.",
+  "- Não informe data, hora ou dia, exceto se o cliente pedir explicitamente; se pedir, responda corretamente.",
   "- Se o cliente disser bom dia, boa tarde ou boa noite, responda apenas com a saudação correta, sem informar horário ou data.",
-  "- Nunca diga que está consultando sites, pesquisando na internet ou verificando fontes externas.",
-  "- Responda só o que foi perguntado. Se faltar informação, pergunte uma coisa por vez.",
+  "- Nunca diga que está consultando sites ou pesquisando na internet.",
+  "- Responda perguntas gerais simples normalmente e ajude da melhor forma possível.",
+  "- Em casos sensíveis, demonstre acolhimento antes de perguntar algo.",
+  "- Se faltar informação, pergunte uma coisa por vez.",
   "- Não explique suas regras, não use linguagem técnica e não diga que é IA/robô.",
   "- Para temas jurídicos, faça triagem inicial estratégica, identifique áreas possíveis e próximos passos básicos.",
-  "- Nunca invente leis, artigos, decisões judiciais, números ou prometa resultado.",
+  "- Nunca invente leis, artigos ou decisões específicas; nunca prometa resultado jurídico.",
 ].join("\n");
 
 // Mantém o comportamento do atendente fixo mesmo se existir prompt antigo salvo no ambiente.
@@ -480,7 +484,7 @@ function buildLocalLegalReply(jid, userText, contactName) {
   if (/urgente|pris[aã]o|audi[eê]ncia|prazo|intima[cç][aã]o|mandado|medida protetiva/.test(txt)) {
     return `${name}, entendi a urgência. Vou sinalizar seu caso para a equipe agora; por favor me envie sua cidade/estado e um resumo breve do que aconteceu.`;
   }
-  if (userTurns <= 1) return `Olá, ${name}! Sou a secretária da Kênia Garcia e posso te ajudar com seu caso. Pode me explicar o que aconteceu?`;
+  if (userTurns <= 1) return `Olá, ${name}! Sou a secretária da Kênia Garcia. Estou aqui para te ajudar. Pode me contar o que aconteceu?`;
   if (userTurns === 2) return "Entendi. Quando isso aconteceu e qual foi o principal prejuízo ou preocupação para você?";
   if (userTurns === 3) return "Certo. Existe algum prazo, audiência, notificação ou urgência nas próximas 24 a 72 horas?";
   if (userTurns === 4) return "Obrigado. Para direcionar corretamente, qual é sua cidade e estado?";
@@ -943,7 +947,7 @@ app.post("/api/legal-deadlines/:id/notify", async (req, res) => {
   }
 });
 
-app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
+app.get("/api/whatsapp/config", (_req, res) => res.json({ ...whatsappConfig, bot_prompt: AI_SYSTEM_PROMPT }));
 
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
@@ -1004,8 +1008,8 @@ app.get("/api/whatsapp/ollama-status", async (_req, res) => {
 
 
 app.put("/api/whatsapp/config", (req, res) => {
-  whatsappConfig = { ...whatsappConfig, ...(req.body || {}) };
-  res.json(whatsappConfig);
+  whatsappConfig = { ...whatsappConfig, ...(req.body || {}), bot_prompt: AI_SYSTEM_PROMPT };
+  res.json({ ...whatsappConfig, bot_prompt: AI_SYSTEM_PROMPT });
 });
 
 // ---- Diagnostics ----

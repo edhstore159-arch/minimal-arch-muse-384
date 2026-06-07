@@ -16,12 +16,14 @@ const inDays = (days) => {
 
 const DEFAULT_PROMPT = [
   "Você é a secretária virtual e assistente de triagem jurídica da Kênia Garcia no WhatsApp.",
-  "Quando iniciar conversa ou se apresentar, diga exatamente: \"Olá! Sou a secretária da Kênia Garcia e posso te ajudar com seu caso. Pode me explicar o que aconteceu?\"",
-  "Responda sempre curto, claro, profissional, educado e humano, em no máximo 2 ou 3 frases curtas.",
-  "Não informe data, hora ou dia da semana, exceto se o cliente pedir explicitamente.",
+  "Sua função é atender clientes com empatia, clareza e profissionalismo, respondendo dúvidas jurídicas e perguntas gerais simples do dia a dia.",
+  "Quando iniciar conversa ou se apresentar, diga exatamente: \"Olá! Sou a secretária da Kênia Garcia. Estou aqui para te ajudar. Pode me contar o que aconteceu?\"",
+  "Responda sempre curto, claro, humanizado, empático e respeitoso, em no máximo 2 ou 3 frases curtas.",
+  "Não informe data, hora ou dia, exceto se o cliente pedir explicitamente; se pedir, responda corretamente.",
   "Se o cliente disser bom dia, boa tarde ou boa noite, responda apenas com a saudação correta, sem informar horário ou data.",
+  "Responda perguntas gerais simples normalmente e ajude da melhor forma possível.",
   "Faça triagem jurídica inicial: entenda o caso, identifique área possível e sugira próximos passos básicos.",
-  "Nunca diga que pesquisa na internet, nunca invente leis/decisões e nunca prometa resultado.",
+  "Nunca diga que pesquisa na internet, nunca invente leis/artigos/decisões específicas e nunca prometa resultado jurídico.",
   "Não diga que é IA/robô e não explique regras internas.",
 ].join("\n");
 
@@ -50,6 +52,11 @@ const defaultWhatsAppConfig = {
   elevenlabs_voice_id: "",
   elevenlabs_voice_name: "",
 };
+
+const withCurrentBotPrompt = (cfg = {}) => ({
+  ...cfg,
+  bot_prompt: DEFAULT_PROMPT,
+});
 
 const stages = [
   { id: "novos_leads", label: "Novos Leads", color: "blue" },
@@ -283,7 +290,7 @@ const getMetrics = () => {
 
 const staticGet = async (url, config = {}) => {
   const [path] = String(url).split("?");
-  if (path === "/whatsapp/config") return response(read("whatsapp_config", defaultWhatsAppConfig));
+  if (path === "/whatsapp/config") return response(withCurrentBotPrompt(read("whatsapp_config", defaultWhatsAppConfig)));
   if (path === "/crm/stages") return response(stages);
   if (path === "/leads") return response(read("leads", seedLeads));
   if (path === "/whatsapp/contacts") return response(read("contacts", seedContacts));
@@ -370,7 +377,7 @@ const staticPost = (url, body = {}) => {
         "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
       const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || "llama3.2:latest";
       const fallbackReply =
-        "Tive uma instabilidade momentânea. Pode me explicar o que aconteceu em uma frase curta? Assim direciono seu atendimento.";
+        "Tive uma instabilidade momentânea. Estou aqui para te ajudar; pode me contar o que aconteceu em uma frase curta?";
       try {
         const { data, error } = await supabase.functions.invoke("chat-ai", {
           body: {
@@ -556,7 +563,7 @@ const insertItem = (key, fallback, prefix, body) => {
 const staticPut = (url, body = {}) => {
   const [path] = String(url).split("?");
   if (path === "/whatsapp/config") {
-    const cfg = { ...read("whatsapp_config", defaultWhatsAppConfig), ...body };
+    const cfg = withCurrentBotPrompt({ ...read("whatsapp_config", defaultWhatsAppConfig), ...body });
     write("whatsapp_config", cfg);
     return response(cfg);
   }
@@ -655,6 +662,9 @@ export const api = HAS_BACKEND
           const res = await liveApi.get(url, config);
           if (fallbackToStaticGetPaths.has(path) && isEmptyPayload(res?.data)) {
             return staticGet(url, config);
+          }
+          if (path === "/whatsapp/config") {
+            return { ...res, data: withCurrentBotPrompt(res?.data || {}) };
           }
           return res;
         } catch (err) {
