@@ -314,6 +314,58 @@ function cleanRepeatedText(text) {
   return uniqueLines.join("\n").trim();
 }
 
+function normalizeForSimilarity(text) {
+  return String(text || "")
+    .replace(/<AGENDAMENTO>[\s\S]*?<\/AGENDAMENTO>/g, "")
+    .replace(/<?\/?\s*HANDOFF[_\s-]*K[EÊ]NIA\s*\/?>/giu, "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function similarityScore(a, b) {
+  const left = new Set(normalizeForSimilarity(a).split(" ").filter((word) => word.length > 2));
+  const right = new Set(normalizeForSimilarity(b).split(" ").filter((word) => word.length > 2));
+  if (!left.size || !right.size) return 0;
+  let overlap = 0;
+  for (const word of left) if (right.has(word)) overlap += 1;
+  return overlap / Math.max(left.size, right.size);
+}
+
+function recentAssistantReplies(history) {
+  return (Array.isArray(history) ? history : [])
+    .filter((m) => m.role === "assistant" && String(m.content || "").trim())
+    .map((m) => cleanRepeatedText(m.content))
+    .slice(-4);
+}
+
+function isNearDuplicateReply(reply, history) {
+  const normalizedReply = normalizeForSimilarity(reply);
+  if (!normalizedReply) return false;
+  return recentAssistantReplies(history).some((previous) => {
+    const normalizedPrevious = normalizeForSimilarity(previous);
+    if (!normalizedPrevious) return false;
+    const score = similarityScore(normalizedReply, normalizedPrevious);
+    return normalizedReply === normalizedPrevious || score >= 0.86 || (normalizedReply.length < 240 && score >= 0.72);
+  });
+}
+
+function buildNonRepeatingFallback(userText, contactName = "cliente") {
+  const firstName = String(contactName || "cliente").split(" ")[0] || "cliente";
+  const txt = String(userText || "").toLowerCase();
+  if (userAskedTemporalInfo(txt)) return `Hoje é ${saoPauloTemporalContext().replace(/^.*referência\s+/i, "").replace(/,\s*America\/Sao_Paulo\..*$/i, ".")}`;
+  if (/\b(agendar|marcar|consulta|reuni[aã]o|hor[aá]rio|atendimento)\b/i.test(txt)) {
+    return `${firstName}, claro. Para registrar a consulta, me envie nome completo, telefone, e-mail, cidade/estado, área do caso, data e horário desejados.`;
+  }
+  if (/\b(div[oó]rcio|guarda|pens[aã]o|fam[ií]lia|invent[aá]rio|trabalhista|demiss[aã]o|rescis[aã]o|inss|aposentadoria|consumidor|cobran[cç]a|audi[eê]ncia|intima[cç][aã]o)\b/i.test(txt)) {
+    return `${firstName}, entendi. Me diga quando isso aconteceu, sua cidade/estado e se existe algum prazo, audiência ou documento recebido.`;
+  }
+  return `${firstName}, entendi. Para eu avançar no atendimento, me conte em uma frase o que aconteceu e qual orientação você precisa agora.`;
+}
+
 function userAskedTemporalInfo(text) {
   return /\b(que\s+horas|qual\s+(?:é\s+)?(?:a\s+)?hora|hor[áa]rio\s+atual|data\s+de\s+hoje|que\s+dia\s+(?:é|estamos)|hoje\s+[ée]\s+que\s+dia|dia\s+da\s+semana)\b/i.test(String(text || ""));
 }
@@ -329,7 +381,7 @@ function removeTemporalLeaks(reply, userText) {
     .trim();
 }
 
-async function callAI(messagesPayload) {
+async function callAI(messagesPayload, options = {}) {
   const ollamaPrompt = messagesPayload
     .map((message) => {
       const role = message.role === "system" ? "Instruções" : message.role === "assistant" ? "Atendente" : "Cliente";
@@ -401,7 +453,11 @@ async function callAI(messagesPayload) {
         method: "POST",
         headers: cfg.headers,
         signal: controller.signal,
-        body: JSON.stringify({ model: cfg.model, messages: messagesPayload }),
+          body: JSON.stringify({
+            model: cfg.model,
+            messages: messagesPayload,
+            ...(typeof options.temperature === "number" ? { temperature: options.temperature } : {}),
+          }),
       });
       if (!resp.ok) {
         const errText = await resp.text();
@@ -601,15 +657,32 @@ async function autoReply(jid, userText, contactName) {
     return;
   }
   const history = aiHistory.get(jid) || [];
+  const lastReplies = recentAssistantReplies(history);
+  const antiRepetitionContext = lastReplies.length
+    ? `\nANTI-REPETIÇÃO OPERACIONAL:\nÚltimas respostas enviadas:\n${lastReplies.map((item, index) => `${index + 1}. ${item}`).join("\n")}\nNão repita nenhuma delas; avance a conversa respondendo à última mensagem do cliente.`
+    : "";
   const messagesPayload = [
-    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nNome do contato: ${contactName || "Cliente"}.` },
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nNome do contato: ${contactName || "Cliente"}.${antiRepetitionContext}` },
     ...history,
     { role: "user", content: userText },
   ];
   recordAutoReply({ step: "ai_request", jid, providers: ["ollama", OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
-  const result = await callAI(messagesPayload);
+  let result = await callAI(messagesPayload, { temperature: 0.72 });
   const usedFallback = !result.ok;
-  const reply = cleanRepeatedText(removeTemporalLeaks(usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply, userText));
+  let rawReply = usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply;
+  if (!usedFallback && isNearDuplicateReply(rawReply, history)) {
+    const retry = await callAI([
+      { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nCORREÇÃO OBRIGATÓRIA: a resposta candidata repetiu uma mensagem anterior. Gere uma resposta nova, curta, útil, sem saudação inicial e sem repetir perguntas já feitas.` },
+      ...history,
+      { role: "user", content: userText },
+    ], { temperature: 0.9 });
+    if (retry.ok) {
+      result = retry;
+      rawReply = retry.reply;
+    }
+    if (isNearDuplicateReply(rawReply, history)) rawReply = buildNonRepeatingFallback(userText, contactName);
+  }
+  const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, userText));
   if (usedFallback) recordAutoReply({ step: "ai_fail_local_fallback", jid, result, reply: reply.slice(0, 200) });
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
@@ -1246,12 +1319,29 @@ app.post("/api/chat/message", async (req, res) => {
   const message = String(req.body?.message || req.body?.text || "").trim();
   if (!message) return res.status(400).json({ error: "message vazio" });
   const history = Array.isArray(req.body?.history) ? req.body.history : [];
-  const result = await callAI([
-    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}` },
-    ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") })),
+  const normalizedHistory = history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") }));
+  const lastReplies = recentAssistantReplies(normalizedHistory);
+  const antiRepetitionContext = lastReplies.length
+    ? `\nANTI-REPETIÇÃO OPERACIONAL:\nÚltimas respostas enviadas:\n${lastReplies.map((item, index) => `${index + 1}. ${item}`).join("\n")}\nNão repita nenhuma delas; avance a conversa respondendo à última mensagem do cliente.`
+    : "";
+  let result = await callAI([
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}${antiRepetitionContext}` },
+    ...normalizedHistory,
     { role: "user", content: message },
-  ]);
-  const rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
+  ], { temperature: 0.72 });
+  let rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
+  if (result.ok && isNearDuplicateReply(rawReply, normalizedHistory)) {
+    const retry = await callAI([
+      { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nCORREÇÃO OBRIGATÓRIA: a resposta candidata repetiu uma mensagem anterior. Gere uma resposta nova, curta, útil, sem saudação inicial e sem repetir perguntas já feitas.` },
+      ...normalizedHistory,
+      { role: "user", content: message },
+    ], { temperature: 0.9 });
+    if (retry.ok) {
+      result = retry;
+      rawReply = retry.reply;
+    }
+    if (isNearDuplicateReply(rawReply, normalizedHistory)) rawReply = buildNonRepeatingFallback(message, req.body?.visitor_name || "Cliente");
+  }
   const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
   const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, message)).trim();
   res.json({
