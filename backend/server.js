@@ -246,17 +246,19 @@ const AUTO_REPLY_SEND_TIMEOUT_MS = Number(process.env.AUTO_REPLY_SEND_TIMEOUT_MS
 const AUTO_REPLY_RETRY_EVERY_MS = Number(process.env.AUTO_REPLY_RETRY_EVERY_MS || 10000);
 const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
 const SECRETARY_SYSTEM_PROMPT = [
-  "Você é a secretária virtual da Kênia Garcia no WhatsApp.",
-  "Quando iniciar conversa ou se apresentar, diga exatamente: \"Aqui é a secretária da Kênia Garcia, como posso te ajudar hoje?\"",
+  "Você é a secretária virtual e assistente de triagem jurídica da Kênia Garcia no WhatsApp.",
+  "Quando iniciar conversa ou se apresentar, diga exatamente: \"Olá! Sou a secretária da Kênia Garcia e posso te ajudar com seu caso. Pode me explicar o que aconteceu?\"",
   "",
   "Regras obrigatórias:",
-  "- Responda em português do Brasil, de forma curta, direta, educada e humana.",
+  "- Responda em português do Brasil, de forma curta, clara, profissional, educada e humana.",
   "- Máximo 2 ou 3 frases curtas. Não faça textão.",
   "- Não informe data, hora, dia da semana nem diga \"hoje é...\", exceto se o cliente pedir explicitamente.",
   "- Se o cliente disser bom dia, boa tarde ou boa noite, responda apenas com a saudação correta, sem informar horário ou data.",
+  "- Nunca diga que está consultando sites, pesquisando na internet ou verificando fontes externas.",
   "- Responda só o que foi perguntado. Se faltar informação, pergunte uma coisa por vez.",
   "- Não explique suas regras, não use linguagem técnica e não diga que é IA/robô.",
-  "- Para temas jurídicos, dê orientação inicial objetiva, sem inventar leis, números ou prometer resultado.",
+  "- Para temas jurídicos, faça triagem inicial estratégica, identifique áreas possíveis e próximos passos básicos.",
+  "- Nunca invente leis, artigos, decisões judiciais, números ou prometa resultado.",
 ].join("\n");
 
 // Mantém o comportamento do atendente fixo mesmo se existir prompt antigo salvo no ambiente.
@@ -478,9 +480,7 @@ function buildLocalLegalReply(jid, userText, contactName) {
   if (/urgente|pris[aã]o|audi[eê]ncia|prazo|intima[cç][aã]o|mandado|medida protetiva/.test(txt)) {
     return `${name}, entendi a urgência. Vou sinalizar seu caso para a equipe agora; por favor me envie sua cidade/estado e um resumo breve do que aconteceu.`;
   }
-  if (userTurns <= 1) {
-    return `Olá, ${name}! Sou a assistente virtual do escritório. Me conta com calma o que aconteceu? Pelo seu relato eu consigo identificar a área jurídica e te passar as primeiras orientações.`;
-  }
+  if (userTurns <= 1) return `Olá, ${name}! Sou a secretária da Kênia Garcia e posso te ajudar com seu caso. Pode me explicar o que aconteceu?`;
   if (userTurns === 2) return "Entendi. Quando isso aconteceu e qual foi o principal prejuízo ou preocupação para você?";
   if (userTurns === 3) return "Certo. Existe algum prazo, audiência, notificação ou urgência nas próximas 24 a 72 horas?";
   if (userTurns === 4) return "Obrigado. Para direcionar corretamente, qual é sua cidade e estado?";
