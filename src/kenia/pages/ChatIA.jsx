@@ -203,7 +203,7 @@ export default function ChatIA() {
     {
       role: "assistant",
       content:
-        "Oi! Aqui é a Kênia Garcia, advogada. ☕\n\nMe conta brevemente o que aconteceu — eu te escuto com calma, organizo seu caso e já te dou as primeiras orientações. Pode começar.",
+        "Aqui é a secretária da Dra. Kênia Garcia, como posso te ajudar hoje?",
       audio_base64: null,
     },
   ]);
@@ -780,7 +780,7 @@ export default function ChatIA() {
       {
         role: "assistant",
         content:
-          "Recomeçando do zero. ☕ Aqui é a Kênia Garcia, advogada. Me conta brevemente: o que aconteceu?",
+          "Aqui é a secretária da Dra. Kênia Garcia, como posso te ajudar hoje?",
         audio_base64: null,
       },
     ]);
