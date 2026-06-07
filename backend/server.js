@@ -1262,6 +1262,10 @@ app.get("/api/whatsapp/qr", async (_req, res) => {
 });
 
 app.get("/api/whatsapp/qr/image", async (_req, res) => {
+  const status = baileysRuntimeStatus();
+  if (!status.connected && (!currentQR || (currentQRAt && Date.now() - currentQRAt > QR_RENEW_AFTER_MS))) {
+    await ensureQrReady({ forceRenew: true });
+  }
   if (!currentQR) return res.status(404).send("No QR available");
   const buf = await QRCode.toBuffer(currentQR, { width: 320 });
   res.setHeader("Content-Type", "image/png");
