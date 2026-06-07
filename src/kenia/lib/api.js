@@ -41,6 +41,51 @@ const cleanInternalChatMarkers = (text) =>
     .replace(/`{1,3}\s*HANDOFF[_\s-]*K[EÊ]NIA\s*`{1,3}/giu, "")
     .trim();
 
+const normalizeForSimilarity = (text) =>
+  cleanInternalChatMarkers(text)
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const similarityScore = (a, b) => {
+  const left = new Set(normalizeForSimilarity(a).split(" ").filter((word) => word.length > 2));
+  const right = new Set(normalizeForSimilarity(b).split(" ").filter((word) => word.length > 2));
+  if (!left.size || !right.size) return 0;
+  let overlap = 0;
+  left.forEach((word) => { if (right.has(word)) overlap += 1; });
+  return overlap / Math.max(left.size, right.size);
+};
+
+const recentAssistantReplies = (history = []) =>
+  (Array.isArray(history) ? history : [])
+    .filter((m) => m.role === "assistant" && String(m.content || "").trim())
+    .map((m) => cleanInternalChatMarkers(m.content))
+    .slice(-4);
+
+const isNearDuplicateReply = (reply, history = []) => {
+  const normalizedReply = normalizeForSimilarity(reply);
+  if (!normalizedReply) return false;
+  return recentAssistantReplies(history).some((previous) => {
+    const normalizedPrevious = normalizeForSimilarity(previous);
+    const score = similarityScore(normalizedReply, normalizedPrevious);
+    return normalizedReply === normalizedPrevious || score >= 0.86 || (normalizedReply.length < 240 && score >= 0.72);
+  });
+};
+
+const buildNonRepeatingFallback = (message) => {
+  const text = String(message || "").toLowerCase();
+  if (/\b(agendar|marcar|consulta|reuni[aã]o|hor[aá]rio|atendimento)\b/i.test(text)) {
+    return "Claro. Para registrar a consulta, me envie nome completo, telefone, e-mail, cidade/estado, área do caso, data e horário desejados.";
+  }
+  if (/\b(div[oó]rcio|guarda|pens[aã]o|fam[ií]lia|invent[aá]rio|trabalhista|demiss[aã]o|rescis[aã]o|inss|aposentadoria|consumidor|audi[eê]ncia|intima[cç][aã]o)\b/i.test(text)) {
+    return "Entendi. Para direcionar melhor seu atendimento, me conte quando isso aconteceu, sua cidade/estado e se existe algum prazo ou audiência marcado.";
+  }
+  return "Entendi. Para seguir sem repetir informações, me conte em poucas palavras o que aconteceu e qual ajuda você precisa agora.";
+};
+
 const defaultWhatsAppConfig = {
   provider: "zapi",
   zapi_instance_id: "",
