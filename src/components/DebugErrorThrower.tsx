@@ -1,24 +1,32 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * DebugErrorThrower
  *
- * Escuta "lovable-debug-error" e registra a instrução sem derrubar a árvore React.
+ * Escuta "lovable-debug-error" e LANÇA um erro fatal de runtime com a
+ * instrução recebida. Esse erro é INTENCIONAL — ele existe para escapar
+ * para o overlay global da Lovable, permitindo que o usuário use o botão
+ * "Try to Fix" como fluxo de correção.
  *
- * Nunca lança erro em render/effect: isso causava tela branca no app.
+ * NÃO envolver em ErrorBoundary. NÃO trocar o throw por log/toast.
  */
 export const DebugErrorThrower = () => {
+  const [message, setMessage] = useState<string | null>(null);
+
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
-        window.dispatchEvent(new CustomEvent("lovable-debug-instruction-received", { detail }));
-        console.info("[debug-instruction]", detail);
+        setMessage(detail);
       }
     };
     window.addEventListener("lovable-debug-error", handler as EventListener);
     return () => window.removeEventListener("lovable-debug-error", handler as EventListener);
   }, []);
+
+  if (message) {
+    throw new Error(message);
+  }
 
   return null;
 };
