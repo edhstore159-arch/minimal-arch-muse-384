@@ -786,7 +786,7 @@ export default function WhatsAppSettings() {
                       </ol>
                       <div className="text-[11px] text-gold-700 bg-gold-50 border border-gold-200 p-2 rounded">
                         💡 O QR agora fica disponível por mais tempo e a tela atualiza automaticamente.
-                        Use "Reconectar serviço" ou "Resetar sessão" somente se o QR parar de renovar.
+                        Use "Reconectar serviço" ou "Renovar QR" somente se o QR parar de renovar.
                       </div>
                       <div className="text-[11px] text-nude-500 bg-nude-50 border border-nude-200 p-2 rounded">
                         ⚠️ Esta conexão é não-oficial (uso pessoal). Para alto volume comercial,
