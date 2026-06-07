@@ -48,6 +48,16 @@ export default function Onboarding() {
   const [connected, setConnected] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const applyQrResponse = (qrData = {}) => {
+    const qr = qrData?.qr || qrData?.data?.value || qrData?.data?.qrcode || qrData?.data?.qr;
+    if (qr) setQrImg(qr);
+    if (qrData?.connected) {
+      setConnected(true);
+      setQrImg(null);
+    }
+    return Boolean(qr || qrData?.connected);
+  };
+
   useEffect(() => {
     api.get("/whatsapp/config").then(r => {
       const c = r.data || {};
@@ -59,6 +69,25 @@ export default function Onboarding() {
       if (c.bot_prompt) setData(d => ({ ...d, bot_prompt: c.bot_prompt }));
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (step !== 3 || connected) return;
+    const refreshQr = async () => {
+      try {
+        const { data: status } = await api.get("/whatsapp/baileys/status");
+        if (status?.connected) {
+          setConnected(true);
+          setQrImg(null);
+          return;
+        }
+        const { data: qrData } = await api.get("/whatsapp/qr");
+        applyQrResponse(qrData);
+      } catch {}
+    };
+    refreshQr();
+    const timer = window.setInterval(refreshQr, 10000);
+    return () => window.clearInterval(timer);
+  }, [step, connected]);
 
   const saveStep1 = async () => {
     if (!data.office_name) { toast.error("Informe o nome do escritório"); return; }
@@ -73,14 +102,12 @@ export default function Onboarding() {
     setSaving(true);
     try {
       await api.put("/whatsapp/config", {
-        provider: "zapi", ...zapi,
+        provider: "baileys", ...zapi,
         bot_enabled: true, bot_prompt: data.bot_prompt,
       });
       toast.success("Configuração WhatsApp salva");
-      // buscar QR
       const { data: qrData } = await api.get("/whatsapp/qr");
-      if (qrData?.data?.value) setQrImg(qrData.data.value);
-      else if (qrData?.data?.qrcode) setQrImg(qrData.data.qrcode);
+      if (!applyQrResponse(qrData)) toast.info("Aguardando o QR Code do WhatsApp...");
     } catch {
       toast.error("Erro ao salvar WhatsApp");
     } finally {
