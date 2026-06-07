@@ -786,20 +786,22 @@ async function startSock() {
       const loggedOut = code === DisconnectReason.loggedOut;
       const replaced = code === DisconnectReason.connectionReplaced;
       const transientLoggedOut = loggedOut && !manualLogoutRequested && lastOpenAt && Date.now() - lastOpenAt < 30000;
-      const shouldReconnect = !manualLogoutRequested && (!loggedOut || transientLoggedOut);
+      const needsFreshPairing = loggedOut && !manualLogoutRequested && !transientLoggedOut;
+      const shouldReconnect = !manualLogoutRequested && (!loggedOut || transientLoggedOut || needsFreshPairing);
       reconnectAttempts = shouldReconnect ? reconnectAttempts + 1 : 0;
       if (shouldReconnect && !reconnectingSince) reconnectingSince = Date.now();
       const backoff = Math.min(RECONNECT_DELAY_MS * Math.max(1, reconnectAttempts), RECONNECT_MAX_DELAY_MS);
-      const delay = code === DisconnectReason.restartRequired ? 250 : replaced ? 5000 : backoff;
+      const delay = needsFreshPairing ? 1500 : code === DisconnectReason.restartRequired ? 250 : replaced ? 5000 : backoff;
       await closeSock();
       starting = false;
       connectionState = shouldReconnect ? "disconnected" : "logged_out";
       currentQR = null;
       currentQRAt = null;
-      if (!shouldReconnect && loggedOut) {
+      if (needsFreshPairing) {
         try {
           const fs = await import("node:fs/promises");
           await fs.rm(AUTH_DIR, { recursive: true, force: true });
+          await fs.mkdir(AUTH_DIR, { recursive: true });
         } catch {}
       }
       if (shouldReconnect && !reconnectTimer) {
