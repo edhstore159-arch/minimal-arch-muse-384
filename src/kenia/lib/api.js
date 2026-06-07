@@ -360,7 +360,7 @@ const staticPost = (url, body = {}) => {
       const OLLAMA_URL =
         import.meta.env.VITE_OLLAMA_URL ||
         "https://unabashed-vertical-crispness.ngrok-free.dev/api/generate";
-      const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || "qwen3:0.6b";
+      const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || "llama3.2:latest";
       const fallbackReply =
         "Tive uma instabilidade momentânea com o servidor da IA, mas continuo por aqui. Me envie sua dúvida em uma frase curta que eu respondo e direciono seu atendimento.";
       try {
@@ -382,7 +382,7 @@ const staticPost = (url, body = {}) => {
             handoff: Boolean(data.handoff),
             speaker: data.speaker || null,
             analysis: data.analysis || { acertividade: 80, qualificacao: "ok" },
-            server_time: data.server_time || nowIso(),
+            server_time: null,
           });
         }
       } catch (e) {
@@ -394,7 +394,7 @@ const staticPost = (url, body = {}) => {
           .join("\n");
         const system =
           body.system_prompt ||
-          "Você é a Dra. Kênia Garcia, advogada brasileira. Responda de forma humana, breve e empática. Nunca diga que é IA.";
+          'Você é a secretária virtual da Dra. Kênia Garcia. Quando for se apresentar, diga exatamente: "Aqui é a secretária da Dra. Kênia Garcia, como posso te ajudar hoje?" Responda de forma humana, breve e objetiva em PT-BR, no máximo 2–3 frases curtas. Não envie data, hora nem dia da semana, exceto se o cliente perguntar explicitamente.';
         const prompt = `${system}\n\n${history}\nCliente: ${body.message || body.text || ""}\nKênia:`;
 
         const controller = new AbortController();
@@ -416,7 +416,7 @@ const staticPost = (url, body = {}) => {
             handoff: false,
             speaker: null,
             analysis: { acertividade: 80, qualificacao: "ok" },
-            server_time: nowIso(),
+            server_time: null,
           });
       } catch (e) {
         return response({
