@@ -26,6 +26,7 @@ services:
     name: kenia-whatsapp-backend
     runtime: node
     plan: free
+    renderSubdomainPolicy: enabled
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
