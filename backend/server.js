@@ -1319,12 +1319,29 @@ app.post("/api/chat/message", async (req, res) => {
   const message = String(req.body?.message || req.body?.text || "").trim();
   if (!message) return res.status(400).json({ error: "message vazio" });
   const history = Array.isArray(req.body?.history) ? req.body.history : [];
-  const result = await callAI([
-    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}` },
-    ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") })),
+  const normalizedHistory = history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") }));
+  const lastReplies = recentAssistantReplies(normalizedHistory);
+  const antiRepetitionContext = lastReplies.length
+    ? `\nANTI-REPETIÇÃO OPERACIONAL:\nÚltimas respostas enviadas:\n${lastReplies.map((item, index) => `${index + 1}. ${item}`).join("\n")}\nNão repita nenhuma delas; avance a conversa respondendo à última mensagem do cliente.`
+    : "";
+  let result = await callAI([
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}${antiRepetitionContext}` },
+    ...normalizedHistory,
     { role: "user", content: message },
-  ]);
-  const rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
+  ], { temperature: 0.72 });
+  let rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
+  if (result.ok && isNearDuplicateReply(rawReply, normalizedHistory)) {
+    const retry = await callAI([
+      { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nCORREÇÃO OBRIGATÓRIA: a resposta candidata repetiu uma mensagem anterior. Gere uma resposta nova, curta, útil, sem saudação inicial e sem repetir perguntas já feitas.` },
+      ...normalizedHistory,
+      { role: "user", content: message },
+    ], { temperature: 0.9 });
+    if (retry.ok) {
+      result = retry;
+      rawReply = retry.reply;
+    }
+    if (isNearDuplicateReply(rawReply, normalizedHistory)) rawReply = buildNonRepeatingFallback(message, req.body?.visitor_name || "Cliente");
+  }
   const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
   const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, message)).trim();
   res.json({
