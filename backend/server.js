@@ -947,7 +947,7 @@ app.post("/api/legal-deadlines/:id/notify", async (req, res) => {
   }
 });
 
-app.get("/api/whatsapp/config", (_req, res) => res.json(whatsappConfig));
+app.get("/api/whatsapp/config", (_req, res) => res.json({ ...whatsappConfig, bot_prompt: AI_SYSTEM_PROMPT }));
 
 // Teste rapido da chave de IA configurada no servidor
 app.get("/api/whatsapp/ai-test", async (_req, res) => {
@@ -1008,8 +1008,8 @@ app.get("/api/whatsapp/ollama-status", async (_req, res) => {
 
 
 app.put("/api/whatsapp/config", (req, res) => {
-  whatsappConfig = { ...whatsappConfig, ...(req.body || {}) };
-  res.json(whatsappConfig);
+  whatsappConfig = { ...whatsappConfig, ...(req.body || {}), bot_prompt: AI_SYSTEM_PROMPT };
+  res.json({ ...whatsappConfig, bot_prompt: AI_SYSTEM_PROMPT });
 });
 
 // ---- Diagnostics ----
