@@ -291,6 +291,21 @@ function cleanRepeatedText(text) {
   return uniqueLines.join("\n").trim();
 }
 
+function userAskedTemporalInfo(text) {
+  return /\b(que\s+horas|qual\s+(?:é\s+)?(?:a\s+)?hora|hor[áa]rio\s+atual|data\s+de\s+hoje|que\s+dia\s+(?:é|estamos)|hoje\s+[ée]\s+que\s+dia|dia\s+da\s+semana)\b/i.test(String(text || ""));
+}
+
+function removeTemporalLeaks(reply, userText) {
+  if (userAskedTemporalInfo(userText)) return reply;
+  return String(reply || "")
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/\b(hoje\s+[ée]|agora\s+s[aã]o|s[aã]o\s+\d{1,2}:\d{2}|hora\s+atual|data\s+de\s+hoje|segunda-feira|terça-feira|ter[cç]a-feira|quarta-feira|quinta-feira|sexta-feira|s[áa]bado|domingo)\b/i.test(part))
+    .join(" ")
+    .trim();
+}
+
 async function callAI(messagesPayload) {
   const ollamaPrompt = messagesPayload
     .map((message) => {
@@ -573,7 +588,7 @@ async function autoReply(jid, userText, contactName) {
   recordAutoReply({ step: "ai_request", jid, providers: ["ollama", OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
   const result = await callAI(messagesPayload);
   const usedFallback = !result.ok;
-  const reply = cleanRepeatedText(usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply);
+  const reply = cleanRepeatedText(removeTemporalLeaks(usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply, userText));
   if (usedFallback) recordAutoReply({ step: "ai_fail_local_fallback", jid, result, reply: reply.slice(0, 200) });
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
@@ -1217,7 +1232,7 @@ app.post("/api/chat/message", async (req, res) => {
   ]);
   const rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
   const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
-  const reply = cleanRepeatedText(rawReply).trim();
+  const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, message)).trim();
   res.json({
     session_id: req.body?.session_id || `session-${Date.now()}`,
     response: reply,
