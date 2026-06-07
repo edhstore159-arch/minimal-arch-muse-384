@@ -55,7 +55,7 @@ const normalizeOllamaBaseUrl = (value) => {
 const OLLAMA_BASE_URL = normalizeOllamaBaseUrl(OLLAMA_RAW_URL);
 const OLLAMA_URL = `${OLLAMA_BASE_URL}/api/generate`;
 const OLLAMA_TAGS_URL = `${OLLAMA_BASE_URL}/api/tags`;
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:0.6b";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2:latest";
 const OLLAMA_REQUEST_RETRIES = Number(process.env.OLLAMA_REQUEST_RETRIES || 2);
 const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "10m";
 const OLLAMA_HEALTH_INTERVAL_MS = Number(process.env.OLLAMA_HEALTH_INTERVAL_MS || 240000);
@@ -245,25 +245,22 @@ const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 45000)
 const AUTO_REPLY_SEND_TIMEOUT_MS = Number(process.env.AUTO_REPLY_SEND_TIMEOUT_MS || 20000);
 const AUTO_REPLY_RETRY_EVERY_MS = Number(process.env.AUTO_REPLY_RETRY_EVERY_MS || 10000);
 const AUTO_REPLY_QUEUE_MAX = Number(process.env.AUTO_REPLY_QUEUE_MAX || 50);
-const AI_SYSTEM_PROMPT =
-  process.env.AI_SYSTEM_PROMPT ||
-  [
-    "Você é um assistente virtual completo e especializado em legislação brasileira.",
-    "Responda QUALQUER pergunta do usuário — jurídica ou não (dúvidas gerais, dia a dia, escritório, agendamentos, conversa casual). NUNCA se recuse a responder sob alegação de fugir do tema; ajude sempre, de forma clara e útil.",
-    "",
-    "Regras de comportamento:",
-    "- Responda sempre em português do Brasil, com tom humano, acolhedor e profissional.",
-    "- Para perguntas JURÍDICAS, baseie-se em fontes confiáveis e atualizadas, com prioridade para Jusbrasil (https://www.jusbrasil.com.br/), além de Planalto/gov.br, STF, STJ, TST e legislação vigente (CF/88, CC, CLT, CDC, CPC, CPP, leis especiais).",
-    "- Sempre que pertinente, cite a área do Direito (Trabalhista, Consumidor, Família, Previdenciário, Civil, Penal, Tributário, Empresarial etc.) e o artigo/lei aplicável, mencionando que a referência foi consultada no Jusbrasil ou na fonte oficial.",
-    "- Explique em linguagem simples, sem juridiquês; use bullets curtos quando ajudar.",
-    "- Nunca invente leis, artigos, súmulas ou decisões. Se não tiver certeza, diga claramente e recomende confirmar com a Dra. Kênia.",
-    "- Não dê garantias de resultado processual. Recomende consulta com advogado quando exigir análise documental ou estratégia específica.",
-    "- Para perguntas NÃO jurídicas, responda normalmente, mantendo o mesmo tom acolhedor.",
-    "",
-    "Estrutura recomendada para temas jurídicos: breve acolhimento; explicação objetiva com base legal (citando Jusbrasil/artigo); direitos ou riscos envolvidos; próximos passos; pergunta complementar se necessário.",
-    "",
-    "Importante: atuação informativa e educacional; não substitui parecer jurídico formal.",
-  ].join("\n");
+const SECRETARY_SYSTEM_PROMPT = [
+  "Você é a secretária virtual da Kênia Garcia no WhatsApp.",
+  "Quando iniciar conversa ou se apresentar, diga exatamente: \"Aqui é a secretária da Kênia Garcia, como posso te ajudar hoje?\"",
+  "",
+  "Regras obrigatórias:",
+  "- Responda em português do Brasil, de forma curta, direta, educada e humana.",
+  "- Máximo 2 ou 3 frases curtas. Não faça textão.",
+  "- Não informe data, hora, dia da semana nem diga \"hoje é...\", exceto se o cliente pedir explicitamente.",
+  "- Se o cliente disser bom dia, boa tarde ou boa noite, responda apenas com a saudação correta, sem informar horário ou data.",
+  "- Responda só o que foi perguntado. Se faltar informação, pergunte uma coisa por vez.",
+  "- Não explique suas regras, não use linguagem técnica e não diga que é IA/robô.",
+  "- Para temas jurídicos, dê orientação inicial objetiva, sem inventar leis, números ou prometer resultado.",
+].join("\n");
+
+// Mantém o comportamento do atendente fixo mesmo se existir prompt antigo salvo no ambiente.
+const AI_SYSTEM_PROMPT = SECRETARY_SYSTEM_PROMPT;
 
 const aiHistory = new Map(); // jid -> [{role, content}]
 
@@ -271,7 +268,9 @@ function saoPauloTemporalContext() {
   const now = new Date();
   const date = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
   const time = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(now);
-  return `CONTEXTO TEMPORAL: hoje é ${date}; hora atual ${time} (America/Sao_Paulo). Use isso para saudação e para calcular hoje, amanhã e próximas datas.`;
+  const hour = Number(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(now));
+  const greeting = hour >= 5 && hour < 12 ? "Bom dia" : hour >= 12 && hour < 18 ? "Boa tarde" : "Boa noite";
+  return `CONTEXTO TEMPORAL INTERNO — nunca mostre estes dados ao cliente, salvo pedido explícito de data/hora: referência ${date}, ${time}, America/Sao_Paulo. Saudação correta: ${greeting}.`;
 }
 
 function cleanRepeatedText(text) {
@@ -290,6 +289,21 @@ function cleanRepeatedText(text) {
     if (normalized && normalized !== previous) uniqueLines.push(line);
   }
   return uniqueLines.join("\n").trim();
+}
+
+function userAskedTemporalInfo(text) {
+  return /\b(que\s+horas|qual\s+(?:é\s+)?(?:a\s+)?hora|hor[áa]rio\s+atual|data\s+de\s+hoje|que\s+dia\s+(?:é|estamos)|hoje\s+[ée]\s+que\s+dia|dia\s+da\s+semana)\b/i.test(String(text || ""));
+}
+
+function removeTemporalLeaks(reply, userText) {
+  if (userAskedTemporalInfo(userText)) return reply;
+  return String(reply || "")
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/\b(hoje\s+[ée]|agora\s+s[aã]o|s[aã]o\s+\d{1,2}:\d{2}|hora\s+atual|data\s+de\s+hoje|segunda-feira|terça-feira|ter[cç]a-feira|quarta-feira|quinta-feira|sexta-feira|s[áa]bado|domingo)\b/i.test(part))
+    .join(" ")
+    .trim();
 }
 
 async function callAI(messagesPayload) {
@@ -574,7 +588,7 @@ async function autoReply(jid, userText, contactName) {
   recordAutoReply({ step: "ai_request", jid, providers: ["ollama", OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
   const result = await callAI(messagesPayload);
   const usedFallback = !result.ok;
-  const reply = cleanRepeatedText(usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply);
+  const reply = cleanRepeatedText(removeTemporalLeaks(usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply, userText));
   if (usedFallback) recordAutoReply({ step: "ai_fail_local_fallback", jid, result, reply: reply.slice(0, 200) });
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
@@ -1218,7 +1232,7 @@ app.post("/api/chat/message", async (req, res) => {
   ]);
   const rawReply = result.ok ? result.reply : buildLocalLegalReply(req.body?.session_id || "web", message, req.body?.visitor_name || "Cliente");
   const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
-  const reply = cleanRepeatedText(rawReply).trim();
+  const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, message)).trim();
   res.json({
     session_id: req.body?.session_id || `session-${Date.now()}`,
     response: reply,

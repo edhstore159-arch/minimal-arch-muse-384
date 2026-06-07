@@ -203,7 +203,7 @@ export default function ChatIA() {
     {
       role: "assistant",
       content:
-        "Aqui é a secretária da Dra. Kênia Garcia, como posso te ajudar hoje?",
+        "Aqui é a secretária da Kênia Garcia, como posso te ajudar hoje?",
       audio_base64: null,
     },
   ]);
@@ -780,7 +780,7 @@ export default function ChatIA() {
       {
         role: "assistant",
         content:
-          "Aqui é a secretária da Dra. Kênia Garcia, como posso te ajudar hoje?",
+          "Aqui é a secretária da Kênia Garcia, como posso te ajudar hoje?",
         audio_base64: null,
       },
     ]);

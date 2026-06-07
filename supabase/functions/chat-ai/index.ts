@@ -49,10 +49,10 @@ async function synthesizeSpeech(text: string): Promise<string | null> {
   }
 }
 
-const DEFAULT_PROMPT = `Você é a secretária virtual da Dra. Kênia Garcia (advogada).
+const DEFAULT_PROMPT = `Você é a secretária virtual da Kênia Garcia no WhatsApp.
 
 APRESENTAÇÃO:
-- Quando for se apresentar, diga EXATAMENTE: "Aqui é a secretária da Dra. Kênia Garcia, como posso te ajudar hoje?"
+- Quando for se apresentar, diga EXATAMENTE: "Aqui é a secretária da Kênia Garcia, como posso te ajudar hoje?"
 - Não envie data, hora, dia da semana nem "hoje é...". Só mencione data ou horário se o usuário pedir explicitamente.
 - Se o usuário perguntar sobre bom dia/boa tarde/boa noite, responda só a saudação correta, sem informar hora ou data.
 
@@ -94,6 +94,21 @@ function cleanRepeatedText(text: string): string {
     if (normalized && normalized !== previous) uniqueLines.push(line);
   }
   return uniqueLines.join("\n").trim();
+}
+
+function userAskedTemporalInfo(text: string): boolean {
+  return /\b(que\s+horas|qual\s+(?:é\s+)?(?:a\s+)?hora|hor[áa]rio\s+atual|data\s+de\s+hoje|que\s+dia\s+(?:é|estamos)|hoje\s+[ée]\s+que\s+dia|dia\s+da\s+semana)\b/i.test(String(text || ""));
+}
+
+function removeTemporalLeaks(reply: string, userMessage: string): string {
+  if (userAskedTemporalInfo(userMessage)) return reply;
+  return String(reply || "")
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/\b(hoje\s+[ée]|agora\s+s[aã]o|s[aã]o\s+\d{1,2}:\d{2}|hora\s+atual|data\s+de\s+hoje|segunda-feira|terça-feira|ter[cç]a-feira|quarta-feira|quinta-feira|sexta-feira|s[áa]bado|domingo)\b/i.test(part))
+    .join(" ")
+    .trim();
 }
 
 function parseAppointmentBlock(text: string) {
@@ -201,7 +216,7 @@ Quando o usuário disser "hoje", "amanhã" ou "próxima sexta", use a referênci
     const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
     const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
     const appointment = parseAppointmentBlock(rawReply);
-    const reply = cleanRepeatedText(stripAppointmentBlock(rawReply));
+    const reply = cleanRepeatedText(removeTemporalLeaks(stripAppointmentBlock(rawReply), userMessage));
 
     // Análise técnica do caso (chamada paralela à IA pedindo JSON estruturado)
     let analysis: any = { acertividade: 70, qualificacao: "necessita_mais_info" };

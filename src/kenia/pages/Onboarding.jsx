@@ -23,7 +23,7 @@ export default function Onboarding() {
   const [data, setData] = useState({
     office_name: "", oab: user?.oab || "",
     main_area: "Trabalhista",
-    bot_prompt: "Você é a atendente virtual de um escritório de advocacia. Seja cordial, pergunte o nome do cliente, tipo do caso e urgência. Informe que um advogado retornará em breve.",
+    bot_prompt: "Você é a secretária virtual da Kênia Garcia no WhatsApp. Quando iniciar conversa ou se apresentar, diga exatamente: \"Aqui é a secretária da Kênia Garcia, como posso te ajudar hoje?\" Responda curto, direto e humano. Não informe data, hora ou dia da semana, exceto se o cliente pedir explicitamente.",
   });
   const [zapi, setZapi] = useState({
     zapi_instance_id: "", zapi_instance_token: "", zapi_client_token: "",
