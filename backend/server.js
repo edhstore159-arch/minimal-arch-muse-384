@@ -1558,6 +1558,72 @@ app.post("/api/chat/message", async (req, res) => {
   });
 });
 
+// ---- Painel Admin: análises jurídicas dos leads ----
+function listCaseAnalyses(filterQ) {
+  const all = Array.from(caseAnalysesStore.values()).sort(
+    (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+  );
+  const items = filterQ && filterQ !== "all"
+    ? all.filter((i) => i.qualificacao === filterQ)
+    : all;
+  const total = all.length;
+  const qualificados = all.filter((i) => i.qualificacao === "qualificado").length;
+  const nao_qualificados = all.filter((i) => i.qualificacao === "nao_qualificado").length;
+  const necessita_mais_info = all.filter((i) => i.qualificacao === "necessita_mais_info").length;
+  const avg_acertividade = total
+    ? Math.round(all.reduce((s, i) => s + Number(i.acertividade || 0), 0) / total)
+    : 0;
+  return { total, qualificados, nao_qualificados, necessita_mais_info, avg_acertividade, items };
+}
+
+app.get("/api/admin/case-analyses", (req, res) => {
+  res.json(listCaseAnalyses(req.query?.qualificacao));
+});
+
+app.get("/api/admin/case-analyses/:id", (req, res) => {
+  const analysis = Array.from(caseAnalysesStore.values()).find((i) => i.id === req.params.id);
+  if (!analysis) return res.status(404).json({ error: "not_found" });
+  const messages = (messagesStore.get(analysis.jid) || []).slice(-50).map((m) => ({
+    role: m.from_me ? "assistant" : "user",
+    content: m.text,
+    created_at: m.created_at,
+  }));
+  res.json({ analysis, messages });
+});
+
+app.patch("/api/admin/case-analyses/:id", (req, res) => {
+  const entry = Array.from(caseAnalysesStore.values()).find((i) => i.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: "not_found" });
+  const allowedQ = ["qualificado", "nao_qualificado", "necessita_mais_info"];
+  if (req.body?.qualificacao && allowedQ.includes(req.body.qualificacao)) {
+    entry.qualificacao = req.body.qualificacao;
+    entry.admin_override = { qualificacao: req.body.qualificacao, at: new Date().toISOString() };
+  }
+  if (typeof req.body?.notes === "string") entry.admin_notes = req.body.notes.slice(0, 2000);
+  entry.updated_at = new Date().toISOString();
+  caseAnalysesStore.set(entry.jid, entry);
+  res.json({ ok: true, analysis: entry });
+});
+
+app.post("/api/admin/case-analyses/:id/reanalyze", async (req, res) => {
+  const entry = Array.from(caseAnalysesStore.values()).find((i) => i.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: "not_found" });
+  const history = aiHistory.get(entry.jid) || [];
+  const lastUser = [...history].reverse().find((m) => m.role === "user")?.content || "";
+  const updated = await analyzeLeadCase({
+    jid: entry.jid,
+    contactName: entry.visitor_name,
+    history,
+    lastUserText: lastUser,
+  });
+  res.json({ ok: Boolean(updated), analysis: updated || entry });
+});
+
+app.post("/api/legislation/refresh", (_req, res) => {
+  lastLegislationRefreshAt = new Date().toISOString();
+  res.json({ ok: true, refreshed_at: lastLegislationRefreshAt });
+});
+
 // ---- Fallback /api/* ----
 app.all("/api/*", (_req, res) => res.json(ok({ fallback: true })));
 
