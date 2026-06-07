@@ -259,7 +259,8 @@ const SECRETARY_SYSTEM_PROMPT = [
   "- Para temas jurídicos, dê orientação inicial objetiva, sem inventar leis, números ou prometer resultado.",
 ].join("\n");
 
-const AI_SYSTEM_PROMPT = process.env.AI_SYSTEM_PROMPT || SECRETARY_SYSTEM_PROMPT;
+// Mantém o comportamento do atendente fixo mesmo se existir prompt antigo salvo no ambiente.
+const AI_SYSTEM_PROMPT = SECRETARY_SYSTEM_PROMPT;
 
 const aiHistory = new Map(); // jid -> [{role, content}]
 
