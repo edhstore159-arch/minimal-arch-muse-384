@@ -980,6 +980,48 @@ const baileysRuntimeStatus = () => {
 app.get("/", (_req, res) => res.json(ok({ service: "kenia-whatsapp-backend" })));
 app.get("/api/health", (_req, res) => res.json(ok({ state: connectionState })));
 
+// ---- Proxy direto para Ollama (/api/generate) ----
+app.post("/api/generate", async (req, res) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), OLLAMA_GENERATE_TIMEOUT_MS);
+  try {
+    const body = {
+      model: OLLAMA_MODEL,
+      stream: false,
+      options: { num_predict: 260, temperature: 0.2 },
+      ...(req.body || {}),
+    };
+    const upstream = await fetch(OLLAMA_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const raw = await upstream.text();
+    let data;
+    try { data = JSON.parse(raw); } catch { data = { response: raw }; }
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({
+        ok: false,
+        error: formatOllamaHttpError(upstream.status, raw, "Ollama"),
+        upstream: data,
+      });
+    }
+    res.json(data);
+  } catch (err) {
+    const aborted = err?.name === "AbortError";
+    res.status(aborted ? 504 : 502).json({
+      ok: false,
+      error: aborted
+        ? `Timeout (${OLLAMA_GENERATE_TIMEOUT_MS}ms) ao chamar ${OLLAMA_URL}.`
+        : `Falha ao chamar Ollama: ${err?.message || err}`,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
+
 app.get("/api/debug/instructions", (_req, res) => {
   res.json(debugInstructions.slice(0, 50));
 });
