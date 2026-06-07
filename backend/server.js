@@ -1208,7 +1208,11 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
 
 // ---- Status ----
 app.get("/api/whatsapp/baileys/status", (_req, res) => {
-  res.json(baileysRuntimeStatus());
+  const status = baileysRuntimeStatus();
+  if (!status.connected && !status.qr_available) {
+    ensureQrReady().catch(() => {});
+  }
+  res.json(status);
 });
 
 app.get("/api/whatsapp/test-connection", (_req, res) => {
@@ -1233,20 +1237,27 @@ app.post("/api/whatsapp/test-connection", (_req, res) => {
 
 // ---- QR Code ----
 app.get("/api/whatsapp/baileys/qr", async (_req, res) => {
+  let status = baileysRuntimeStatus();
+  if (!status.connected && (!currentQR || (currentQRAt && Date.now() - currentQRAt > QR_RENEW_AFTER_MS))) {
+    status = await ensureQrReady({ forceRenew: true });
+  }
   const qr = currentQR ? await QRCode.toDataURL(currentQR, { width: 320, margin: 2 }) : null;
-  const status = baileysRuntimeStatus();
   res.json({ qr, raw: currentQR, ...status });
 });
 
 app.get("/api/whatsapp/qr", async (_req, res) => {
+  let status = baileysRuntimeStatus();
+  if (!status.connected && (!currentQR || (currentQRAt && Date.now() - currentQRAt > QR_RENEW_AFTER_MS))) {
+    status = await ensureQrReady({ forceRenew: true });
+  }
   if (!currentQR) {
     return res.json({
-      connected: connectionState === "open",
+      connected: status.connected,
       qr: null,
+      state: status.state,
     });
   }
   const dataUrl = await QRCode.toDataURL(currentQR);
-  const status = baileysRuntimeStatus();
   res.json({ connected: false, qr: dataUrl, qr_expires_in_s: status.qr_expires_in_s, qr_timeout_s: status.qr_timeout_s });
 });
 
