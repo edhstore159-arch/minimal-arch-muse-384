@@ -810,6 +810,8 @@ async function autoReply(jid, userText, contactName) {
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
   aiHistory.set(jid, history);
+  // Análise jurídica em background (não bloqueia o envio da resposta)
+  analyzeLeadCase({ jid, contactName, history, lastUserText: userText }).catch(() => {});
   try {
     const sent = await sendBotText(jid, reply, { source: usedFallback ? "local_fallback" : result.provider });
     recordAutoReply({ step: "sent", jid, attempt: sent.attempt, provider: usedFallback ? "local_fallback" : result.provider, model: result.model || null, reply: reply.slice(0, 200) });
