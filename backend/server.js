@@ -663,6 +663,116 @@ async function processAutoReplyQueue() {
   }
 }
 
+// ---- Análise jurídica automática do lead (alimenta AdminCases) ----
+const LEGAL_ANALYSIS_SYSTEM_PROMPT = [
+  "Você é um analista jurídico sênior. Receberá a transcrição de uma conversa de WhatsApp entre uma secretária e um possível cliente da advogada Kênia Garcia.",
+  "Sua tarefa é classificar o caso retornando EXCLUSIVAMENTE um JSON válido (sem markdown, sem comentários, sem texto fora do JSON) com exatamente estas chaves:",
+  "{",
+  '  "area": string,                    // ex: "Trabalhista", "Família", "Previdenciário", "Consumidor", "Cível", "Penal", "Indefinido"',
+  '  "qualificacao": "qualificado" | "nao_qualificado" | "necessita_mais_info",',
+  '  "acertividade": number,            // 0-100, confiança da análise',
+  '  "chance_exito": number,            // 0-100, chance estimada de êxito',
+  '  "resumo": string,                  // 1 frase técnica do caso',
+  '  "motivo": string,                  // por que está qualificado/não/precisa mais info',
+  '  "fundamentos": string[],           // até 4 dispositivos legais aplicáveis em linguagem curta',
+  '  "proxima_pergunta": string         // próxima pergunta estratégica para o cliente',
+  "}",
+  "Se faltarem dados (área desconhecida, fatos vagos), use qualificacao=\"necessita_mais_info\" e baixe a acertividade.",
+  "Nunca invente artigos específicos; cite apenas dispositivos genéricos plausíveis (ex: \"CLT — verbas rescisórias\", \"CC art. 1.694 — alimentos\").",
+].join("\n");
+
+function safeParseAnalysisJson(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+  const stripped = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  const tryParse = (s) => { try { return JSON.parse(s); } catch { return null; } };
+  let obj = tryParse(stripped);
+  if (!obj) {
+    const m = stripped.match(/\{[\s\S]*\}/);
+    if (m) obj = tryParse(m[0]);
+  }
+  return obj;
+}
+
+function normalizeAnalysis(obj) {
+  const allowedQ = ["qualificado", "nao_qualificado", "necessita_mais_info"];
+  const clamp = (n) => {
+    const v = Math.round(Number(n));
+    if (!Number.isFinite(v)) return 0;
+    return Math.max(0, Math.min(100, v));
+  };
+  return {
+    area: String(obj?.area || "Indefinido").slice(0, 60),
+    qualificacao: allowedQ.includes(obj?.qualificacao) ? obj.qualificacao : "necessita_mais_info",
+    acertividade: clamp(obj?.acertividade),
+    chance_exito: clamp(obj?.chance_exito),
+    resumo: String(obj?.resumo || "").slice(0, 400),
+    motivo: String(obj?.motivo || "").slice(0, 600),
+    fundamentos: Array.isArray(obj?.fundamentos)
+      ? obj.fundamentos.slice(0, 6).map((f) => String(f).slice(0, 160)).filter(Boolean)
+      : [],
+    proxima_pergunta: String(obj?.proxima_pergunta || "").slice(0, 240),
+  };
+}
+
+async function analyzeLeadCase({ jid, contactName, history, lastUserText }) {
+  try {
+    const transcript = (history || [])
+      .slice(-12)
+      .map((m) => `${m.role === "user" ? "Cliente" : "Atendente"}: ${m.content}`)
+      .join("\n");
+    const payload = [
+      { role: "system", content: LEGAL_ANALYSIS_SYSTEM_PROMPT },
+      {
+        role: "user",
+        content:
+          `Contato: ${contactName || "Cliente"} (${jidToPhone(jid) || "sem telefone"}).\n` +
+          `Transcrição recente:\n${transcript}\n\n` +
+          `Última mensagem do cliente: "${String(lastUserText || "").slice(0, 600)}".\n\n` +
+          "Retorne apenas o JSON conforme o esquema.",
+      },
+    ];
+    const result = await callAI(payload, { temperature: 0.1 });
+    if (!result.ok) {
+      recordAutoReply({ step: "legal_analysis_fail", jid, error: result.error || "callAI_fail" });
+      return null;
+    }
+    const parsed = safeParseAnalysisJson(result.reply);
+    if (!parsed) {
+      recordAutoReply({ step: "legal_analysis_parse_fail", jid, preview: String(result.reply || "").slice(0, 160) });
+      return null;
+    }
+    const normalized = normalizeAnalysis(parsed);
+    const prev = caseAnalysesStore.get(jid);
+    const now = new Date().toISOString();
+    const entry = {
+      id: prev?.id || `case-${jidToPhone(jid) || Date.now()}`,
+      jid,
+      visitor_name: contactName || prev?.visitor_name || jidToPhone(jid) || "Cliente",
+      visitor_phone: jidToPhone(jid) || prev?.visitor_phone || "",
+      ...normalized,
+      admin_notes: prev?.admin_notes || "",
+      admin_override: prev?.admin_override || null,
+      created_at: prev?.created_at || now,
+      updated_at: now,
+      message_count: (history || []).length,
+    };
+    // se admin já sobrescreveu, mantém a qualificação manual
+    if (prev?.admin_override?.qualificacao) {
+      entry.qualificacao = prev.admin_override.qualificacao;
+    }
+    caseAnalysesStore.set(jid, entry);
+    recordAutoReply({ step: "legal_analysis_ok", jid, qualificacao: entry.qualificacao, area: entry.area });
+    return entry;
+  } catch (e) {
+    recordAutoReply({ step: "legal_analysis_throw", jid, error: e?.message || String(e) });
+    return null;
+  }
+}
+
 async function autoReply(jid, userText, contactName) {
   recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasOpenAI: Boolean(OPENAI_API_KEY), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
   if (!sock || connectionState !== "open") {
