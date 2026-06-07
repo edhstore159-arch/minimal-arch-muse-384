@@ -323,17 +323,11 @@ REGRA OBRIGATÓRIA SOBRE DATA E HORA:
       temperature: 0.72,
     });
 
-    if (!aiResult.ok) {
-      const status = aiResult.status === 429 || aiResult.status === 402 ? aiResult.status : 502;
-      return new Response(
-        JSON.stringify({ error: "AI Gateway error", status: aiResult.status, detail: aiResult.error }),
-        { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    let data = aiResult.data;
-    let rawReply: string = data?.choices?.[0]?.message?.content ?? "";
-    if (isNearDuplicateReply(rawReply, history)) {
+    let data: any = aiResult.ok ? aiResult.data : null;
+    let rawReply: string = aiResult.ok
+      ? data?.choices?.[0]?.message?.content ?? ""
+      : buildNonRepeatingFallback(userMessage, fmtDate, fmtTime);
+    if (aiResult.ok && isNearDuplicateReply(rawReply, history)) {
       const retryResult = await chatCompletion({
         model: "google/gemini-3-flash-preview",
         messages: [
