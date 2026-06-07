@@ -121,9 +121,8 @@ export default function Onboarding() {
       const { data: r } = await api.post("/whatsapp/test-connection");
       if (r.connected) {
         setConnected(true);
+        setQrImg(null);
         toast.success("WhatsApp conectado!");
-        // auto-setup webhook
-        await api.post("/whatsapp/setup-webhook", {});
       } else {
         toast.warning("Ainda não conectado. Escaneie o QR e tente de novo.");
       }
