@@ -56,7 +56,8 @@ const OLLAMA_BASE_URL = normalizeOllamaBaseUrl(OLLAMA_RAW_URL);
 const OLLAMA_URL = `${OLLAMA_BASE_URL}/api/generate`;
 const OLLAMA_TAGS_URL = `${OLLAMA_BASE_URL}/api/tags`;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
-const OLLAMA_REQUEST_RETRIES = Number(process.env.OLLAMA_REQUEST_RETRIES || 2);
+const OLLAMA_REQUEST_RETRIES = Number(process.env.OLLAMA_REQUEST_RETRIES || 0);
+const OLLAMA_GENERATE_TIMEOUT_MS = Number(process.env.OLLAMA_GENERATE_TIMEOUT_MS || 15000);
 const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "10m";
 const OLLAMA_HEALTH_INTERVAL_MS = Number(process.env.OLLAMA_HEALTH_INTERVAL_MS || 240000);
 const OLLAMA_HEALTH_TIMEOUT_MS = Number(process.env.OLLAMA_HEALTH_TIMEOUT_MS || 8000);
@@ -87,7 +88,7 @@ export async function perguntarIA(texto) {
   let lastErrorForThrow = null;
   for (let attempt = 1; attempt <= OLLAMA_REQUEST_RETRIES + 1; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), OLLAMA_GENERATE_TIMEOUT_MS);
     try {
       const resposta = await fetch(OLLAMA_URL, {
         method: "POST",
@@ -98,6 +99,7 @@ export async function perguntarIA(texto) {
           prompt: texto,
           stream: false,
           keep_alive: OLLAMA_KEEP_ALIVE,
+          options: { num_predict: 260, temperature: 0.2 },
         }),
       });
       const raw = await resposta.text();
@@ -111,7 +113,7 @@ export async function perguntarIA(texto) {
     } catch (e) {
       lastErrorForThrow = e;
       const timedOut = e?.name === "AbortError";
-      const message = timedOut ? `timeout ${AI_REQUEST_TIMEOUT_MS}ms` : e?.message || String(e);
+      const message = timedOut ? `generate timeout ${OLLAMA_GENERATE_TIMEOUT_MS}ms` : e?.message || String(e);
       ollamaStatus = { ...ollamaStatus, ok: false, last_checked_at: new Date().toISOString(), last_error: message };
       if (attempt <= OLLAMA_REQUEST_RETRIES) await delay(800 * attempt);
     } finally {
