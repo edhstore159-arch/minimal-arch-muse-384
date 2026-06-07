@@ -1549,7 +1549,7 @@ app.post("/api/chat/message", async (req, res) => {
   const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
   const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, message)).trim();
   // análise em background a partir da sessão web
-  const sessionId = req.body?.session_id || `web-${Date.now()}`;
+  const sessionId = req.body?.session_id || `session-${Date.now()}`;
   const webJid = `web:${sessionId}`;
   const visitorName = req.body?.visitor_name || "Cliente Web";
   const webHistory = [
