@@ -247,11 +247,15 @@ Deno.serve(async (req) => {
 
     const systemContent = `${extraPrompt}
 
-CONTEXTO TEMPORAL INTERNO — não escreva estes dados na resposta, exceto se o usuário pedir data/hora explicitamente:
-- Referência para cálculos: ${fmtDate}, ${fmtTime}, America/Sao_Paulo, ISO ${isoSp}
-- Saudação adequada se perguntarem: "${saudacao}"
+CONTEXTO TEMPORAL INTERNO (fuso America/Sao_Paulo):
+- Data/hora atual: ${fmtDate}, ${fmtTime} (ISO ${isoSp})
+- Saudação adequada agora: "${saudacao}"
 
-Quando o usuário disser "hoje", "amanhã" ou "próxima sexta", use a referência acima apenas para calcular agendamentos.`;
+REGRA OBRIGATÓRIA SOBRE DATA E HORA:
+- Se o cliente perguntar a data, o dia, o dia da semana, o mês, o ano ou as horas (ex.: "que dia é hoje?", "que horas são?", "qual a data de hoje?", "estamos em que dia da semana?"), RESPONDA com clareza usando EXATAMENTE os valores acima. Exemplo: "Hoje é ${fmtDate}, e agora são ${fmtTime}."
+- Nunca diga que não sabe a data ou a hora, e nunca invente outro valor.
+- Se o cliente NÃO perguntar, não mencione data nem hora.
+- Para "hoje", "amanhã", "próxima sexta" em agendamentos, calcule a partir da referência acima.`;
 
     const messages = [
       { role: "system", content: systemContent },
