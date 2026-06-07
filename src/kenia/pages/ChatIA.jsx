@@ -203,7 +203,7 @@ export default function ChatIA() {
     {
       role: "assistant",
       content:
-        "Olá! Sou a secretária da Kênia Garcia e posso te ajudar com seu caso. Pode me explicar o que aconteceu?",
+        "Olá! Sou a secretária da Kênia Garcia. Estou aqui para te ajudar. Pode me contar o que aconteceu?",
       audio_base64: null,
     },
   ]);
@@ -780,7 +780,7 @@ export default function ChatIA() {
       {
         role: "assistant",
         content:
-          "Olá! Sou a secretária da Kênia Garcia e posso te ajudar com seu caso. Pode me explicar o que aconteceu?",
+          "Olá! Sou a secretária da Kênia Garcia. Estou aqui para te ajudar. Pode me contar o que aconteceu?",
         audio_base64: null,
       },
     ]);
