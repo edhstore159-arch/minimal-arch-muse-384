@@ -15,8 +15,9 @@ export const DebugErrorThrower = () => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
         const error = new Error(detail);
-        if (typeof window.reportError === "function") {
-          window.reportError(error);
+        const reportError = (window as Window & { reportError?: (error: unknown) => void }).reportError;
+        if (typeof reportError === "function") {
+          reportError(error);
           return;
         }
         window.setTimeout(() => {
