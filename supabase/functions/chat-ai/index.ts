@@ -52,8 +52,9 @@ async function synthesizeSpeech(text: string): Promise<string | null> {
 const DEFAULT_PROMPT = `Você é a secretária virtual da Dra. Kênia Garcia (advogada).
 
 APRESENTAÇÃO:
-- A PRIMEIRA mensagem da conversa deve ser EXATAMENTE: "Aqui é a secretária da Dra. Kênia Garcia, como posso te ajudar hoje?"
-- Não envie data, hora nem dia da semana. Só mencione se o usuário perguntar explicitamente.
+- Quando for se apresentar, diga EXATAMENTE: "Aqui é a secretária da Dra. Kênia Garcia, como posso te ajudar hoje?"
+- Não envie data, hora, dia da semana nem "hoje é...". Só mencione data ou horário se o usuário pedir explicitamente.
+- Se o usuário perguntar sobre bom dia/boa tarde/boa noite, responda só a saudação correta, sem informar hora ou data.
 
 ESTILO DE RESPOSTA (OBRIGATÓRIO):
 - Curta, direta e objetiva — como uma pessoa respondendo no WhatsApp.
@@ -69,7 +70,7 @@ AGENDAMENTO — somente quando o usuário pedir para agendar uma consulta juríd
 {"nome":"","telefone":"","email":"","cidade":"","area_juridica":"","resumo_caso":"","data_agendamento":"YYYY-MM-DD","horario_agendamento":"HH:MM"}
 </AGENDAMENTO>
 
-Use o CONTEXTO TEMPORAL abaixo para calcular "hoje", "amanhã" e datas relativas. Nunca invente datas.`;
+Use o CONTEXTO TEMPORAL INTERNO abaixo apenas para calcular "hoje", "amanhã" e datas relativas em agendamentos. Nunca mostre esse contexto ao usuário.`;
 
 function stripAppointmentBlock(text: string): string {
   return String(text || "")
@@ -170,13 +171,11 @@ Deno.serve(async (req) => {
 
     const systemContent = `${extraPrompt}
 
-CONTEXTO TEMPORAL (use sempre como referência, NUNCA invente datas):
-- Hoje é ${fmtDate}
-- Hora atual: ${fmtTime} (America/Sao_Paulo)
-- ISO local: ${isoSp}
-- SAUDAÇÃO CORRETA AGORA (use EXATAMENTE esta na primeira mensagem, nunca outra): "${saudacao}"
+CONTEXTO TEMPORAL INTERNO — não escreva estes dados na resposta, exceto se o usuário pedir data/hora explicitamente:
+- Referência para cálculos: ${fmtDate}, ${fmtTime}, America/Sao_Paulo, ISO ${isoSp}
+- Saudação adequada se perguntarem: "${saudacao}"
 
-Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir da data acima.`;
+Quando o usuário disser "hoje", "amanhã" ou "próxima sexta", use a referência acima apenas para calcular agendamentos.`;
 
     const messages = [
       { role: "system", content: systemContent },
@@ -263,7 +262,6 @@ Quando o usuário disser "hoje", "amanhã", "próxima sexta", calcule a partir d
         handoff,
         speaker: handoff ? "Dra. Kênia Garcia" : "Secretária",
         analysis,
-        server_time: { date: fmtDate, time: fmtTime, iso: isoSp },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
