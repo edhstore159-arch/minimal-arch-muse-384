@@ -996,6 +996,7 @@ const baileysRuntimeStatus = () => {
     qr_age_ms: qrAgeMs,
     qr_expires_in_s: currentQRAt ? Math.max(0, Math.ceil((QR_TIMEOUT_MS - qrAgeMs) / 1000)) : null,
     qr_timeout_s: Math.ceil(QR_TIMEOUT_MS / 1000),
+    qr_renew_after_s: Math.ceil(QR_RENEW_AFTER_MS / 1000),
   };
 };
 
