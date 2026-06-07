@@ -657,15 +657,32 @@ async function autoReply(jid, userText, contactName) {
     return;
   }
   const history = aiHistory.get(jid) || [];
+  const lastReplies = recentAssistantReplies(history);
+  const antiRepetitionContext = lastReplies.length
+    ? `\nANTI-REPETIÇÃO OPERACIONAL:\nÚltimas respostas enviadas:\n${lastReplies.map((item, index) => `${index + 1}. ${item}`).join("\n")}\nNão repita nenhuma delas; avance a conversa respondendo à última mensagem do cliente.`
+    : "";
   const messagesPayload = [
-    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nNome do contato: ${contactName || "Cliente"}.` },
+    { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nNome do contato: ${contactName || "Cliente"}.${antiRepetitionContext}` },
     ...history,
     { role: "user", content: userText },
   ];
   recordAutoReply({ step: "ai_request", jid, providers: ["ollama", OPENAI_API_KEY && "openai", EMERGENT_API_KEY && "emergent", LOVABLE_API_KEY && "lovable"].filter(Boolean) });
-  const result = await callAI(messagesPayload);
+  let result = await callAI(messagesPayload, { temperature: 0.72 });
   const usedFallback = !result.ok;
-  const reply = cleanRepeatedText(removeTemporalLeaks(usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply, userText));
+  let rawReply = usedFallback ? buildLocalLegalReply(jid, userText, contactName) : result.reply;
+  if (!usedFallback && isNearDuplicateReply(rawReply, history)) {
+    const retry = await callAI([
+      { role: "system", content: `${AI_SYSTEM_PROMPT}\n${saoPauloTemporalContext()}\nCORREÇÃO OBRIGATÓRIA: a resposta candidata repetiu uma mensagem anterior. Gere uma resposta nova, curta, útil, sem saudação inicial e sem repetir perguntas já feitas.` },
+      ...history,
+      { role: "user", content: userText },
+    ], { temperature: 0.9 });
+    if (retry.ok) {
+      result = retry;
+      rawReply = retry.reply;
+    }
+    if (isNearDuplicateReply(rawReply, history)) rawReply = buildNonRepeatingFallback(userText, contactName);
+  }
+  const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, userText));
   if (usedFallback) recordAutoReply({ step: "ai_fail_local_fallback", jid, result, reply: reply.slice(0, 200) });
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
