@@ -757,16 +757,16 @@ export default function WhatsAppSettings() {
                           className="ml-auto h-7 text-xs"
                           onClick={async () => {
                             if (!HAS_BACKEND || baileysStatus?.state === "static") {
-                              toast.warning("Resetar sessão só funciona depois que VITE_BACKEND_URL apontar para o backend publicado.", { duration: 9000 });
+                              toast.warning("Renovar QR só funciona depois que VITE_BACKEND_URL apontar para o backend publicado.", { duration: 9000 });
                               return;
                             }
                             try {
-                              const { data } = await api.post("/whatsapp/baileys/restart");
+                              const { data } = await api.post("/whatsapp/baileys/reconnect");
                               if (data?.ok) {
-                                toast.success("Sessão resetada! Aguarde 5s pelo novo QR...");
-                                setTimeout(() => { pollBaileys(); }, 6000);
+                                toast.success("QR renovado sem apagar a sessão. Aguarde alguns segundos...");
+                                setTimeout(() => { pollBaileys(); }, 2500);
                               } else {
-                                toast.error("Erro ao resetar: " + (data?.error || "desconhecido"));
+                                toast.error("Erro ao renovar QR: " + (data?.error || "desconhecido"));
                               }
                             } catch (e) {
                               toast.error("Erro: " + (e?.response?.data?.detail || e.message));
@@ -774,7 +774,7 @@ export default function WhatsAppSettings() {
                           }}
                           data-testid="baileys-restart-btn"
                         >
-                          <RefreshCw className="w-3 h-3 mr-1" /> Resetar sessão
+                          <RefreshCw className="w-3 h-3 mr-1" /> Renovar QR
                         </Button>
                       </div>
                       <ol className="space-y-1.5 list-decimal pl-5 text-nude-600">
