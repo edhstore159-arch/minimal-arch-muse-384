@@ -238,26 +238,10 @@ Quando o usuário disser "hoje", "amanhã" ou "próxima sexta", use a referênci
     });
 
     if (!aiResult.ok) {
-      const detailStr = String(aiResult.error || "");
-      const isBudget = /budget_exceeded|Not enough credits|payment_required/i.test(detailStr) || aiResult.status === 402;
-      const isRate = aiResult.status === 429;
-      const fallbackReply = isBudget
-        ? "Olá! Sou a secretária da Kênia Garcia. No momento estou com instabilidade no atendimento automático. Pode me contar resumidamente o que aconteceu? Em breve retornaremos pessoalmente."
-        : isRate
-        ? "Estamos com muitas mensagens agora. Pode aguardar um instante e enviar novamente?"
-        : "Tive uma instabilidade para responder agora. Pode me contar novamente o que aconteceu?";
+      const status = aiResult.status === 429 || aiResult.status === 402 ? aiResult.status : 502;
       return new Response(
-        JSON.stringify({
-          response: fallbackReply,
-          appointment: null,
-          audio_base64: null,
-          handoff: false,
-          speaker: "Secretária",
-          analysis: { acertividade: 0, qualificacao: "necessita_mais_info" },
-          fallback: true,
-          error_type: isBudget ? "AI_BUDGET_EXCEEDED" : isRate ? "AI_RATE_LIMITED" : "AI_GATEWAY_ERROR",
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "AI Gateway error", status: aiResult.status, detail: aiResult.error }),
+        { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
