@@ -919,6 +919,25 @@ async function restartSock({ resetAuth = false } = {}) {
   };
 }
 
+async function ensureQrReady({ forceRenew = false } = {}) {
+  const now = Date.now();
+  const status = baileysRuntimeStatus();
+  const qrIsFresh = currentQR && currentQRAt && now - currentQRAt < QR_RENEW_AFTER_MS;
+  if (status.connected || (!forceRenew && qrIsFresh)) return status;
+  if (starting && now - lastQrEnsureAt < QR_ENSURE_COOLDOWN_MS) return status;
+  if (!forceRenew && currentQR && currentQRAt && now - currentQRAt < QR_TIMEOUT_MS) return status;
+  if (!qrEnsurePromise) {
+    lastQrEnsureAt = now;
+    qrEnsurePromise = restartSock({ resetAuth: false })
+      .catch((e) => {
+        lastError = e?.message || String(e);
+        return baileysRuntimeStatus();
+      })
+      .finally(() => { qrEnsurePromise = null; });
+  }
+  return qrEnsurePromise;
+}
+
 startSock().catch((e) => {
   lastError = e?.message || String(e);
   console.error("startSock error:", e);
