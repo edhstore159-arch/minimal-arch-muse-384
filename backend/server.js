@@ -381,7 +381,7 @@ function removeTemporalLeaks(reply, userText) {
     .trim();
 }
 
-async function callAI(messagesPayload) {
+async function callAI(messagesPayload, options = {}) {
   const ollamaPrompt = messagesPayload
     .map((message) => {
       const role = message.role === "system" ? "Instruções" : message.role === "assistant" ? "Atendente" : "Cliente";
@@ -453,7 +453,11 @@ async function callAI(messagesPayload) {
         method: "POST",
         headers: cfg.headers,
         signal: controller.signal,
-        body: JSON.stringify({ model: cfg.model, messages: messagesPayload }),
+          body: JSON.stringify({
+            model: cfg.model,
+            messages: messagesPayload,
+            ...(typeof options.temperature === "number" ? { temperature: options.temperature } : {}),
+          }),
       });
       if (!resp.ok) {
         const errText = await resp.text();
