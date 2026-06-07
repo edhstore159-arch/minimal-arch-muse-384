@@ -156,6 +156,55 @@ function cleanRepeatedText(text: string): string {
   return uniqueLines.join("\n").trim();
 }
 
+function normalizeForSimilarity(text: string): string {
+  return stripAppointmentBlock(String(text || ""))
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function similarityScore(a: string, b: string): number {
+  const left = new Set(normalizeForSimilarity(a).split(" ").filter((word) => word.length > 2));
+  const right = new Set(normalizeForSimilarity(b).split(" ").filter((word) => word.length > 2));
+  if (!left.size || !right.size) return 0;
+  let overlap = 0;
+  for (const word of left) if (right.has(word)) overlap += 1;
+  return overlap / Math.max(left.size, right.size);
+}
+
+function recentAssistantReplies(history: Array<{ role: string; content: string }>): string[] {
+  return history
+    .filter((m) => m.role === "assistant" && String(m.content || "").trim())
+    .map((m) => stripAppointmentBlock(m.content))
+    .slice(-4);
+}
+
+function isNearDuplicateReply(reply: string, history: Array<{ role: string; content: string }>): boolean {
+  const normalizedReply = normalizeForSimilarity(reply);
+  if (!normalizedReply) return false;
+  return recentAssistantReplies(history).some((previous) => {
+    const normalizedPrevious = normalizeForSimilarity(previous);
+    if (!normalizedPrevious) return false;
+    const score = similarityScore(normalizedReply, normalizedPrevious);
+    return normalizedReply === normalizedPrevious || score >= 0.86 || (normalizedReply.length < 240 && score >= 0.72);
+  });
+}
+
+function buildNonRepeatingFallback(userMessage: string, fmtDate: string, fmtTime: string): string {
+  const text = String(userMessage || "").toLowerCase();
+  if (userAskedTemporalInfo(text)) return `Hoje é ${fmtDate}, e agora são ${fmtTime}.`;
+  if (/\b(agendar|marcar|consulta|reuni[aã]o|hor[aá]rio|atendimento)\b/i.test(text)) {
+    return "Claro. Para eu deixar a consulta registrada corretamente, me informe nome completo, telefone, e-mail, cidade/estado, área do caso, data e horário desejados.";
+  }
+  if (/\b(div[oó]rcio|guarda|pens[aã]o|fam[ií]lia|invent[aá]rio|trabalhista|demiss[aã]o|rescis[aã]o|inss|aposentadoria|consumidor|cobran[cç]a|audi[eê]ncia|intima[cç][aã]o)\b/i.test(text)) {
+    return "Entendi. Para eu direcionar melhor seu atendimento, me conte quando isso aconteceu, sua cidade/estado e se existe algum prazo ou audiência marcado.";
+  }
+  return "Entendi. Para seguir sem repetir informações, me conte em poucas palavras o que aconteceu e qual ajuda você precisa agora.";
+}
+
 function userAskedTemporalInfo(text: string): boolean {
   return /\b(que\s+horas|qual\s+(?:é\s+)?(?:a\s+)?hora|hor[áa]rio\s+atual|agora\s+s[aã]o|data\s+de\s+hoje|qual\s+(?:é\s+)?(?:a\s+)?data|que\s+data|que\s+dia\s+(?:é|estamos|s[aã]o|de\s+hoje)|hoje\s+[ée]\s+que\s+dia|dia\s+da\s+semana|dia\s+de\s+hoje|que\s+m[eê]s|qual\s+(?:o\s+)?(?:dia|m[eê]s|ano)|me\s+(?:diga|fala|fale|informa).*(?:dia|hora|data))\b/i.test(String(text || ""));
 }
@@ -245,6 +294,11 @@ Deno.serve(async (req) => {
     const saudacao =
       hourSp >= 5 && hourSp < 12 ? "Bom dia" : hourSp >= 12 && hourSp < 18 ? "Boa tarde" : "Boa noite";
 
+    const assistantReplies = recentAssistantReplies(history);
+    const antiRepetitionContext = assistantReplies.length
+      ? `\n\nANTI-REPETIÇÃO OPERACIONAL:\n- As últimas respostas da secretária foram:\n${assistantReplies.map((item, index) => `${index + 1}. ${item}`).join("\n")}\n- Não repita nenhuma delas, nem a mesma saudação, nem a mesma pergunta. Responda diretamente à última mensagem do cliente com avanço real na conversa.`
+      : "";
+
     const systemContent = `${extraPrompt}
 
 CONTEXTO TEMPORAL INTERNO (fuso America/Sao_Paulo):
@@ -255,7 +309,7 @@ REGRA OBRIGATÓRIA SOBRE DATA E HORA:
 - Se o cliente perguntar a data, o dia, o dia da semana, o mês, o ano ou as horas (ex.: "que dia é hoje?", "que horas são?", "qual a data de hoje?", "estamos em que dia da semana?"), RESPONDA com clareza usando EXATAMENTE os valores acima. Exemplo: "Hoje é ${fmtDate}, e agora são ${fmtTime}."
 - Nunca diga que não sabe a data ou a hora, e nunca invente outro valor.
 - Se o cliente NÃO perguntar, não mencione data nem hora.
-- Para "hoje", "amanhã", "próxima sexta" em agendamentos, calcule a partir da referência acima.`;
+- Para "hoje", "amanhã", "próxima sexta" em agendamentos, calcule a partir da referência acima.${antiRepetitionContext}`;
 
     const messages = [
       { role: "system", content: systemContent },
@@ -263,9 +317,10 @@ REGRA OBRIGATÓRIA SOBRE DATA E HORA:
       { role: "user", content: userMessage },
     ];
 
-    const aiResult = await chatCompletion({
+    let aiResult = await chatCompletion({
       model: "google/gemini-3-flash-preview",
       messages,
+      temperature: 0.72,
     });
 
     if (!aiResult.ok) {
@@ -276,8 +331,27 @@ REGRA OBRIGATÓRIA SOBRE DATA E HORA:
       );
     }
 
-    const data = aiResult.data;
-    const rawReply: string = data?.choices?.[0]?.message?.content ?? "";
+    let data = aiResult.data;
+    let rawReply: string = data?.choices?.[0]?.message?.content ?? "";
+    if (isNearDuplicateReply(rawReply, history)) {
+      const retryResult = await chatCompletion({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content: `${systemContent}\n\nCORREÇÃO OBRIGATÓRIA: a resposta candidata repetiu uma mensagem anterior. Gere uma resposta nova, curta e útil, sem saudação inicial e sem repetir perguntas já feitas.`,
+          },
+          ...history.map((m) => ({ role: m.role, content: String(m.content || "") })),
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.9,
+      });
+      if (retryResult.ok) {
+        data = retryResult.data;
+        rawReply = data?.choices?.[0]?.message?.content ?? rawReply;
+      }
+      if (isNearDuplicateReply(rawReply, history)) rawReply = buildNonRepeatingFallback(userMessage, fmtDate, fmtTime);
+    }
     const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
     const appointment = parseAppointmentBlock(rawReply);
     const reply = cleanRepeatedText(removeTemporalLeaks(stripAppointmentBlock(rawReply), userMessage));
