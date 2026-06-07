@@ -263,17 +263,33 @@ const write = (key, value) => localStorage.setItem(`static_api_${key}`, JSON.str
 const response = (data, status = 200, headers = {}) => Promise.resolve({ data: clone(data), status, statusText: "OK", headers, config: {} });
 const nextId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+const buildJitsiLink = (seed) => {
+  const safe = String(seed || `kenia-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    .replace(/[^a-zA-Z0-9-]/g, "-")
+    .slice(0, 60);
+  return `https://meet.jit.si/${safe}`;
+};
+
 const normalizeAppointment = (item) => {
   const startsAt = item.starts_at || (item.appointment_date && item.appointment_time
     ? new Date(`${item.appointment_date}T${String(item.appointment_time).slice(0, 5)}:00`).toISOString()
     : nowIso());
+  const raw = item.raw_payload || {};
+  const meetingLink =
+    item.meeting_link ||
+    item.meet_url ||
+    raw.meeting_link ||
+    raw.meet_url ||
+    buildJitsiLink(item.id || `${item.client_name || "consulta"}-${startsAt}`);
   return {
     ...item,
-    title: item.title || `Consulta — ${item.legal_area || "Atendimento jurídico"} · ${item.client_name || "Cliente"}`,
+    title: item.title || raw.title || `Consulta — ${item.legal_area || "Atendimento jurídico"} · ${item.client_name || "Cliente"}`,
     starts_at: startsAt,
-    duration_min: item.duration_min || 60,
-    location: item.location || "Google Meet",
-    notes: item.notes || [item.phone ? `WhatsApp: ${item.phone}` : "", item.case_summary].filter(Boolean).join(" · "),
+    duration_min: item.duration_min || raw.duration_min || 60,
+    location: item.location || raw.location || "Google Meet",
+    meeting_link: meetingLink,
+    meet_url: meetingLink,
+    notes: item.notes || raw.notes || [item.phone ? `WhatsApp: ${item.phone}` : "", item.case_summary].filter(Boolean).join(" · "),
     status: item.status === "scheduled" ? "confirmado" : item.status || "confirmado",
   };
 };
