@@ -187,6 +187,13 @@ const contactsStore = new Map(); // jid -> contato
 const messagesStore = new Map(); // jid -> Array<mensagens>
 const processedAutoReplyMessageIds = new Set();
 const debugInstructions = [];
+
+// ---- Painel jurídico: análise automática de leads ----
+// Cada entrada: { id, jid, visitor_name, visitor_phone, area, qualificacao,
+//   acertividade, chance_exito, resumo, motivo, fundamentos[], proxima_pergunta,
+//   admin_notes, created_at, updated_at }
+const caseAnalysesStore = new Map(); // jid -> análise
+let lastLegislationRefreshAt = null;
 const legalDeadlines = [
   {
     id: "deadline-1",
@@ -656,6 +663,116 @@ async function processAutoReplyQueue() {
   }
 }
 
+// ---- Análise jurídica automática do lead (alimenta AdminCases) ----
+const LEGAL_ANALYSIS_SYSTEM_PROMPT = [
+  "Você é um analista jurídico sênior. Receberá a transcrição de uma conversa de WhatsApp entre uma secretária e um possível cliente da advogada Kênia Garcia.",
+  "Sua tarefa é classificar o caso retornando EXCLUSIVAMENTE um JSON válido (sem markdown, sem comentários, sem texto fora do JSON) com exatamente estas chaves:",
+  "{",
+  '  "area": string,                    // ex: "Trabalhista", "Família", "Previdenciário", "Consumidor", "Cível", "Penal", "Indefinido"',
+  '  "qualificacao": "qualificado" | "nao_qualificado" | "necessita_mais_info",',
+  '  "acertividade": number,            // 0-100, confiança da análise',
+  '  "chance_exito": number,            // 0-100, chance estimada de êxito',
+  '  "resumo": string,                  // 1 frase técnica do caso',
+  '  "motivo": string,                  // por que está qualificado/não/precisa mais info',
+  '  "fundamentos": string[],           // até 4 dispositivos legais aplicáveis em linguagem curta',
+  '  "proxima_pergunta": string         // próxima pergunta estratégica para o cliente',
+  "}",
+  "Se faltarem dados (área desconhecida, fatos vagos), use qualificacao=\"necessita_mais_info\" e baixe a acertividade.",
+  "Nunca invente artigos específicos; cite apenas dispositivos genéricos plausíveis (ex: \"CLT — verbas rescisórias\", \"CC art. 1.694 — alimentos\").",
+].join("\n");
+
+function safeParseAnalysisJson(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+  const stripped = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  const tryParse = (s) => { try { return JSON.parse(s); } catch { return null; } };
+  let obj = tryParse(stripped);
+  if (!obj) {
+    const m = stripped.match(/\{[\s\S]*\}/);
+    if (m) obj = tryParse(m[0]);
+  }
+  return obj;
+}
+
+function normalizeAnalysis(obj) {
+  const allowedQ = ["qualificado", "nao_qualificado", "necessita_mais_info"];
+  const clamp = (n) => {
+    const v = Math.round(Number(n));
+    if (!Number.isFinite(v)) return 0;
+    return Math.max(0, Math.min(100, v));
+  };
+  return {
+    area: String(obj?.area || "Indefinido").slice(0, 60),
+    qualificacao: allowedQ.includes(obj?.qualificacao) ? obj.qualificacao : "necessita_mais_info",
+    acertividade: clamp(obj?.acertividade),
+    chance_exito: clamp(obj?.chance_exito),
+    resumo: String(obj?.resumo || "").slice(0, 400),
+    motivo: String(obj?.motivo || "").slice(0, 600),
+    fundamentos: Array.isArray(obj?.fundamentos)
+      ? obj.fundamentos.slice(0, 6).map((f) => String(f).slice(0, 160)).filter(Boolean)
+      : [],
+    proxima_pergunta: String(obj?.proxima_pergunta || "").slice(0, 240),
+  };
+}
+
+async function analyzeLeadCase({ jid, contactName, history, lastUserText }) {
+  try {
+    const transcript = (history || [])
+      .slice(-12)
+      .map((m) => `${m.role === "user" ? "Cliente" : "Atendente"}: ${m.content}`)
+      .join("\n");
+    const payload = [
+      { role: "system", content: LEGAL_ANALYSIS_SYSTEM_PROMPT },
+      {
+        role: "user",
+        content:
+          `Contato: ${contactName || "Cliente"} (${jidToPhone(jid) || "sem telefone"}).\n` +
+          `Transcrição recente:\n${transcript}\n\n` +
+          `Última mensagem do cliente: "${String(lastUserText || "").slice(0, 600)}".\n\n` +
+          "Retorne apenas o JSON conforme o esquema.",
+      },
+    ];
+    const result = await callAI(payload, { temperature: 0.1 });
+    if (!result.ok) {
+      recordAutoReply({ step: "legal_analysis_fail", jid, error: result.error || "callAI_fail" });
+      return null;
+    }
+    const parsed = safeParseAnalysisJson(result.reply);
+    if (!parsed) {
+      recordAutoReply({ step: "legal_analysis_parse_fail", jid, preview: String(result.reply || "").slice(0, 160) });
+      return null;
+    }
+    const normalized = normalizeAnalysis(parsed);
+    const prev = caseAnalysesStore.get(jid);
+    const now = new Date().toISOString();
+    const entry = {
+      id: prev?.id || `case-${jidToPhone(jid) || Date.now()}`,
+      jid,
+      visitor_name: contactName || prev?.visitor_name || jidToPhone(jid) || "Cliente",
+      visitor_phone: jidToPhone(jid) || prev?.visitor_phone || "",
+      ...normalized,
+      admin_notes: prev?.admin_notes || "",
+      admin_override: prev?.admin_override || null,
+      created_at: prev?.created_at || now,
+      updated_at: now,
+      message_count: (history || []).length,
+    };
+    // se admin já sobrescreveu, mantém a qualificação manual
+    if (prev?.admin_override?.qualificacao) {
+      entry.qualificacao = prev.admin_override.qualificacao;
+    }
+    caseAnalysesStore.set(jid, entry);
+    recordAutoReply({ step: "legal_analysis_ok", jid, qualificacao: entry.qualificacao, area: entry.area });
+    return entry;
+  } catch (e) {
+    recordAutoReply({ step: "legal_analysis_throw", jid, error: e?.message || String(e) });
+    return null;
+  }
+}
+
 async function autoReply(jid, userText, contactName) {
   recordAutoReply({ step: "trigger", jid, userText: String(userText || "").slice(0, 200), hasOpenAI: Boolean(OPENAI_API_KEY), hasEmergent: Boolean(EMERGENT_API_KEY), hasLovable: Boolean(LOVABLE_API_KEY), botEnabled: whatsappConfig.bot_enabled, connectionState });
   if (!sock || connectionState !== "open") {
@@ -693,6 +810,8 @@ async function autoReply(jid, userText, contactName) {
   history.push({ role: "user", content: userText });
   history.push({ role: "assistant", content: reply });
   aiHistory.set(jid, history);
+  // Análise jurídica em background (não bloqueia o envio da resposta)
+  analyzeLeadCase({ jid, contactName, history, lastUserText: userText }).catch(() => {});
   try {
     const sent = await sendBotText(jid, reply, { source: usedFallback ? "local_fallback" : result.provider });
     recordAutoReply({ step: "sent", jid, attempt: sent.attempt, provider: usedFallback ? "local_fallback" : result.provider, model: result.model || null, reply: reply.slice(0, 200) });
@@ -1429,14 +1548,90 @@ app.post("/api/chat/message", async (req, res) => {
   }
   const handoff = /HANDOFF[_\s-]*K[EÊ]NIA/i.test(rawReply);
   const reply = cleanRepeatedText(removeTemporalLeaks(rawReply, message)).trim();
+  // análise em background a partir da sessão web
+  const sessionId = req.body?.session_id || `web-${Date.now()}`;
+  const webJid = `web:${sessionId}`;
+  const visitorName = req.body?.visitor_name || "Cliente Web";
+  const webHistory = [
+    ...normalizedHistory,
+    { role: "user", content: message },
+    { role: "assistant", content: reply },
+  ];
+  analyzeLeadCase({ jid: webJid, contactName: visitorName, history: webHistory, lastUserText: message }).catch(() => {});
   res.json({
-    session_id: req.body?.session_id || `session-${Date.now()}`,
+    session_id: sessionId,
     response: reply,
     audio_base64: null,
     handoff,
     speaker: handoff ? "Dra. Kênia Garcia" : "Secretária",
     analysis: { acertividade: result.ok ? 90 : 70, qualificacao: result.ok ? "ok" : "fallback" },
   });
+});
+
+// ---- Painel Admin: análises jurídicas dos leads ----
+function listCaseAnalyses(filterQ) {
+  const all = Array.from(caseAnalysesStore.values()).sort(
+    (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+  );
+  const items = filterQ && filterQ !== "all"
+    ? all.filter((i) => i.qualificacao === filterQ)
+    : all;
+  const total = all.length;
+  const qualificados = all.filter((i) => i.qualificacao === "qualificado").length;
+  const nao_qualificados = all.filter((i) => i.qualificacao === "nao_qualificado").length;
+  const necessita_mais_info = all.filter((i) => i.qualificacao === "necessita_mais_info").length;
+  const avg_acertividade = total
+    ? Math.round(all.reduce((s, i) => s + Number(i.acertividade || 0), 0) / total)
+    : 0;
+  return { total, qualificados, nao_qualificados, necessita_mais_info, avg_acertividade, items };
+}
+
+app.get("/api/admin/case-analyses", (req, res) => {
+  res.json(listCaseAnalyses(req.query?.qualificacao));
+});
+
+app.get("/api/admin/case-analyses/:id", (req, res) => {
+  const analysis = Array.from(caseAnalysesStore.values()).find((i) => i.id === req.params.id);
+  if (!analysis) return res.status(404).json({ error: "not_found" });
+  const messages = (messagesStore.get(analysis.jid) || []).slice(-50).map((m) => ({
+    role: m.from_me ? "assistant" : "user",
+    content: m.text,
+    created_at: m.created_at,
+  }));
+  res.json({ analysis, messages });
+});
+
+app.patch("/api/admin/case-analyses/:id", (req, res) => {
+  const entry = Array.from(caseAnalysesStore.values()).find((i) => i.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: "not_found" });
+  const allowedQ = ["qualificado", "nao_qualificado", "necessita_mais_info"];
+  if (req.body?.qualificacao && allowedQ.includes(req.body.qualificacao)) {
+    entry.qualificacao = req.body.qualificacao;
+    entry.admin_override = { qualificacao: req.body.qualificacao, at: new Date().toISOString() };
+  }
+  if (typeof req.body?.notes === "string") entry.admin_notes = req.body.notes.slice(0, 2000);
+  entry.updated_at = new Date().toISOString();
+  caseAnalysesStore.set(entry.jid, entry);
+  res.json({ ok: true, analysis: entry });
+});
+
+app.post("/api/admin/case-analyses/:id/reanalyze", async (req, res) => {
+  const entry = Array.from(caseAnalysesStore.values()).find((i) => i.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: "not_found" });
+  const history = aiHistory.get(entry.jid) || [];
+  const lastUser = [...history].reverse().find((m) => m.role === "user")?.content || "";
+  const updated = await analyzeLeadCase({
+    jid: entry.jid,
+    contactName: entry.visitor_name,
+    history,
+    lastUserText: lastUser,
+  });
+  res.json({ ok: Boolean(updated), analysis: updated || entry });
+});
+
+app.post("/api/legislation/refresh", (_req, res) => {
+  lastLegislationRefreshAt = new Date().toISOString();
+  res.json({ ok: true, refreshed_at: lastLegislationRefreshAt });
 });
 
 // ---- Fallback /api/* ----
