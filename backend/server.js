@@ -187,6 +187,13 @@ const contactsStore = new Map(); // jid -> contato
 const messagesStore = new Map(); // jid -> Array<mensagens>
 const processedAutoReplyMessageIds = new Set();
 const debugInstructions = [];
+
+// ---- Painel jurídico: análise automática de leads ----
+// Cada entrada: { id, jid, visitor_name, visitor_phone, area, qualificacao,
+//   acertividade, chance_exito, resumo, motivo, fundamentos[], proxima_pergunta,
+//   admin_notes, created_at, updated_at }
+const caseAnalysesStore = new Map(); // jid -> análise
+let lastLegislationRefreshAt = null;
 const legalDeadlines = [
   {
     id: "deadline-1",
