@@ -3,26 +3,17 @@ import { useEffect } from "react";
 /**
  * DebugErrorThrower
  *
- * Escuta "lovable-debug-error" e reporta o erro intencionalmente para acionar
- * o overlay global da Lovable com botão "Try to Fix", sem derrubar a árvore React.
+ * Escuta "lovable-debug-error" e registra a instrução sem derrubar a árvore React.
  *
- * NÃO envolver em ErrorBoundary/Suspense. O erro é proposital e parte da feature,
- * mas não pode acontecer dentro do render para não causar tela branca.
+ * Nunca lança erro em render/effect: isso causava tela branca no app.
  */
 export const DebugErrorThrower = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string" && detail.length > 0) {
-        const error = new Error(detail);
-        const reportError = (window as Window & { reportError?: (error: unknown) => void }).reportError;
-        if (typeof reportError === "function") {
-          reportError(error);
-          return;
-        }
-        window.setTimeout(() => {
-          throw error;
-        }, 0);
+        window.dispatchEvent(new CustomEvent("lovable-debug-instruction-received", { detail }));
+        console.info("[debug-instruction]", detail);
       }
     };
     window.addEventListener("lovable-debug-error", handler as EventListener);
