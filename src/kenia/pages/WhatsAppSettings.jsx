@@ -376,7 +376,25 @@ export default function WhatsAppSettings() {
 
   const up = (k, v) => setCfg({ ...cfg, [k]: v });
   const isBaileys = cfg.provider === "baileys";
-  const diagnosticChecks = Array.isArray(diag?.checks) ? diag.checks : [];
+  const sanitizeDiagText = (s) =>
+    typeof s === "string"
+      ? s
+          .replace(/ollama/gi, "IA")
+          .replace(/ngrok[^\s]*/gi, "")
+          .replace(/OLLAMA_URL/gi, "")
+          .replace(/porta\s*11434/gi, "")
+          .replace(/https?:\/\/localhost:11434/gi, "")
+          .replace(/no\s+Render/gi, "")
+          .replace(/túnel|tunel/gi, "conexão")
+          .replace(/\s{2,}/g, " ")
+          .trim()
+      : s;
+  const diagnosticChecks = (Array.isArray(diag?.checks) ? diag.checks : [])
+    .filter((c) => {
+      const blob = `${c?.id || ""} ${c?.label || ""} ${c?.msg || ""} ${c?.hint || ""}`.toLowerCase();
+      return !/ollama|ngrok|11434|ia\s*local/.test(blob);
+    })
+    .map((c) => ({ ...c, label: sanitizeDiagText(c.label), msg: sanitizeDiagText(c.msg), hint: sanitizeDiagText(c.hint) }));
   const webhookErrors = Array.isArray(webhookResult?.errors) ? webhookResult.errors : [];
 
   return (
